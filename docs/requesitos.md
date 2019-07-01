@@ -34,3 +34,13 @@ Como requerimiento, el descargador debe tener una version en bash y una en C com
 6. En caso de fallo en el programa principal, lo volvera a ejecutar y encaso de varios fallos seguidos, informara al servidor y quedara en modo de espera.
 7. Debe tener la capacidad de reinstalarse en lugares al azar cada cierto tiempo.
 8. Debe poder hacer modificaciones muy simples del ejecutable del programa principal para cambiar su hash.
+
+# Especificaciones y otras anotaciones
+
+Para networking, el programa descargador usara curl principalmente, aunque si no esta disponible se puede usar wget u otras alternativas. El programa principal debe usar libcurl para comunicarse con el servidor.
+
+El protocolo de comunicacion servidor-cliente debe ser https. En la primera iteracion podemos usar http para simplificar y hacer debug.
+
+La ip del servidor debe estar ofuscada, al igual que el resto de strings que puedan identificar al programa. Esto se puede hacer mediante macros en C y aunque no es muy efectivo, defiende al programa de una linea de ataque muy simple.
+
+Muchas partes del codigo se pueden extraer y reutilizar del codigo de Yao, esto incluye minimo la instalacion del programa y la comunicacion con el servidor.
