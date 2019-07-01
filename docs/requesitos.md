@@ -13,27 +13,29 @@ Como requerimiento, el descargador debe tener una version en bash y una en C com
 # 2. Programa principal
 
 1. Peso del ejecutable todo lo ligero que se pueda.
-2. Strings usadas en el programa tienen que estar ofuscadas.
-3. Capacidad para crear y ejecutar plugins.
-4. Instalacion silenciosa y semi-aleatoria.
-5. Extremadamente resistente a fallos tanto externos como internos.
-6. Debe instalar el watchdog
-7. Debe recopilar informacion sobre el ordenador en que se ha instalado. Esto es: sistema operativo, version, version de un programa aleatorio, usuarios, localizacion, hora local, lista de programas, usuario conectado o desconectado, etc. Tambien es muy importante que el programa sea capaz de escanear la red y recopilar toda la informacion posible sobre los ordenadores conectados. 
-8. Debe poder encriptar y enviar esta informacion al servidor mediante http (preferiblemente con SSL).
-9. Debe poder permitir la apertura de una conexion ssh inversa.
-10. Debe permitir la desinstalacion completa o parcial (dejando el watchdog).
-11. Se deben poder descargar archivos aleatorios del servidor. La subida de archivos debe estar restringida a logs (puntos 7 y 8).
+2. Al reiniciarse el ordenador, el programa debe volver a ejecutarse.
+3. Strings usadas en el programa tienen que estar ofuscadas.
+4. Capacidad para crear y ejecutar plugins.
+5. Instalacion silenciosa y semi-aleatoria.
+6. Extremadamente resistente a fallos tanto externos como internos.
+7. Debe instalar el watchdog
+8. Debe recopilar informacion sobre el ordenador en que se ha instalado. Esto es: sistema operativo, version, version de un programa aleatorio, usuarios, localizacion, hora local, lista de programas, usuario conectado o desconectado, etc. Tambien es muy importante que el programa sea capaz de escanear la red y recopilar toda la informacion posible sobre los ordenadores conectados. 
+9. Debe poder encriptar y enviar esta informacion al servidor mediante http (preferiblemente con SSL).
+10. Debe poder permitir la apertura de una conexion ssh inversa.
+11. Debe permitir la desinstalacion completa o parcial (dejando el watchdog).
+12. Se deben poder descargar archivos aleatorios del servidor. La subida de archivos debe estar restringida a logs (puntos 7 y 8).
 
 # 3. Watchdog
 
 1. Todo lo ligero que se pueda
-2. Se tiene que poder quedar en modo de espera. Dejara de ejecutar todas sus funciones principales. Solo podra escuchar instrucciones del servidor.
-3. Debe poder instalarse en multiples localizaciones, randomizadas.
-4. Se debe poder inyectar en otros programas.
-5. Debe comprobar cada poco tiempo si el programa principal esta funcionando.
-6. En caso de fallo en el programa principal, lo volvera a ejecutar y encaso de varios fallos seguidos, informara al servidor y quedara en modo de espera.
-7. Debe tener la capacidad de reinstalarse en lugares al azar cada cierto tiempo.
-8. Debe poder hacer modificaciones muy simples del ejecutable del programa principal para cambiar su hash.
+2. Al reiniciarse el ordenador, el programa debe volver a ejecutarse. Para evitar problemas, el watchdog debe esperar un rato despues de ser iniciado para darle tiempo al programa principal para que se inicie.
+3. Se tiene que poder quedar en modo de espera. Dejara de ejecutar todas sus funciones principales. Solo podra escuchar instrucciones del servidor.
+4. Debe poder instalarse en multiples localizaciones, randomizadas.
+5. Se debe poder inyectar en otros programas.
+6. Debe comprobar cada poco tiempo si el programa principal esta funcionando.
+7. En caso de fallo en el programa principal, lo volvera a ejecutar y encaso de varios fallos seguidos, informara al servidor y quedara en modo de espera.
+8. Debe tener la capacidad de reinstalarse en lugares al azar cada cierto tiempo.
+9. Debe poder hacer modificaciones muy simples del ejecutable del programa principal para cambiar su hash.
 
 # Especificaciones y otras anotaciones
 
@@ -44,3 +46,5 @@ El protocolo de comunicacion servidor-cliente debe ser https. En la primera iter
 La ip del servidor debe estar ofuscada, al igual que el resto de strings que puedan identificar al programa. Esto se puede hacer mediante macros en C y aunque no es muy efectivo, defiende al programa de una linea de ataque muy simple.
 
 Muchas partes del codigo se pueden extraer y reutilizar del codigo de Yao, esto incluye minimo la instalacion del programa y la comunicacion con el servidor.
+
+No nos podemos permitir perder absolutamente nada de memoria. Este programa va a estar en ejecucion durante periodos muy largos de tiempo y no debe llamar la atencion ni en uso de CPU ni en uso de RAM.
