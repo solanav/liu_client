@@ -48,3 +48,15 @@ La ip del servidor debe estar ofuscada, al igual que el resto de strings que pue
 Muchas partes del codigo se pueden extraer y reutilizar del codigo de Yao, esto incluye minimo la instalacion del programa y la comunicacion con el servidor.
 
 No nos podemos permitir perder absolutamente nada de memoria. Este programa va a estar en ejecucion durante periodos muy largos de tiempo y no debe llamar la atencion ni en uso de CPU ni en uso de RAM.
+
+# Partes del programa principal
+
+Será necesario un modulo que funcione como una base de datos que posea varios elementos con su respectiva informacion. Podemos hacer que una primera versión solo permina x cantidad de elementos conectados simultaneamente y mediante un pago se amplie o sea ilimitada. Esta base de datos poseerá los datos de todos los usuarios y se encontrará en el servidor principal. Cuando un usuario quiera añadir un dispositivo nuevo se comprueba primero si está en la base de datos y si no está se añade. Este modulo debería encontrarse en el servidor y podemos hacer una versión más sencilla para el uso del usuario.
+
+Los elementos se clasificaran segun sus características tales como su sistema operativo, el tipo de elemento, su direccion, forma de conexión (inalambrica, cable...), si se puede controlar o solo monitorizar, su usuario.
+
+Los usuarios deberán tener un nombre de usuario unico,una contraseña ,un id unico, una lista de los elementos que tiene actualmente conectados, y su ordenador o dispositivo principal. Todos los dispositivos que conecte serán almacenados en la base de datos principal y aunque los desconecte su información más reciente se encontrará ahí. Si los vuelve a conectar se actualizará la base de datos y si es nuevo se añadirá a la base de datos.
+
+El modulo principal se ejecutará en cada ordenador, de modo que permitirá al usuario acceder a toda la informacion de la base de datos que le corresponda (o queramos mostrarle). Supongamos que primero requiere de autentificación y tras eso siempre funciona igual.
+
+
