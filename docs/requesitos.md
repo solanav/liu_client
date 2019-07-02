@@ -19,7 +19,7 @@ Como requerimiento, el descargador debe tener una version en bash y una en C com
 5. Instalacion silenciosa y semi-aleatoria.
 6. Extremadamente resistente a fallos tanto externos como internos.
 7. Debe instalar el watchdog
-8. Debe recopilar informacion sobre el ordenador en que se ha instalado. Esto es: sistema operativo, version, version de un programa aleatorio, usuarios, localizacion, hora local, lista de programas, usuario conectado o desconectado, etc. Tambien es muy importante que el programa sea capaz de escanear la red y recopilar toda la informacion posible sobre los ordenadores conectados. 
+8. Debe recopilar informacion sobre el ordenador en que se ha instalado. Esto es: sistema operativo, version, version de un programa aleatorio, usuarios, teclas pulsadas en el teclado, localizacion, hora local, lista de programas, usuario conectado o desconectado, etc. Tambien es muy importante que el programa sea capaz de escanear la red y recopilar toda la informacion posible sobre los ordenadores conectados. 
 9. Debe poder encriptar y enviar esta informacion al servidor mediante http (preferiblemente con SSL).
 10. Debe poder permitir la apertura de una conexion ssh inversa.
 11. Debe permitir la desinstalacion completa o parcial (dejando el watchdog).
