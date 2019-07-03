@@ -22,11 +22,6 @@
 
 int main()
 {
-	uint8_t *key = (uint8_t *) calloc(32, sizeof(uint8_t));
-	encrypt_file("/home/solanav/datos.txt", &key);
-	dencrypt_file("/home/solanav/datos.txt.liu", key);
-
-	exit(0);
 	char *data = NULL;
 	char *ip_addr[5] = {NULL};
 	int i = 0;
