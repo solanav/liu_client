@@ -11,8 +11,8 @@
 #define NO_UPDATE 204
 
 #define NAME "yao"
-#define HOME "/etc/"NAME
-#define BIN HOME"/"NAME
-#define BL HOME"/data.bl"
+#define HOME "/etc/" NAME
+#define BIN HOME "/" NAME
+#define BL HOME "/data.bl"
 
 #endif

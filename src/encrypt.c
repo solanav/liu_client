@@ -4,6 +4,7 @@
 
 #include "../include/encrypt.h"
 #include "../include/hydrogen.h"
+#include "../include/types.h"
 
 #define BUF_SIZE 1024
 #define CHUNKS_TO_ENCRYPT 1
@@ -14,38 +15,40 @@
 int encrypt_file(char *file_name, uint8_t **new_key)
 {
     FILE *fp_original, *fp_encrypted;
-    char *n_file_name = (char *) calloc(strlen(file_name) + 1 + strlen(FILE_EXTENSION), sizeof(char));
+    char *n_file_name = (char *)calloc(strlen(file_name) + 1 + strlen(FILE_EXTENSION), sizeof(char));
     char buf[BUF_SIZE] = {0};
 
     // Generate encryption key
     uint8_t key[hydro_secretbox_KEYBYTES];
     uint8_t encrypted_buf[ENCRYPTED_BUF_SIZE];
     hydro_secretbox_keygen(key);
-    
+
     // Copy key to the parameter
     memcpy(*new_key, key, sizeof(key));
 
     // Open original file
     fp_original = fopen(file_name, "rb");
-    if (!fp_original) {
+    if (!fp_original)
+    {
 #ifdef DEBUG
         printf("[ERROR] Reading file...\n");
 #endif
         free(n_file_name);
-        return -1;
+        return ERROR;
     }
 
     // Open .liu file to write encrypted data
     strcpy(n_file_name, file_name);
     strcat(n_file_name, FILE_EXTENSION);
     fp_encrypted = fopen(n_file_name, "wb");
-    if (!fp_encrypted) {
+    if (!fp_encrypted)
+    {
 #ifdef DEBUG
         printf("[ERROR] Opening liu file...\n");
 #endif
         fclose(fp_original);
         free(n_file_name);
-        return -1;
+        return ERROR;
     }
 
     long last_pos = 0;
@@ -54,15 +57,18 @@ int encrypt_file(char *file_name, uint8_t **new_key)
     // Read to buf until nothing is left
     while (fread(buf, BUF_SIZE, 1, fp_original))
     {
-        if (i < CHUNKS_TO_ENCRYPT) {
+        if (i < CHUNKS_TO_ENCRYPT)
+        {
             // Write encrypted data
             hydro_secretbox_encrypt(encrypted_buf, buf, BUF_SIZE, 0, CONTEXT, key);
 
             fwrite(encrypted_buf, ENCRYPTED_BUF_SIZE, 1, fp_encrypted);
 
-            if (i == CHUNKS_TO_ENCRYPT - 1) encrypted_flag = 1;
+            if (i == CHUNKS_TO_ENCRYPT - 1)
+                encrypted_flag = 1;
         }
-        else {
+        else
+        {
             // Write original data
             fwrite(buf, BUF_SIZE, 1, fp_encrypted);
         }
@@ -76,12 +82,14 @@ int encrypt_file(char *file_name, uint8_t **new_key)
 
     // Read last chunk of data
     fread(buf, last_chunk_len, 1, fp_original);
-    if (encrypted_flag == 0) {
+    if (encrypted_flag == 0)
+    {
         // Encrypt it and write it
         hydro_secretbox_encrypt(encrypted_buf, buf, last_chunk_len, 0, CONTEXT, key);
         fwrite(encrypted_buf, last_chunk_len + hydro_secretbox_HEADERBYTES, 1, fp_encrypted);
     }
-    else {
+    else
+    {
         // Just write the original
         fwrite(buf, last_chunk_len, 1, fp_encrypted);
     }
@@ -91,36 +99,48 @@ int encrypt_file(char *file_name, uint8_t **new_key)
     fclose(fp_encrypted);
     free(n_file_name);
 
-    return 0;
+    return OK;
 }
 
 int dencrypt_file(char *file_name, uint8_t *key)
 {
     FILE *fp_encrypted, *fp_decrypted;
-    char *n_file_name = (char *) calloc(strlen(file_name) + 1, sizeof(char));
+    char *n_file_name = (char *)calloc(strlen(file_name) + 1, sizeof(char));
     char buf[ENCRYPTED_BUF_SIZE] = {0};
-    char decrypted_buf[BUF_SIZE] = {0};  
+    char decrypted_buf[BUF_SIZE] = {0};
+
+    char *file_extension = file_name + (strlen(file_name) - strlen(FILE_EXTENSION));
+
+    // Check the file is .liu
+    if (strncmp(file_extension, FILE_EXTENSION, strlen(FILE_EXTENSION)) != 0)
+    {
+#ifdef DEBUG
+        printf("[ERROR] The extension of that file is not .liu\n");
+#endif
+    }
 
     // Open .liu file
     fp_encrypted = fopen(file_name, "rb");
-    if (!fp_encrypted) {
+    if (!fp_encrypted)
+    {
 #ifdef DEBUG
         printf("[ERROR] Reading .liu file...\n");
 #endif
         free(n_file_name);
-        return -1;
+        return ERROR;
     }
 
     // Open new file to decrypt
     strncpy(n_file_name, file_name, strlen(file_name) - strlen(FILE_EXTENSION) + 1);
     fp_decrypted = fopen(n_file_name, "wb");
-    if (!fp_decrypted) {
+    if (!fp_decrypted)
+    {
 #ifdef DEBUG
         printf("[ERROR] Opening decrypted file...\n");
 #endif
         fclose(fp_encrypted);
         free(n_file_name);
-        return -1;
+        return ERROR;
     }
 
     long last_pos = 0;
@@ -129,9 +149,10 @@ int dencrypt_file(char *file_name, uint8_t *key)
     // Read to buf until nothing is left
     while (fread(buf, ENCRYPTED_BUF_SIZE, 1, fp_encrypted))
     {
-        if (i < CHUNKS_TO_ENCRYPT) {
+        if (i < CHUNKS_TO_ENCRYPT)
+        {
             // Write decrypted data
-            if (hydro_secretbox_decrypt(decrypted_buf, (uint8_t *) buf, ENCRYPTED_BUF_SIZE, 0, CONTEXT, key) != 0)
+            if (hydro_secretbox_decrypt(decrypted_buf, (uint8_t *)buf, ENCRYPTED_BUF_SIZE, 0, CONTEXT, key) != 0)
             {
 #ifdef DEBUG
                 printf("[ERROR] Decrypting file...\n");
@@ -140,9 +161,11 @@ int dencrypt_file(char *file_name, uint8_t *key)
 
             fwrite(decrypted_buf, BUF_SIZE, 1, fp_decrypted);
 
-            if (i == CHUNKS_TO_ENCRYPT - 1) decrypted_flag = 1;
+            if (i == CHUNKS_TO_ENCRYPT - 1)
+                decrypted_flag = 1;
         }
-        else {
+        else
+        {
             // Write original data
             fwrite(buf, ENCRYPTED_BUF_SIZE, 1, fp_decrypted);
         }
@@ -156,9 +179,10 @@ int dencrypt_file(char *file_name, uint8_t *key)
 
     // Read last chunk of data
     fread(buf, last_chunk_len, 1, fp_encrypted);
-    if (decrypted_flag == 0) {
+    if (decrypted_flag == 0)
+    {
         // Encrypt it and write it
-        if (hydro_secretbox_decrypt(decrypted_buf, (uint8_t *) buf, last_chunk_len, 0, CONTEXT, key) != 0)
+        if (hydro_secretbox_decrypt(decrypted_buf, (uint8_t *)buf, last_chunk_len, 0, CONTEXT, key) != 0)
         {
 #ifdef DEBUG
             printf("[ERROR] Decrypting file...\n");
@@ -167,7 +191,8 @@ int dencrypt_file(char *file_name, uint8_t *key)
 
         fwrite(decrypted_buf, last_chunk_len - hydro_secretbox_HEADERBYTES, 1, fp_decrypted);
     }
-    else {
+    else
+    {
         // Just write the original
         fwrite(buf, last_chunk_len, 1, fp_decrypted);
     }
@@ -177,5 +202,5 @@ int dencrypt_file(char *file_name, uint8_t *key)
     fclose(fp_decrypted);
     free(n_file_name);
 
-    return 0;
+    return OK;
 }
