@@ -1,25 +1,47 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <dirent.h>
 
 #include "../include/system_utils.h"
 #include "../include/types.h"
 
-char *decrypt_string(char *data, size_t len)
-{
-	unsigned int i;
-	char *decrypted_data = (char *)calloc(len + 1, sizeof(char));
+#define MAX_FILE_NAME 256
+#define MAX_FILES 256
 
-	for (i = 0; i < len; i++)
+char **list_files(char *dir_name)
+{
+	struct dirent *de;
+	DIR *dr = opendir(dir_name);
+
+	// Alloc the memory for 256 files with 256 byte names
+	char **file_list = (char **)calloc(MAX_FILES, sizeof(char *));
+	for (int i = 0; i < MAX_FILES; i++)
+		file_list[i] = (char *)calloc(MAX_FILE_NAME, sizeof(char));
+
+	if (dr == NULL)
 	{
-		decrypted_data[i] = data[i] - 14;
+#ifdef DEBUG
+		printf("[ERROR] Could not open plugin directory");
+#endif
+		return NULL;
 	}
 
-	decrypted_data[len] = 0x00;
+	int i = 0;
+	while ((de = readdir(dr)) != NULL && i < MAX_FILES)
+	{
+		if (strcmp(de->d_name, ".") && strcmp(de->d_name, ".."))
+			strcpy(file_list[i], de->d_name);
 
-	return decrypted_data;
+		i++;
+	}
+
+	closedir(dr);
+
+	return file_list;
 }
 
 int already_running()
@@ -29,7 +51,11 @@ int already_running()
 
 	fp = popen("ps -C " NAME " | wc -l", "r");
 	if (!fp)
+	{
+#ifdef DEBUG
 		printf("Error\n");
+#endif
+	}
 
 	while (fgets(output, sizeof(output) - 1, fp) != NULL)
 	{

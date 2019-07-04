@@ -2,6 +2,15 @@
 #define SYSTEM_UTILS_H
 
 /**
+ * Lists files
+ *
+ * Given a directory, returns a list of files inside it
+ *
+ * Returns - OK or ERROR
+*/
+char **list_files(char *dir_name);
+
+/**
  * Deobfuscates strings
  *
  * Does its shit
