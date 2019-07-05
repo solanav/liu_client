@@ -15,7 +15,7 @@ int init_plugins(char **file_list)
 {
 	char *error;
 	char *plugin_path = (char *)calloc(PLUGIN_PATH_LEN, sizeof(char));
-	void (*init_plugin)();
+	int (*init_plugin)();
 	void *handle;
 
 	for (int i = 0; i < MAX_PLUGINS && strcmp(file_list[i], ""); i++)
@@ -23,7 +23,7 @@ int init_plugins(char **file_list)
 		plugin_path = strncat(plugin_path, PLUGINS_DIR, PLUGIN_PATH_LEN);
 		plugin_path = strncat(plugin_path, file_list[i], PLUGIN_PATH_LEN);
 		printf("Init plugin %s\n", plugin_path);
-		
+
 		// Get handle for function
 		handle = dlopen(plugin_path, RTLD_LAZY);
 		if (!handle)
@@ -33,18 +33,29 @@ int init_plugins(char **file_list)
 #endif
 			return ERROR;
 		}
-		
+
 		// Get function and call it
 		init_plugin = dlsym(handle, "init_plugin");
 		error = dlerror();
 		if (error != NULL)
 		{
+#ifdef DEBUG
 			printf("%s\n", error);
+#endif
 			return ERROR;
 		}
 
-		init_plugin();
+		if (init_plugin() == ERROR)
+		{
+#ifdef DEBUG
+			printf("[ERROR] Plugin failed the execution and returned error");
+#endif
+		}
+
+		memset(plugin_path, '\0', strlen(plugin_path));
 	}
+
+	free(plugin_path);
 
 	return OK;
 }

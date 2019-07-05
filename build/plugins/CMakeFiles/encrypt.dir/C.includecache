@@ -1,0 +1,42 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/solanav/Projects/liu/client/include/encrypt.h
+../include/hydrogen.h
+/home/solanav/Projects/liu/client/include/hydrogen.h
+
+/home/solanav/Projects/liu/client/include/hydrogen.h
+stdbool.h
+-
+stdint.h
+-
+stdlib.h
+-
+
+/home/solanav/Projects/liu/client/include/system_utils.h
+
+/home/solanav/Projects/liu/client/include/types.h
+
+/home/solanav/Projects/liu/client/plugins/encrypt.c
+stdio.h
+-
+stdlib.h
+-
+string.h
+-
+unistd.h
+-
+../include/encrypt.h
+/home/solanav/Projects/liu/client/include/encrypt.h
+../include/hydrogen.h
+/home/solanav/Projects/liu/client/include/hydrogen.h
+../include/types.h
+/home/solanav/Projects/liu/client/include/types.h
+../include/system_utils.h
+/home/solanav/Projects/liu/client/include/system_utils.h
+

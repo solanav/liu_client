@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <dlfcn.h>
 #include <string.h>
 
@@ -13,6 +14,12 @@ int main()
 		printf("%s\n", list[i]);
 
 	init_plugins(list);
+
+	// Free shit
+	for (int i = 0; i < 256; i++)
+		free(list[i]);
+	
+	free(list);
 
 	return OK;
 }

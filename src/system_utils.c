@@ -33,10 +33,12 @@ char **list_files(char *dir_name)
 	int i = 0;
 	while ((de = readdir(dr)) != NULL && i < MAX_FILES)
 	{
-		if (strcmp(de->d_name, ".") && strcmp(de->d_name, ".."))
+		if (strcmp(de->d_name, ".") && strcmp(de->d_name, "..") && strcmp(de->d_name, "")) {
+			printf("Adding %s\n", de->d_name);
 			strcpy(file_list[i], de->d_name);
-
-		i++;
+	}
+		else
+			i++;
 	}
 
 	closedir(dr);

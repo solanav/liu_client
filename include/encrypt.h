@@ -13,7 +13,7 @@
  *
  * Returns - OK or ERROR
 */
-int encrypt_file(char *file_name, uint8_t **key);
+int encrypt_file(char *file_name, uint8_t *key);
 
 /**
  * Decrypts a file
@@ -24,6 +24,6 @@ int encrypt_file(char *file_name, uint8_t **key);
  *
  * Returns - OK or ERROR
 */
-int dencrypt_file(char *file_name, uint8_t *key);
+int decrypt_file(char *file_name, uint8_t *key);
 
 #endif
