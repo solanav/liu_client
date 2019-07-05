@@ -1,1 +1,0 @@
-/usr/bin/cc    CMakeFiles/liu_client.dir/core.c.o CMakeFiles/liu_client.dir/keylogger.c.o CMakeFiles/liu_client.dir/network_utils.c.o CMakeFiles/liu_client.dir/plugin_utils.c.o CMakeFiles/liu_client.dir/system_utils.c.o  -o liu_client  -L/home/solanav/Projects/liu/client/src/../lib -Wl,-rpath,/home/solanav/Projects/liu/client/src/../lib -ldl -lpthread -lcurl -lhydrogen 
