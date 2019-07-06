@@ -10,9 +10,6 @@ int main()
 {
 	char **list = list_files("plugins");
 
-	for (int i = 0; i < 256 && strcmp(list[i], ""); i++)
-		printf("%s\n", list[i]);
-
 	init_plugins(list);
 
 	// Free shit

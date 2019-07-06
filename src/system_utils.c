@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <dirent.h>
+#include <errno.h>
 
 #include "../include/system_utils.h"
 #include "../include/types.h"
@@ -22,10 +23,10 @@ char **list_files(char *dir_name)
 	for (int i = 0; i < MAX_FILES; i++)
 		file_list[i] = (char *)calloc(MAX_FILE_NAME, sizeof(char));
 
-	if (dr == NULL)
+	if (!dr)
 	{
 #ifdef DEBUG
-		printf("[ERROR] Could not open plugin directory");
+		printf("[ERROR] Could not open directory (%s)\n", strerror(errno));
 #endif
 		return NULL;
 	}
@@ -34,11 +35,9 @@ char **list_files(char *dir_name)
 	while ((de = readdir(dr)) != NULL && i < MAX_FILES)
 	{
 		if (strcmp(de->d_name, ".") && strcmp(de->d_name, "..") && strcmp(de->d_name, "")) {
-			printf("Adding %s\n", de->d_name);
-			strcpy(file_list[i], de->d_name);
-	}
-		else
+			strncpy(file_list[i], de->d_name, MAX_FILE_NAME);
 			i++;
+		}
 	}
 
 	closedir(dr);
