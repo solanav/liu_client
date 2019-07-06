@@ -26,7 +26,7 @@ char **list_files(char *dir_name)
 	if (!dr)
 	{
 #ifdef DEBUG
-		printf("[ERROR] Could not open directory (%s)\n", strerror(errno));
+		printf(P_ERROR"Could not open directory (%s)\n", strerror(errno));
 #endif
 		return NULL;
 	}

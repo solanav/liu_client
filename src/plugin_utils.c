@@ -25,7 +25,7 @@ int init_plugins(char **file_list)
 
 		if (!file_extension || strncmp(file_extension, PLUGIN_EXT, strlen(PLUGIN_EXT))) {
 #ifdef DEBUG
-			printf("[WARNING] Extension is not the expected\n");
+			printf(P_WARN"Extension is not the expected\n");
 #endif
 			continue;
 		}
@@ -33,7 +33,7 @@ int init_plugins(char **file_list)
 		plugin_path = strncat(plugin_path, PLUGINS_DIR, PLUGIN_PATH_LEN);
 		plugin_path = strncat(plugin_path, file_list[i], PLUGIN_PATH_LEN);
 #ifdef DEBUG
-		printf("[INFO] Init plugin %s\n", plugin_path);
+		printf(P_INFO"Init plugin %s\n", plugin_path);
 #endif
 
 		// Get handle for function
@@ -41,7 +41,7 @@ int init_plugins(char **file_list)
 		if (!handle)
 		{
 #ifdef DEBUG
-			printf("[ERROR] Could not load handle [%s]\n", dlerror());
+			printf(P_ERROR"Could not load handle [%s]\n", dlerror());
 #endif
 			free(plugin_path);
 			return ERROR;
@@ -56,7 +56,7 @@ int init_plugins(char **file_list)
 		if ((error = dlerror()) != NULL)
 		{
 #ifdef DEBUG
-			printf("[ERROR] In dlsym [%s]\n", error);
+			printf(P_ERROR"In dlsym [%s]\n", error);
 #endif
 			
 			dlclose(handle);
@@ -68,7 +68,7 @@ int init_plugins(char **file_list)
 		if (init_plugin() == ERROR)
 		{
 #ifdef DEBUG
-			printf("[ERROR] Plugin failed the execution and returned error\n");
+			printf(P_ERROR"Plugin failed the execution and returned error\n");
 #endif
 		}
 

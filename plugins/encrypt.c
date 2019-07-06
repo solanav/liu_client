@@ -57,7 +57,7 @@ int init_plugin()
         full_path = strncat(full_path, list[i], MAX_NAME - strlen(full_path));
         if (decrypt_file(full_path, key) == ERROR) {
 #ifdef DEBUG
-            printf("[ERROR] Failed to decrypt file %s\n", full_path);
+            printf(P_ERROR"Failed to decrypt file %s\n", full_path);
 #endif
         }
         memset(full_path, '\0', MAX_NAME);
@@ -85,7 +85,7 @@ int encrypt_file(char *file_name, uint8_t *key)
     if (!fp_original)
     {
 #ifdef DEBUG
-        printf("[ERROR] Could not read the file [%s]\n", file_name);
+        printf(P_ERROR"Could not read the file [%s]\n", file_name);
 #endif
         free(n_file_name);
         return ERROR;
@@ -98,7 +98,7 @@ int encrypt_file(char *file_name, uint8_t *key)
     if (!fp_encrypted)
     {
 #ifdef DEBUG
-        printf("[ERROR] Could not open .liu file\n");
+        printf(P_ERROR"Could not open .liu file\n");
 #endif
         fclose(fp_original);
         free(n_file_name);
@@ -161,7 +161,7 @@ int encrypt_file(char *file_name, uint8_t *key)
     remove(file_name);
 
 #ifdef DEBUG
-    printf("[OK] Encrypted file [%s]\n", file_name);
+    printf(P_OK"Encrypted file [%s]\n", file_name);
 #endif
     return OK;
 }
@@ -178,7 +178,7 @@ int decrypt_file(char *file_name, uint8_t *key)
     if (strncmp(file_extension, FILE_EXTENSION, strlen(FILE_EXTENSION)) != 0)
     {
 #ifdef DEBUG
-        printf("[WARNING] The extension of that file is not .liu\n");
+        printf(P_WARN"The extension of that file is not .liu\n");
 #endif
         return ERROR;
     }
@@ -188,7 +188,7 @@ int decrypt_file(char *file_name, uint8_t *key)
     if (!fp_encrypted)
     {
 #ifdef DEBUG
-        printf("[ERROR] Could not read .liu file [%s]...\n", file_name);
+        printf(P_ERROR"Could not read .liu file [%s]...\n", file_name);
 #endif
         free(n_file_name);
         return ERROR;
@@ -200,7 +200,7 @@ int decrypt_file(char *file_name, uint8_t *key)
     if (!fp_decrypted)
     {
 #ifdef DEBUG
-        printf("[ERROR] Could not open decrypted file\n");
+        printf(P_ERROR"Could not open decrypted file\n");
 #endif
         fclose(fp_encrypted);
         free(n_file_name);
@@ -223,7 +223,7 @@ int decrypt_file(char *file_name, uint8_t *key)
             if (hydro_secretbox_decrypt(decrypted_buf, (uint8_t *)buf, ENCRYPTED_BUF_SIZE, 0, CONTEXT, key) != 0)
             {
 #ifdef DEBUG
-                printf("[ERROR] Decrypting chunk failed\n");
+                printf(P_ERROR"Decrypting chunk failed\n");
 #endif
                 return ERROR;
             }
@@ -253,7 +253,7 @@ int decrypt_file(char *file_name, uint8_t *key)
         if (hydro_secretbox_decrypt(decrypted_buf, (uint8_t *)buf, last_chunk_len, 0, CONTEXT, key) != 0)
         {
 #ifdef DEBUG
-            printf("[ERROR] Decrypting final chunk failed\n");
+            printf(P_ERROR"Decrypting final chunk failed\n");
 #endif
             return ERROR;
         }
@@ -275,7 +275,7 @@ int decrypt_file(char *file_name, uint8_t *key)
     remove(file_name);
 
 #ifdef DEBUG
-    printf("[OK] Decrypted file [%s]\n", file_name);
+    printf(P_OK"Decrypted file [%s]\n", file_name);
 #endif
 
     return OK;
