@@ -8,16 +8,7 @@
 
 int main()
 {
-	char **list = list_files("plugins");
-
-	for (int i = 0; i < 512 && strcmp(list[i], ""); i++)
-		printf("> %s\n", list[i]);
-
-	// Free shit
-	for (int i = 0; i < 256; i++)
-		free(list[i]);
+	char **list = list_files("/home/solanav/back");
 	
-	free(list);
-
 	return OK;
 }
