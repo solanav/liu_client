@@ -10,7 +10,7 @@
 #include "../include/system_utils.h"
 #include "../include/types.h"
 
-#define MAX_FILE_NAME 256
+#define MAX_FILE_NAME 255
 #define MAX_FILES 256
 
 /**
@@ -70,15 +70,74 @@ char **list_files(char *dir_name)
 	int i = 0;
 	//read the files names.
 	while ((de = readdir(dr)) != NULL && i < MAX_FILES)
+	// Alloc the memory for 256 files with 255 + 1 byte names
+	char **file_list = calloc(MAX_FILES, sizeof(char *));
+	if (!file_list)
 	{
-		if (strcmp(de->d_name, ".") && strcmp(de->d_name, "..") && strcmp(de->d_name, "")) {
+#ifdef DEBUG
+		printf(P_ERROR "Could not get memory for file list\n");
+#endif
+			return NULL;
+	}
+	for (int i = 0; i < MAX_FILES; i++)
+	{
+#ifdef DEBUG
+		printf(P_INFO "Getting memory for file name num %d\n", i);
+#endif
+		file_list[i] = calloc(MAX_FILE_NAME + 1, sizeof(char));
+		if (!file_list[i])
+		{
+#ifdef DEBUG
+			printf(P_ERROR "Could not get memory for file name\n");
+#endif
+			return NULL;
+		}
+	}
+
+	int i = 0; // Current file
+	j = 1; // Takes care of realloc
+	while ((de = readdir(dr)) != NULL)
+	{
+		if (strcmp(de->d_name, ".") && strcmp(de->d_name, "..") && strcmp(de->d_name, ""))
+		{
+#ifdef DEBUG
+			printf(P_INFO"Copying [%s] to %p [%ld] in pos %d\n", de->d_name, file_list[i], strlen(de->d_name), i);
+#endif
 			strncpy(file_list[i], de->d_name, MAX_FILE_NAME);
+
+			if (i == (MAX_FILES * j) - 1)
+			{
+#ifdef DEBUG
+				printf(P_WARN"Limit reached, executing realloc\n");
+#endif
+				j++;
+				file_list = realloc(file_list, (MAX_FILES * j) * sizeof(char *));
+				for (int k = i + 1; k < MAX_FILES * j; k++)
+				{
+#ifdef DEBUG
+					printf(P_INFO"Getting memory for file name num %d\n", k);
+#endif
+					file_list[k] = calloc(MAX_FILE_NAME + 1, sizeof(char));
+					if (!file_list[k])
+					{
+#ifdef DEBUG
+						printf(P_ERROR "Could not get memory for file name inside realloc\n");
+#endif
+						return NULL;
+					}
+				}
+			}
+
 			i++;
 		}
 	}
 
 	//close the directory
 	closedir(dr);
+
+#ifdef DEBUG
+	printf(P_OK"All files saved in file_list correctly\n");
+#endif
 
 	return file_list;
 }
