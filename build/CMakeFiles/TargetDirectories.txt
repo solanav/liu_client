@@ -1,0 +1,8 @@
+/home/artiimor/Liu/liu_client/build/CMakeFiles/rebuild_cache.dir
+/home/artiimor/Liu/liu_client/build/CMakeFiles/edit_cache.dir
+/home/artiimor/Liu/liu_client/build/src/CMakeFiles/rebuild_cache.dir
+/home/artiimor/Liu/liu_client/build/src/CMakeFiles/liu_client.dir
+/home/artiimor/Liu/liu_client/build/src/CMakeFiles/edit_cache.dir
+/home/artiimor/Liu/liu_client/build/plugins/CMakeFiles/rebuild_cache.dir
+/home/artiimor/Liu/liu_client/build/plugins/CMakeFiles/encrypt.dir
+/home/artiimor/Liu/liu_client/build/plugins/CMakeFiles/edit_cache.dir

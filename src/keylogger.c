@@ -7,6 +7,11 @@
 
 #define UAM_KEYBOARD "/dev/input/event5"
 
+/**
+ * init_keylogger
+ * 
+ * @return OK or ERROR
+ */
 int init_keylogger()
 {
 	size_t rb;
