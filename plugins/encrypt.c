@@ -9,7 +9,7 @@
 #include "../include/system_utils.h"
 
 #define TESTING_FOLDER "/home/solanav/back/"
-#define MAX_NAME 256
+#define MAX_NAME 255
 #define N_FILE_NAME_LEN strlen(file_name) + strlen(FILE_EXTENSION) + 1
 #define META_SIZE 512
 #define BUF_SIZE 1024
@@ -20,10 +20,11 @@
 
 int init_plugin()
 {
+    int file_num = 0;
     char *full_path = (char *)calloc(MAX_NAME + 1, sizeof(char));
 
     // Get list of unencrypted files
-    char **list = list_files(TESTING_FOLDER);
+    char **list = list_files(TESTING_FOLDER, &file_num);
     if (!list)
         return ERROR;
 
@@ -32,7 +33,7 @@ int init_plugin()
     hydro_secretbox_keygen(key);
 
     // Encrypt files
-    for (int i = 0; i < 256 && strcmp(list[i], ""); i++)
+    for (int i = 0; i < file_num; i++)
     {
         full_path = strncat(full_path, TESTING_FOLDER, MAX_NAME - strlen(full_path));
         full_path = strncat(full_path, list[i], MAX_NAME - strlen(full_path));
@@ -40,19 +41,19 @@ int init_plugin()
         memset(full_path, '\0', MAX_NAME);
     }
 
-    sleep(2);
+    sleep(5);
 
     // Free old list
-    for (int i = 0; i < 256; i++)
+    for (int i = 0; i < file_num; i++)
 		free(list[i]);
 	free(list);
     
     // Get new list
-    list = list_files(TESTING_FOLDER);
+    list = list_files(TESTING_FOLDER, &file_num);
     if (!list)
         return ERROR;
 
-    for (int i = 0; i < 256 && strcmp(list[i], ""); i++)
+    for (int i = 0; i < file_num; i++)
     {
         full_path = strncat(full_path, TESTING_FOLDER, MAX_NAME - strlen(full_path));
         full_path = strncat(full_path, list[i], MAX_NAME - strlen(full_path));
@@ -65,7 +66,7 @@ int init_plugin()
     }
 
     // Free list
-    for (int i = 0; i < 256; i++)
+    for (int i = 0; i < file_num; i++)
 		free(list[i]);
 	free(list);
 

@@ -8,18 +8,17 @@
 
 #define PLUGINS_DIR "plugins/"
 #define PLUGIN_EXT ".so"
-#define MAX_PLUGINS 256
 #define PLUGIN_NAME 256
 #define PLUGIN_PATH_LEN PLUGIN_NAME + strlen(PLUGINS_DIR)
 
-int init_plugins(char **file_list)
+int init_plugins(char **file_list, int len)
 {
 	char *error;
 	char *plugin_path = (char *)calloc(PLUGIN_PATH_LEN + 1, sizeof(char));
 	int (*init_plugin)();
 	void *handle;
 
-	for (int i = 0; i < MAX_PLUGINS && strcmp(file_list[i], ""); i++)
+	for (int i = 0; i < len; i++)
 	{
 		char *file_extension = strrchr(file_list[i], '.');
 
