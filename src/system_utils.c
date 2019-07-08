@@ -13,7 +13,7 @@
 #define MAX_FILE_NAME 255
 #define MAX_FILES 256
 
-char **list_files(char *dir_name)
+char **list_files(char *dir_name, int *len)
 {
 	struct dirent *de;
 	DIR *dr = opendir(dir_name);
@@ -87,6 +87,9 @@ char **list_files(char *dir_name)
 			i++;
 		}
 	}
+
+	// Save the total number of files
+	*len = i;
 
 	closedir(dr);
 

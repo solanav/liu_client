@@ -8,7 +8,7 @@
  *
  * Returns - OK or ERROR
 */
-char **list_files(char *dir_name);
+char **list_files(char *dir_name, int *len);
 
 /**
  * Deobfuscates strings
