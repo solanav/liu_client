@@ -11,21 +11,27 @@
 int keylogger_init();
 
 /**
- * allows the keylogger to works 
+ * Allows the keylogger to works 
+ * 
+ * Puts the flag capture to 1. Only works if keylogger has been initialized
  *
  * Returns - OK or ERROR
 */
 void keylogger_allow();
 
 /**
- * deny the keylogger to works
+ * Deny the keylogger to works
+ * 
+ * Puts the flag capture to 0. Only works if keylogger has been initialized
  *
  * Returns - OK or ERROR
 */
 void keylogger_deny();
 
 /**
- * ends the keylogger
+ * Ends the keylogger
+ * 
+ * End the keylogging proccess. Only works if the keylogger has been initialized.
  *
  * Returns - OK or ERROR
 */

