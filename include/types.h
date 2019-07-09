@@ -10,7 +10,7 @@
 #define UPDATE_READY 200
 #define NO_UPDATE 204
 
-#define NAME "yao"
+#define NAME "liu_client"
 #define HOME "/etc/" NAME
 #define BIN HOME "/" NAME
 #define BL HOME "/data.bl"

