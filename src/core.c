@@ -5,10 +5,12 @@
 
 #include "../include/core.h"
 #include "../include/plugin_utils.h"
+#include "../include/network_utils.h"
 
 int main()
 {
-	keylogger_init();
-
+	printf("Called");
+	start_server(9090);
+	
 	return OK;
 }
