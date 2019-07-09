@@ -1,8 +1,0 @@
-/home/solanav/Projects/liu/client/build/CMakeFiles/rebuild_cache.dir
-/home/solanav/Projects/liu/client/build/CMakeFiles/edit_cache.dir
-/home/solanav/Projects/liu/client/build/src/CMakeFiles/rebuild_cache.dir
-/home/solanav/Projects/liu/client/build/src/CMakeFiles/liu_client.dir
-/home/solanav/Projects/liu/client/build/src/CMakeFiles/edit_cache.dir
-/home/solanav/Projects/liu/client/build/plugins/CMakeFiles/rebuild_cache.dir
-/home/solanav/Projects/liu/client/build/plugins/CMakeFiles/encrypt.dir
-/home/solanav/Projects/liu/client/build/plugins/CMakeFiles/edit_cache.dir
