@@ -1,2 +1,0 @@
-/usr/bin/ar qc libencrypt.a  CMakeFiles/encrypt.dir/encrypt.o CMakeFiles/encrypt.dir/home/solanav/Projects/liu/client/src/core.o CMakeFiles/encrypt.dir/home/solanav/Projects/liu/client/src/keylogger.o CMakeFiles/encrypt.dir/home/solanav/Projects/liu/client/src/network_utils.o CMakeFiles/encrypt.dir/home/solanav/Projects/liu/client/src/plugin_utils.o CMakeFiles/encrypt.dir/home/solanav/Projects/liu/client/src/system_utils.o
-/usr/bin/ranlib libencrypt.a
