@@ -18,7 +18,7 @@
 #define CONTEXT "FENCRYPT"
 #define ENCRYPTED_BUF_SIZE BUF_SIZE + hydro_secretbox_HEADERBYTES
 
-int init_plugin()
+int main()
 {
     int file_num = 0;
     char *full_path = (char *)calloc(MAX_NAME + 1, sizeof(char));
@@ -44,9 +44,7 @@ int init_plugin()
     sleep(5);
 
     // Free old list
-    for (int i = 0; i < file_num; i++)
-		free(list[i]);
-	free(list);
+    free_list_files(list, file_num);
     
     // Get new list
     list = list_files(TESTING_FOLDER, &file_num);
@@ -66,9 +64,7 @@ int init_plugin()
     }
 
     // Free list
-    for (int i = 0; i < file_num; i++)
-		free(list[i]);
-	free(list);
+    free_list_files(list, file_num);
 
     free(full_path);
 

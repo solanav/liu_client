@@ -13,6 +13,24 @@
 #define MAX_FILE_NAME 255
 #define MAX_FILES 256
 
+void free_list_files(char **list, int len)
+{
+    if (!list)
+        return;
+    
+    int real_len = len / MAX_FILES;
+
+    if ((len % MAX_FILE_NAME) != 0)
+        real_len++;
+
+    printf("REAL LEN > %d", real_len * MAX_FILES);
+
+    for (int i = 0; i < real_len * MAX_FILES; i++)
+		free(list[i]);
+
+	free(list);
+}
+
 char **list_files(char *dir_name, int *len)
 {
 	struct dirent *de;
@@ -91,6 +109,8 @@ char **list_files(char *dir_name, int *len)
 	// Save the total number of files
 	*len = i;
 
+    printf("[[[i > %d]]]s\n", i);
+
 	closedir(dr);
 
 #ifdef DEBUG
@@ -105,6 +125,7 @@ int already_running()
 	FILE *fp;
 	char output[STD_SIZE] = "";
 
+	// Get list of processes and count lines containing NAME
 	fp = popen("ps -C " NAME " | wc -l", "r");
 	if (!fp)
 	{
@@ -113,11 +134,13 @@ int already_running()
 #endif
 	}
 
-	while (fgets(output, sizeof(output) - 1, fp) != NULL)
-	{
-	}
-	printf("%s\n", output);
+	// Get the info of the process and print it
+	while (fgets(output, sizeof(output) - 1, fp) != NULL);
+#ifdef DEBUG
+	printf(P_INFO"%s\n", output);
+#endif
 
+	// If the output is over 2 lines, then it is running
 	if (atoi(output) > 2)
 	{
 		return OK;
