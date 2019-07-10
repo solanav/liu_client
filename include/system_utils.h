@@ -2,6 +2,15 @@
 #define SYSTEM_UTILS_H
 
 /**
+ * Frees a list of files
+ *
+ * We use a wrapper because of the realloc and MAX_FILES
+ *
+ * Returns - OK or ERROR
+*/
+void free_list_files(char **list, int len);
+
+/**
  * Lists files
  *
  * Given a directory, returns a list of files inside it
