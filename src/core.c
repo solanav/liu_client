@@ -21,7 +21,7 @@
 
 int main()
 {
-	pid_t pid = -1;
+	pid_t pid = fork();
 
 	if (pid < 0)
 	{

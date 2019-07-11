@@ -125,9 +125,7 @@ int already_running()
 
 	// Get the info of the process and print it
 	while (fgets(output, sizeof(output) - 1, fp) != NULL);
-#ifdef DEBUG
-	printf(P_INFO"%s\n", output);
-#endif
+	DEBUG_PRINT((P_INFO"%s\n", output));
 
 	// If the output is over 2 lines, then it is running
 	if (atoi(output) > 2)
