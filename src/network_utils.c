@@ -7,6 +7,14 @@
 
 #include "../include/types.h"
 
+#ifdef DEBUG
+
+# define DEBUG_PRINT(x) printf x 
+#else
+# define DEBUG_PRINT(x) do {} while (0) 
+
+#endif
+
 #define MAX_UDP 512
 
 int start_server(int port)
@@ -34,9 +42,7 @@ int start_server(int port)
 	if (bind(socket_desc, (const struct sockaddr *)&self_addr,
 			 sizeof(self_addr)) < 0)
 	{
-#ifdef DEBUG
-		printf(P_ERROR "The socket could not be opened\n");
-#endif
+		DEBUG_PRINT((P_ERROR "The socket could not be opened\n"));
 		return ERROR;
 	}
 
@@ -62,9 +68,7 @@ size_t upload_data(char *ip_addr, int port, unsigned char *data, size_t len)
 	socket_desc = socket(AF_INET, SOCK_DGRAM, 0);
 	if (socket_desc < 0)
 	{
-#ifdef DEBUG
-		printf(P_ERROR "The socket could not be opened\n");
-#endif
+		DEBUG_PRINT((P_ERROR "The socket could not be opened\n"));
 		return ERROR;
 	}
 
