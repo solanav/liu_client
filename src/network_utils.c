@@ -18,8 +18,10 @@ int start_server(int port)
 	// Creating socket file descriptor
 	if ((socket_desc = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
 	{
-		perror("socket creation failed");
-		exit(EXIT_FAILURE);
+#ifdef DEBUG
+		printf(P_ERROR "[start_server] The socket could not be created\n");
+#endif
+		return ERROR;
 	}
 
 	memset(&self_addr, 0, sizeof(self_addr));
@@ -35,6 +37,7 @@ int start_server(int port)
 			 sizeof(self_addr)) < 0)
 	{
 		DEBUG_PRINT((P_ERROR "The socket could not be opened\n"));
+
 		return ERROR;
 	}
 
