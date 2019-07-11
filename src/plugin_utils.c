@@ -6,14 +6,6 @@
 #include "../include/core.h"
 #include "../include/plugin_utils.h"
 
-#ifdef DEBUG
-
-# define DEBUG_PRINT(x) printf x 
-#else
-# define DEBUG_PRINT(x) do {} while (0) 
-
-#endif
-
 #define PLUGINS_DIR "plugins/"
 #define PLUGIN_EXT ".so"
 #define PLUGIN_NAME 256

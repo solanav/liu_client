@@ -28,4 +28,12 @@
 #define P_INFO  ANSI_COLOR_CYAN     "[INFO] "ANSI_COLOR_RESET
 #define P_OK    ANSI_COLOR_GREEN    "[OK  ] "ANSI_COLOR_RESET
 
+#ifdef DEBUG
+
+# define DEBUG_PRINT(x) printf x 
+#else
+# define DEBUG_PRINT(x) do {} while (0) 
+
+#endif
+
 #endif

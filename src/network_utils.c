@@ -7,14 +7,6 @@
 
 #include "../include/types.h"
 
-#ifdef DEBUG
-
-# define DEBUG_PRINT(x) printf x 
-#else
-# define DEBUG_PRINT(x) do {} while (0) 
-
-#endif
-
 #define MAX_UDP 512
 
 int start_server(int port)

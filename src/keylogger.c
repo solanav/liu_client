@@ -9,14 +9,6 @@
 #include "keylogger.h"
 #include "../include/types.h"
 
-#ifdef DEBUG
-
-# define DEBUG_PRINT(x) printf x 
-#else
-# define DEBUG_PRINT(x) do {} while (0) 
-
-#endif
-
 #define KEYBOARD_PATH "/dev/input/by-id/usb-CM_Storm_Keyboard_--_Trigger_Z_gaming-event-kbd"
 
 typedef struct
