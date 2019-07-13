@@ -5,6 +5,11 @@
 #include <dlfcn.h>
 #include <string.h>
 
+#include <openssl/rsa.h>
+#include <openssl/sha.h>
+#include <openssl/bio.h>
+#include <openssl/pem.h>
+
 #include "../include/core.h"
 #include "../include/plugin_utils.h"
 #include "../include/network_utils.h"

@@ -5,4 +5,4 @@ file(GLOB SOURCES_S "../src/*.c")
 add_executable(liu_client ${SOURCES_S})
 set_target_properties(liu_client PROPERTIES LINK_FLAGS "-fno-stack-protector")
 
-target_link_libraries(liu_client dl pthread curl hydrogen rt)
+target_link_libraries(liu_client dl pthread curl hydrogen rt crypto)
