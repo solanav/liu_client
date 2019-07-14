@@ -11,7 +11,11 @@
 
 void encryption_testing()
 {
-	/*
+	/**
+	 * =================================================
+	 * THIS IS A TEST FUNCTION, NOT FINAL. DO NOT TOUCH.
+	 * =================================================
+	 */
 	unsigned char digest[SHA256_DIGEST_LENGTH];
 	unsigned char buf[] = "\x69\x69\x69\x69\x69\x69";
 	SHA256_CTX sha_ctx;
@@ -52,7 +56,6 @@ void encryption_testing()
         printf(P_ERROR"Signature is invalid\n");
         return 1;
     }
-	*/
 }
 
 int start_server(int port)
