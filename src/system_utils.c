@@ -110,7 +110,9 @@ int already_running()
 	fp = popen("ps -C " NAME " | wc -l", "r");
 	if (!fp)
 	{
-		DEBUG_PRINT(("Error\n"));
+#ifdef DEBUG
+		printf("Error\n");
+#endif
 	}
 
 	// Get the info of the process and print it
