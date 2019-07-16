@@ -18,5 +18,9 @@ int main()
 	
 	init_plugins(file_list, len);
 
+	add_terminal_message_with_colour("prueba final lol", TERMINAL_LIGHT_CYAN);
+
+	printf("HOLA\n");
+
 	return OK;
 }
