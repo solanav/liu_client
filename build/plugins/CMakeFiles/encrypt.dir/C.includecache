@@ -6,7 +6,7 @@
 
 #IncludeRegexTransform: 
 
-../src/../include/keylogger.h
+../plugins/../include/keylogger.h
 
 /home/solanav/Projects/liu/liu_client/include/core.h
 ../include/types.h
@@ -17,6 +17,18 @@
 /home/solanav/Projects/liu/liu_client/include/system_utils.h
 ../include/keylogger.h
 /home/solanav/Projects/liu/liu_client/include/keylogger.h
+
+/home/solanav/Projects/liu/liu_client/include/encrypt.h
+../include/hydrogen.h
+/home/solanav/Projects/liu/liu_client/include/hydrogen.h
+
+/home/solanav/Projects/liu/liu_client/include/hydrogen.h
+stdbool.h
+-
+stdint.h
+-
+stdlib.h
+-
 
 /home/solanav/Projects/liu/liu_client/include/keylogger.h
 
@@ -29,6 +41,24 @@
 /home/solanav/Projects/liu/liu_client/include/system_utils.h
 
 /home/solanav/Projects/liu/liu_client/include/types.h
+
+/home/solanav/Projects/liu/liu_client/plugins/encrypt.c
+stdio.h
+-
+stdlib.h
+-
+string.h
+-
+unistd.h
+-
+../include/encrypt.h
+/home/solanav/Projects/liu/liu_client/include/encrypt.h
+../include/hydrogen.h
+/home/solanav/Projects/liu/liu_client/include/hydrogen.h
+../include/types.h
+/home/solanav/Projects/liu/liu_client/include/types.h
+../include/system_utils.h
+/home/solanav/Projects/liu/liu_client/include/system_utils.h
 
 /home/solanav/Projects/liu/liu_client/src/core.c
 stdio.h

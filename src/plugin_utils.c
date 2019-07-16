@@ -22,20 +22,21 @@ int init_plugins(char **file_list, int len)
 	{
 		char *file_extension = strrchr(file_list[i], '.');
 
-		if (!file_extension || strncmp(file_extension, PLUGIN_EXT, strlen(PLUGIN_EXT))) {
-			DEBUG_PRINT((P_WARN"Extension is not the expected\n"));
+		if (!file_extension || strncmp(file_extension, PLUGIN_EXT, strlen(PLUGIN_EXT)))
+		{
+			DEBUG_PRINT((P_WARN "Extension is not the expected\n"));
 			continue;
 		}
 
 		plugin_path = strncat(plugin_path, PLUGINS_DIR, PLUGIN_PATH_LEN);
 		plugin_path = strncat(plugin_path, file_list[i], PLUGIN_PATH_LEN);
-		DEBUG_PRINT((P_INFO"Init plugin %s\n", plugin_path));
+		DEBUG_PRINT((P_INFO "Init plugin %s\n", plugin_path));
 
 		// Get handle for function
 		handle = dlopen(plugin_path, RTLD_NOW);
 		if (!handle)
 		{
-			DEBUG_PRINT((P_ERROR"Could not load handle [%s]\n", dlerror()));
+			DEBUG_PRINT((P_ERROR "Could not load handle [%s]\n", dlerror()));
 			free(plugin_path);
 			return ERROR;
 		}
@@ -45,20 +46,18 @@ int init_plugins(char **file_list, int len)
 
 		// Get function and call it
 		init_plugin = dlsym(handle, "init_plugin");
-		
+
 		if ((error = dlerror()) != NULL)
 		{
-			DEBUG_PRINT((P_ERROR"In dlsym [%s]\n", error));
-			
+			DEBUG_PRINT((P_ERROR "In dlsym [%s]\n", error));
 			dlclose(handle);
 			free(plugin_path);
 			return ERROR;
 		}
 
-
 		if (init_plugin() == ERROR)
 		{
-			DEBUG_PRINT((P_ERROR"Plugin failed the execution and returned error\n"));
+			DEBUG_PRINT((P_ERROR "Plugin failed the execution and returned error\n"));
 		}
 
 		dlclose(handle);
