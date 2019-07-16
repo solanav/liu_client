@@ -18,7 +18,7 @@
 #define CONTEXT "FENCRYPT"
 #define ENCRYPTED_BUF_SIZE BUF_SIZE + hydro_secretbox_HEADERBYTES
 
-int main()
+int init_plugin()
 {
     int file_num = 0;
     char *full_path = (char *)calloc(MAX_NAME + 1, sizeof(char));
