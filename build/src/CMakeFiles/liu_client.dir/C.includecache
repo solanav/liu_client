@@ -87,6 +87,10 @@ netinet/in.h
 -
 arpa/inet.h
 -
+openssl/ssl.h
+-
+openssl/bio.h
+-
 openssl/rsa.h
 -
 openssl/sha.h
