@@ -72,9 +72,7 @@ int start_server(int port)
 	// Creating socket file descriptor
 	if ((socket_desc = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
 	{
-#ifdef DEBUG
-		printf(P_ERROR "[start_server] The socket could not be created\n");
-#endif
+		DEBUG_PRINT((P_ERROR "[start_server] The socket could not be created\n"););
 		return ERROR;
 	}
 
