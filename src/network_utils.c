@@ -67,31 +67,28 @@ int start_server(int port)
 {
 	int socket_desc;
 	char buf[MAX_UDP];
-	struct sockaddr_in self_addr, other_addr;
+	struct sockaddr_in servaddr, cliaddr;
 
 	// Creating socket file descriptor
 	if ((socket_desc = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
 	{
-#ifdef DEBUG
-		printf(P_ERROR "[start_server] The socket could not be created\n");
-#endif
-		return ERROR;
+		perror("socket creation failed");
+		exit(EXIT_FAILURE);
 	}
 
-	memset(&self_addr, 0, sizeof(self_addr));
-	memset(&other_addr, 0, sizeof(other_addr));
+	memset(&servaddr, 0, sizeof(servaddr));
+	memset(&cliaddr, 0, sizeof(cliaddr));
 
-	// Filling the self info
-	self_addr.sin_family = AF_INET;
-	self_addr.sin_addr.s_addr = INADDR_ANY;
-	self_addr.sin_port = htons(port);
+	// Filling server information
+	servaddr.sin_family = AF_INET;
+	servaddr.sin_addr.s_addr = INADDR_ANY;
+	servaddr.sin_port = htons(port);
 
-	// Bind the socket with the self address
-	if (bind(socket_desc, (const struct sockaddr *)&self_addr,
-			 sizeof(self_addr)) < 0)
+	// Bind the socket with the server address
+	if (bind(socket_desc, (const struct sockaddr *)&servaddr,
+			 sizeof(servaddr)) < 0)
 	{
 		DEBUG_PRINT((P_ERROR "The socket could not be opened\n"));
-
 		return ERROR;
 	}
 
@@ -99,7 +96,7 @@ int start_server(int port)
 	{
 		int len, n;
 		n = recvfrom(socket_desc, (char *)buf, MAX_UDP,
-					 MSG_WAITALL, (struct sockaddr *)&other_addr,
+					 MSG_WAITALL, (struct sockaddr *)&cliaddr,
 					 &len);
 		buf[n] = '\0';
 

