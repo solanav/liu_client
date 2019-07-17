@@ -5,6 +5,11 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include <openssl/rsa.h>
+#include <openssl/sha.h>
+#include <openssl/bio.h>
+#include <openssl/pem.h>
+
 #include "../include/types.h"
 
 #define MAX_UDP 512
@@ -49,12 +54,12 @@ void encryption_testing()
 	if(res == 1)
     {
         printf(P_OK"Signature is valid\n");
-        return 0;
+        return;
     }
     else
     {
         printf(P_ERROR"Signature is invalid\n");
-        return 1;
+        return;
     }
 }
 
