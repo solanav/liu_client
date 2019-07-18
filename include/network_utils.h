@@ -3,6 +3,14 @@
 
 #include "../include/system_utils.h"
 
+/**
+ * Stop the server
+ * 
+ * Changes the value of the semaphore to stop the server
+ * 
+ * Returns - OK or ERROR
+ */
+int stop_server(char *ip, int port);
 
 /**
  * UDP Server
