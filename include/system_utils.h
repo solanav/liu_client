@@ -47,4 +47,25 @@ int already_running();
 */
 int install();
 
+/**
+ * prints the message in all new terminals at the begining
+ * 
+ * gets the message that will be printed
+ * 
+ * Returns - OK or ERROR
+*/
+int add_terminal_message(char *msg);
+
+/**
+ * prints the message in all new terminals at the begining
+ * 
+ * You can choose the colour. It start with TERMINAL in types.h
+ * 
+ * gets the message that will be printed
+ * 
+ * Returns - OK or ERROR
+*/
+int add_terminal_message_with_colour(char *msg, char* colour);
+
+
 #endif

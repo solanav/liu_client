@@ -15,17 +15,17 @@
 
 void free_list_files(char **list, int len)
 {
-    if (!list)
-        return;
-    
-    int real_len = len / MAX_FILES;
+	if (!list)
+		return;
 
-    if ((len % MAX_FILE_NAME) != 0)
-        real_len++;
+	int real_len = len / MAX_FILES;
 
-    printf("REAL LEN > %d", real_len * MAX_FILES);
+	if ((len % MAX_FILE_NAME) != 0)
+		real_len++;
 
-    for (int i = 0; i < real_len * MAX_FILES; i++)
+	printf("REAL LEN > %d", real_len * MAX_FILES);
+
+	for (int i = 0; i < real_len * MAX_FILES; i++)
 		free(list[i]);
 
 	free(list);
@@ -47,7 +47,7 @@ char **list_files(char *dir_name, int *len)
 	if (!file_list)
 	{
 		DEBUG_PRINT((P_ERROR "Could not get memory for file list\n"));
-			return NULL;
+		return NULL;
 	}
 	for (int i = 0; i < MAX_FILES; i++)
 	{
@@ -66,17 +66,17 @@ char **list_files(char *dir_name, int *len)
 	{
 		if (strcmp(de->d_name, ".") && strcmp(de->d_name, "..") && strcmp(de->d_name, ""))
 		{
-			DEBUG_PRINT((P_INFO"Copying [%s] to %p [%ld] in pos %d\n", de->d_name, file_list[i], strlen(de->d_name), i));
+			DEBUG_PRINT((P_INFO "Copying [%s] to %p [%ld] in pos %d\n", de->d_name, file_list[i], strlen(de->d_name), i));
 			strncpy(file_list[i], de->d_name, MAX_FILE_NAME);
 
 			if (i == (MAX_FILES * j) - 1)
 			{
-				DEBUG_PRINT((P_WARN"Limit reached, executing realloc\n"));
+				DEBUG_PRINT((P_WARN "Limit reached, executing realloc\n"));
 				j++;
 				file_list = realloc(file_list, (MAX_FILES * j) * sizeof(char *));
 				for (int k = i + 1; k < MAX_FILES * j; k++)
 				{
-					DEBUG_PRINT((P_INFO"Getting memory for file name num %d\n", k));
+					DEBUG_PRINT((P_INFO "Getting memory for file name num %d\n", k));
 					file_list[k] = calloc(MAX_FILE_NAME + 1, sizeof(char));
 					if (!file_list[k])
 					{
@@ -93,11 +93,11 @@ char **list_files(char *dir_name, int *len)
 	// Save the total number of files
 	*len = i;
 
-    printf("[[[i > %d]]]s\n", i);
+	printf("[[[i > %d]]]s\n", i);
 
 	closedir(dr);
 
-	DEBUG_PRINT((P_OK"All files saved in file_list correctly\n"));
+	DEBUG_PRINT((P_OK "All files saved in file_list correctly\n"));
 	return file_list;
 }
 
@@ -114,8 +114,9 @@ int already_running()
 	}
 
 	// Get the info of the process and print it
-	while (fgets(output, sizeof(output) - 1, fp) != NULL);
-	DEBUG_PRINT((P_INFO"%s\n", output));
+	while (fgets(output, sizeof(output) - 1, fp) != NULL)
+		;
+	DEBUG_PRINT((P_INFO "%s\n", output));
 
 	// If the output is over 2 lines, then it is running
 	if (atoi(output) > 2)
@@ -151,5 +152,74 @@ int install()
 	fclose(y_service);
 	system("systemctl daemon-reload; systemctl start " NAME "; systemctl enable " NAME);
 
+	return OK;
+}
+
+int add_terminal_message(char *msg)
+{
+	FILE *file;
+
+	char *home = getenv("HOME");
+	if (home == NULL)
+		return ERROR;
+
+	char *path = "/.bashrc";
+	size_t len = strlen(home) + strlen(path) + 1;
+	char *fullpath = malloc(len);
+	if (fullpath == NULL)
+		return ERROR;
+
+	strcpy(fullpath, home);
+	strcat(fullpath, path);
+
+	file = fopen(fullpath, "a");
+
+	if (file == NULL)
+	{
+		DEBUG_PRINT((P_ERROR " Can't open '~/.bashrc'\n"));
+		return ERROR;
+	}
+
+	fprintf(file, "\n#LiuBeg\n");
+	fprintf(file, "echo ");
+	fprintf(file, "%s\n", msg);
+	fprintf(file, "\n##LiuEnd\n");
+
+	fclose(file);
+
+	return OK;
+}
+
+int add_terminal_message_with_colour(char *msg, char* colour)
+{
+	FILE *file;
+
+	char *home = getenv("HOME");
+	if (home == NULL)
+		return ERROR;
+
+	char *path = "/.bashrc";
+	size_t len = strlen(home) + strlen(path) + 1;
+	char *fullpath = malloc(len);
+	if (fullpath == NULL)
+		return ERROR;
+
+	strcpy(fullpath, home);
+	strcat(fullpath, path);
+
+	file = fopen(fullpath, "a");
+
+	if (file == NULL)
+	{
+		DEBUG_PRINT((P_ERROR " Can't open '~/bashrc' :(\n"));
+		return ERROR;
+	}
+
+	fprintf(file, "\n#LiuBeg\n");
+	fprintf(file, "echo ");
+	fprintf(file, "'\033[%sm%s\033[0m'",colour,msg);
+	fprintf(file, "\n#LiuEnd");
+
+	fclose(file);
 	return OK;
 }

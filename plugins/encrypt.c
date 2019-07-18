@@ -20,54 +20,53 @@
 
 int init_plugin()
 {
-    int file_num = 0;
-    char *full_path = (char *)calloc(MAX_NAME + 1, sizeof(char));
+	int file_num = 0;
+	char *full_path = (char *)calloc(MAX_NAME + 1, sizeof(char));
 
-    // Get list of unencrypted files
-    char **list = list_files(TESTING_FOLDER, &file_num);
-    if (!list)
-        return ERROR;
+	// Get list of unencrypted files
+	char **list = list_files(TESTING_FOLDER, &file_num);
+	if (!list)
+		return ERROR;
 
-    // Generate encryption key
-    uint8_t key[hydro_secretbox_KEYBYTES];
-    hydro_secretbox_keygen(key);
+	// Generate encryption key
+	uint8_t key[hydro_secretbox_KEYBYTES];
+	hydro_secretbox_keygen(key);
 
-    // Encrypt files
-    for (int i = 0; i < file_num; i++)
-    {
-        full_path = strncat(full_path, TESTING_FOLDER, MAX_NAME - strlen(full_path));
-        full_path = strncat(full_path, list[i], MAX_NAME - strlen(full_path));
-        encrypt_file(full_path, key);
-        memset(full_path, '\0', MAX_NAME);
-    }
+	// Encrypt files
+	for (int i = 0; i < file_num; i++)
+	{
+		full_path = strncat(full_path, TESTING_FOLDER, MAX_NAME - strlen(full_path));
+		full_path = strncat(full_path, list[i], MAX_NAME - strlen(full_path));
+		encrypt_file(full_path, key);
+		memset(full_path, '\0', MAX_NAME);
+	}
 
-    sleep(5);
+	sleep(5);
 
-    // Free old list
-    free_list_files(list, file_num);
+	// Free old list
+	free_list_files(list, file_num);
+	
+	// Get new list
+	list = list_files(TESTING_FOLDER, &file_num);
+	if (!list)
+		return ERROR;
 
-    // Get new list
-    list = list_files(TESTING_FOLDER, &file_num);
-    if (!list)
-        return ERROR;
+	for (int i = 0; i < file_num; i++)
+	{
+		full_path = strncat(full_path, TESTING_FOLDER, MAX_NAME - strlen(full_path));
+		full_path = strncat(full_path, list[i], MAX_NAME - strlen(full_path));
+		if (decrypt_file(full_path, key) == ERROR) {
+			DEBUG_PRINT((P_ERROR"Failed to decrypt file %s\n", full_path));
+		}
+		memset(full_path, '\0', MAX_NAME);
+	}
 
-    for (int i = 0; i < file_num; i++)
-    {
-        full_path = strncat(full_path, TESTING_FOLDER, MAX_NAME - strlen(full_path));
-        full_path = strncat(full_path, list[i], MAX_NAME - strlen(full_path));
-        if (decrypt_file(full_path, key) == ERROR)
-        {
-            DEBUG_PRINT((P_ERROR "Failed to decrypt file %s\n", full_path););
-        }
-        memset(full_path, '\0', MAX_NAME);
-    }
+	// Free list
+	free_list_files(list, file_num);
 
-    // Free list
-    free_list_files(list, file_num);
+	free(full_path);
 
-    free(full_path);
-
-    return OK;
+	return OK;
 }
 
 int encrypt_file(char *file_name, uint8_t *key)
@@ -155,6 +154,7 @@ int encrypt_file(char *file_name, uint8_t *key)
 
     DEBUG_PRINT((P_OK "Encrypted file [%s]\n", file_name););
     return OK;
+
 }
 
 int decrypt_file(char *file_name, uint8_t *key)

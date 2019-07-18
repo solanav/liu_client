@@ -5,6 +5,7 @@
 #include <dlfcn.h>
 #include <string.h>
 #include <sys/wait.h>
+#include <sys/ptrace.h>
 
 #include "../include/core.h"
 #include "../include/plugin_utils.h"
@@ -14,7 +15,20 @@
 
 int main()
 {
-pid_t pid = fork();
+  pid_t pid = fork();
+	
+  /*All debugger uses PTRACE_TRACEME and it only can be called at once for each process.
+	It indicate that the proccess is to be traced*/
+	if (ptrace(PTRACE_TRACEME, 0, 1, 0) < 0)
+	{
+		printf("               __\n");
+		printf("              / _) -You shouldn't be debuggin, stupid bitch |\n");
+		printf("     _.----._/ /\n");
+		printf("    /         /\n");
+		printf(" __/ (  | (  |\n");
+		printf("/__.-'|_|--|_|\n");
+		return OTHER;
+	}
 
 	if (pid < 0)
 	{
