@@ -4,6 +4,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
+#include <semaphore.h>
+#include <sys/stat.h>
 
 #include <openssl/rsa.h>
 #include <openssl/sha.h>
@@ -13,6 +16,8 @@
 #include "../include/types.h"
 
 #define MAX_UDP 512
+#define SERVER_SEM "/server_stop"
+#define SEM_INIT 0
 
 void encryption_testing()
 {
@@ -49,18 +54,17 @@ void encryption_testing()
 
 	// Clean
 	RSA_free(pri_key);
-	
 
-	if(res == 1)
-    {
-        printf(P_OK"Signature is valid\n");
-        return;
-    }
-    else
-    {
-        printf(P_ERROR"Signature is invalid\n");
-        return;
-    }
+	if (res == 1)
+	{
+		printf(P_OK "Signature is valid\n");
+		return;
+	}
+	else
+	{
+		printf(P_ERROR "Signature is invalid\n");
+		return;
+	}
 }
 
 int start_server(int port)
@@ -68,6 +72,11 @@ int start_server(int port)
 	int socket_desc;
 	char buf[MAX_UDP];
 	struct sockaddr_in self_addr, other_addr;
+	sem_t *sem;
+	int sem_value = SEM_INIT;
+
+	// Create the semaphore
+	sem = sem_open(SERVER_SEM, O_CREAT, S_IRUSR | S_IWUSR, SEM_INIT);
 
 	// Creating socket file descriptor
 	if ((socket_desc = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
@@ -93,17 +102,39 @@ int start_server(int port)
 		return ERROR;
 	}
 
-	while (1)
+	while (sem_value == SEM_INIT)
 	{
 		int len, n;
 		n = recvfrom(socket_desc, (char *)buf, MAX_UDP,
 					 MSG_WAITALL, (struct sockaddr *)&other_addr,
-					 &len);
+					 (socklen_t *)&len);
 		buf[n] = '\0';
 
 		printf("Client : %s\n", buf);
+		sem_getvalue(sem, &sem_value);
 	}
 	return 0;
+}
+
+int stop_server(char *ip, int port)
+{
+	sem_t *sem;
+
+	sem = sem_open(SERVER_SEM, O_CREAT);
+	if (!sem)
+	{
+		DEBUG_PRINT((P_ERROR "Could not open semaphore to close server\n"));
+		return ERROR;
+	}
+
+	sem_post(sem);
+	sem_close(sem);
+	sem_unlink(SERVER_SEM);
+
+	// Message to update the server so it stops
+	upload_data(ip, port, "", 1);
+
+	return OK;
 }
 
 size_t upload_data(char *ip_addr, int port, unsigned char *data, size_t len)
@@ -120,7 +151,7 @@ size_t upload_data(char *ip_addr, int port, unsigned char *data, size_t len)
 	}
 
 	memset(&other_addr, 0, sizeof(other_addr));
-	
+
 	// Fill info for the other
 	other_addr.sin_family = AF_INET;
 	other_addr.sin_addr.s_addr = inet_addr(ip_addr);
