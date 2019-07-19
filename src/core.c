@@ -5,6 +5,7 @@
 #include <dlfcn.h>
 #include <string.h>
 #include <sys/wait.h>
+#include <sys/ptrace.h>
 
 #include "../include/core.h"
 #include "../include/plugin_utils.h"
