@@ -1,7 +1,11 @@
 #ifndef NETWORK_UTILS_H
 #define NETWORK_UTILS_H
 
+#include <netinet/in.h>
+
 #include "../include/system_utils.h"
+
+typedef struct _peer_list peer_list;
 
 /**
  * Stop the server
@@ -22,6 +26,9 @@ int stop_server(char *ip, int port);
  * Returns - The data or NULL in case of error
 */
 int start_server(int port);
+
+void get_ip(char *ip_addr, int port);
+int add_peer(peer_list *peers, const struct sockaddr_in *other);
 
 /**
  * C2 uploader

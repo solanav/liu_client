@@ -5,7 +5,6 @@ set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_C_COMPILER /usr/bin/gcc)
 find_library(LIBRT rt) 
 
-
 add_definitions(-DDEBUG)
 
 add_subdirectory(src)

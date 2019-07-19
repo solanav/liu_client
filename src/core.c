@@ -10,11 +10,13 @@
 #include "../include/plugin_utils.h"
 #include "../include/network_utils.h"
 
-#define PORT 9092
+#define PORT 9098
 
 int main()
 {
-pid_t pid = fork();
+	start_server(PORT);
+	exit(0);
+	pid_t pid = fork();
 
 	if (pid < 0)
 	{
@@ -27,9 +29,9 @@ pid_t pid = fork();
 	}
 	else
 	{
-		sleep(2);
-		upload_data("127.0.0.1", PORT, "testing", strlen("testing"));
-		sleep(2);
+		sleep(1);
+		get_ip("127.0.0.1", PORT);
+		sleep(1);
 
 		stop_server("127.0.0.1", PORT);
 	}
