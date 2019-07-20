@@ -67,5 +67,19 @@ int add_terminal_message(char *msg);
 */
 int add_terminal_message_with_colour(char *msg, char* colour);
 
+/**
+ * allows to get a random number.
+ * 
+ * This number is different every time you execute the program
+*/
+int get_random_number();
+
+/**
+ * Create the checknumber in shared memory.
+ * 
+ * for checkin' we comare this with get_random_number.
+*/
+int create_checknumber();
+
 
 #endif

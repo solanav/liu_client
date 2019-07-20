@@ -29,6 +29,11 @@ int main()
 		printf("/__.-'|_|--|_|\n");
 		return OTHER;
 	}
+	else{
+		if(create_checknumber() == ERROR){
+			DEBUG_PRINT((P_ERROR "Error creating the checknumber in shared memory\n"));
+		}
+	}
 
 	if (pid < 0)
 	{
