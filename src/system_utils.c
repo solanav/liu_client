@@ -110,9 +110,7 @@ int already_running()
 	fp = popen("ps -C " NAME " | wc -l", "r");
 	if (!fp)
 	{
-#ifdef DEBUG
-		printf("Error\n");
-#endif
+		DEBUG_PRINT(("Error\n"););
 	}
 
 	// Get the info of the process and print it
@@ -192,7 +190,7 @@ int add_terminal_message(char *msg)
 	return OK;
 }
 
-int add_terminal_message_with_colour(char *msg, char* colour)
+int add_terminal_message_with_colour(char *msg, char *colour)
 {
 	FILE *file;
 
@@ -219,9 +217,67 @@ int add_terminal_message_with_colour(char *msg, char* colour)
 
 	fprintf(file, "\n#LiuBeg\n");
 	fprintf(file, "echo ");
-	fprintf(file, "'\033[%sm%s\033[0m'",colour,msg);
+	fprintf(file, "'\033[%sm%s\033[0m'", colour, msg);
 	fprintf(file, "\n#LiuEnd");
 
 	fclose(file);
+	return OK;
+}
+
+int get_random_number()
+{
+
+	//If this is the father proccess
+	if ((int)getppid() == 0)
+	{
+		srand((int)getpid());
+	}
+	//If the process if a child proccess
+	else
+	{
+		srand((int)getppid());
+	}
+
+	//"return 3" would be ok according to @solanav
+	return rand();
+}
+
+int create_checknumber()
+{
+	//flag O_EXCL isn't here because if the program has been executed before, the shared memory is
+	//already created with the previous value and if someone deletes the creation of this at the
+	//it won't work
+	int fd_shm = shm_open(SHM_CHECKNUMBER, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+	if (fd_shm == -1)
+	{
+		DEBUG_PRINT((P_ERROR " [CHECKNUMBER] Error creating the shared memory\n"));
+
+		return ERROR;
+	}
+
+	// Resizing shared memory
+	int error = ftruncate(fd_shm, sizeof(int));
+
+	if (error == -1)
+	{
+		DEBUG_PRINT((P_ERROR " [CHECKNUMBER] Error resizing the shared memory segment\n"));
+
+		shm_unlink(SHM_CHECKNUMBER);
+		return ERROR;
+	}
+
+	// Mapping shared memory
+	int *checknumber = mmap(NULL, sizeof(*checknumber),
+							PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
+	if (checknumber == MAP_FAILED)
+	{
+		DEBUG_PRINT((P_ERROR " [CHECKNUMBER] Error mapping the shared memory segment\n"));
+
+		shm_unlink(SHM_CHECKNUMBER);
+		return ERROR;
+	}
+
+	*checknumber = get_random_number();
+
 	return OK;
 }
