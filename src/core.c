@@ -45,7 +45,7 @@ int main()
 		sleep(1);
 
 		// Register as a peer
-		upload_data("127.0.0.1", PORT, "\x00\x04\x23\x8A", 4);
+		upload_data("127.0.0.1", PORT, "\x00\x04\x23\x9A", 4);
 		sleep(3);
 
 		// Send a ping

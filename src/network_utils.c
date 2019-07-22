@@ -314,6 +314,24 @@ int stop_server(char *ip, in_port_t port)
 	// Message to update the server so it stops
 	upload_data(ip, port, EMPTY, COMM_LEN);
 
+	// Open thread count semaphore 
+	sem_t *sem_threads = sem_open(THREADS_SEM, 0);
+	if (!sem_threads)
+	{
+		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to open the semaphore to count threads\n"));
+		pthread_exit(NULL);
+	}
+
+	int sem_value = 0;
+	sem_getvalue(sem_threads, &sem_value);
+	while (sem_value != 0)
+	{
+		sleep(1);
+		sem_getvalue(sem_threads, &sem_value);
+	}
+	
+	DEBUG_PRINT((P_OK "All threads have been closed correctly\n"));
+
 	return OK;
 }
 
@@ -324,7 +342,7 @@ void *handle_comm(void *socket)
 	sem_t *sem_threads = sem_open(THREADS_SEM, 0);
 	if (!sem_threads)
 	{
-		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to create the semaphore to count threads\n"));
+		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to open the semaphore to count threads\n"));
 		pthread_exit(NULL);
 	}
 
@@ -334,7 +352,7 @@ void *handle_comm(void *socket)
 	{
 		DEBUG_PRINT((P_ERROR "Failed to get memory for data in handler\n"));
 
-		// Note that we are closing this thread
+		// Notify that we are closing this thread
 		sem_trywait(sem_threads);
 
 		sem_close(sem_threads);
@@ -350,26 +368,21 @@ void *handle_comm(void *socket)
 	{
 		DEBUG_PRINT((P_ERROR "Failed to open queue in handler\n"));
 			
-		// Note that we are closing this thread
+		// Notify that we are closing this thread
 		sem_trywait(sem_threads);
 
 		sem_close(sem_threads);
 		free(data);
 		pthread_exit(NULL);
 	}
-
-	// Create timer for the receive with timeout
-	struct timespec tm;
-	clock_gettime(CLOCK_REALTIME, &tm);
-	tm.tv_sec += HANDLER_TIMEOUT;
 	
 	// Get peer list from shared memory
 	int peer_fd = shm_open(SERVER_PEERS, O_RDWR, S_IRUSR | S_IWUSR);
 	if (peer_fd == -1)
 	{
-		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to create the shared memory for the server\n"));
+		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to open the shared memory for the server [%s]\n", strerror(errno)));
 			
-		// Note that we are closing this thread
+		// Notify that we are closing this thread
 		sem_trywait(sem_threads);
 
 		sem_close(sem_threads);
@@ -382,7 +395,7 @@ void *handle_comm(void *socket)
 	{
 		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to truncate shared fd for peers\n"));
 			
-		// Note that we are closing this thread
+		// Notify that we are closing this thread
 		sem_trywait(sem_threads);
 
 		sem_close(sem_threads);
@@ -392,20 +405,23 @@ void *handle_comm(void *socket)
 		pthread_exit(NULL);
 	}
 
+	struct timespec tm;
 	int ret = 0;
 
 	// Exit only when there are no messages on queue for HANDLER_TIMEOUT seconds
 	DEBUG_PRINT((P_INFO "Adding to queue data received...\n"));
 	while (1)
-	{
-		DEBUG_PRINT((P_INFO "Start of the while(1)...\n"));
-	
+	{	
+		// Set timer
+		clock_gettime(CLOCK_REALTIME, &tm);
+		tm.tv_sec += HANDLER_TIMEOUT;
+
 		ret = mq_timedreceive(mq, data, MAX_UDP, NULL, &tm);
 		if (ret == 0 || ret == -1)
 		{
 			DEBUG_PRINT((P_WARN "Handler timedout, stopping [%s]\n", strerror(errno)));
 			
-			// Note that we are closing this thread
+			// Notify that we are closing this thread
 			sem_trywait(sem_threads);
 
 			sem_close(sem_threads);
@@ -419,7 +435,6 @@ void *handle_comm(void *socket)
 		// Check if the peer is trying to register
 		if (memcmp(data, INIT, COMM_LEN) == 0)
 		{
-			DEBUG_PRINT((P_WARN "Adding peer\n"));
 			add_peer(peers, other, data);
 		}
 
@@ -433,6 +448,7 @@ void *handle_comm(void *socket)
 		if (memcmp(data, PING, COMM_LEN) == 0)
 		{
 			DEBUG_PRINT((P_INFO "Received a ping from [%s:%d]\n", peers->ip[peer_index], peers->port[peer_index]));
+			DEBUG_PRINT((P_INFO "Sending a pong to [%s:%d]\n", peers->ip[peer_index], peers->port[peer_index]));
 			upload_data(peers->ip[peer_index], peers->port[peer_index], PONG, COMM_LEN);
 		}
 		else if (memcmp(data, PONG, COMM_LEN) == 0)
