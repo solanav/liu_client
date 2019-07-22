@@ -25,10 +25,13 @@
 #include "../include/types.h"
 
 #define SERVER_SEM "/server_stop"
+#define THREADS_SEM "/threads_count"
 #define SERVER_QUEUE "/server_queue"
 #define SERVER_PEERS "/peer_list"
 #define SEM_INIT 0
 #define MAX_THREADS 128
+#define MAX_MSG_QUEUE 10
+#define HANDLER_TIMEOUT 1 // in seconds
 
 // Private functions
 void latency_calculator(int signum);
@@ -72,36 +75,48 @@ int init_networking()
 	{
 		DEBUG_PRINT((P_ERROR "[init_networking] Failed to map shared fd for peers\n"));
 		ret = ERROR;
-		goto MAP_CLEAN;
+		goto SHM_CLEAN;
 	}
 	memset(peers, 0, sizeof(peer_list));
 
 	// Create msg_queue for the server and handler
-	struct mq_attr attr;  
-	attr.mq_flags = 0;  
-	attr.mq_maxmsg = 10;  
-	attr.mq_msgsize = MAX_UDP;  
+	struct mq_attr attr;
+	attr.mq_flags = 0;
+	attr.mq_maxmsg = MAX_MSG_QUEUE;
+	attr.mq_msgsize = MAX_UDP;
 	attr.mq_curmsgs = 0;
 
 	mqd_t datagram_queue = mq_open(SERVER_QUEUE, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR, &attr);
 	if (datagram_queue == -1)
 	{
-		DEBUG_PRINT((P_ERROR"Datagram queue failed to open %s\n", strerror(errno)));
+		DEBUG_PRINT((P_ERROR "Datagram queue failed to open %s\n", strerror(errno)));
+		ret = ERROR;
+		goto MAP_CLEAN;
+	}
+
+	// Create semaphore to keep count of threads that are alive
+	sem_t *sem_threads = sem_open(THREADS_SEM, O_CREAT, S_IRUSR | S_IWUSR, SEM_INIT);
+	if (!sem_threads)
+	{
+		DEBUG_PRINT((P_ERROR "[init_networking] Failed to create the semaphore for the server\n"));
 		ret = ERROR;
 		goto MQ_CLEAN;
 	}
 
-	// Close but don't unlink
-	MQ_CLEAN:
+// Close but don't unlink
+SEM2_CLEAN:
+	sem_close(sem_threads);
+
+MQ_CLEAN:
 	mq_close(datagram_queue);
-	
-	MAP_CLEAN:
+
+MAP_CLEAN:
 	munmap(peers, sizeof(peer_list));
 
-	SHM_CLEAN:
+SHM_CLEAN:
 	close(peer_fd);
-	
-	SEM_CLEAN:
+
+SEM_CLEAN:
 	sem_close(sem);
 
 	return ret;
@@ -110,6 +125,7 @@ int init_networking()
 int clean_networking()
 {
 	sem_unlink(SERVER_SEM);
+	sem_unlink(THREADS_SEM);
 	shm_unlink(SERVER_PEERS);
 	mq_unlink(SERVER_QUEUE);
 
@@ -195,15 +211,33 @@ int start_server(in_port_t port)
 	DEBUG_PRINT((P_INFO "Starting server...\n"));
 
 	byte buf[MAX_UDP];
-	int thread_num = 0;
 	pthread_t threads[MAX_THREADS];
-	
-	// Open semaphore
+
+	// Open semaphore to stop server
 	int sem_value = SEM_INIT;
 	sem_t *sem = sem_open(SERVER_SEM, 0);
-	
+	if (!sem)
+	{
+		DEBUG_PRINT((P_ERROR "[start_server] Failed to create the semaphore to stop the server\n"));
+		return ERROR;
+	}
+
+	// Open semaphore to count threads
+	int sem_value_threads = SEM_INIT;
+	sem_t *sem_threads = sem_open(THREADS_SEM, 0);
+	if (!sem_threads)
+	{
+		DEBUG_PRINT((P_ERROR "[start_server] Failed to create the semaphore to count threads\n"));
+		return ERROR;
+	}
+
 	// Open message queue
-	mqd_t datagram_queue = mq_open(SERVER_QUEUE, O_WRONLY);
+	mqd_t datagram_queue = mq_open(SERVER_QUEUE, O_RDWR);
+	if (datagram_queue == -1)
+	{
+		DEBUG_PRINT((P_ERROR "Failed to open message queue [%s]\n", strerror(errno)));
+		return ERROR;
+	}
 
 	while (sem_value == SEM_INIT)
 	{
@@ -219,26 +253,43 @@ int start_server(in_port_t port)
 		else
 		{
 			// Add to message queue
-			DEBUG_PRINT((P_INFO "Adding to queue data received...\n"));
-			if (mq_send(datagram_queue, (char *) buf, 10, 0) == -1)
+			if (mq_send(datagram_queue, (char *)buf, 10, 0) == -1)
 			{
 				DEBUG_PRINT((P_ERROR "Failed to send data to message queue [%s]\n", strerror(errno)));
 				return ERROR;
 			}
 
-			// Create a thread to handle the message
-			pthread_create(&threads[thread_num], NULL, handle_comm, &other_addr);
-			thread_num++;
+			// Update the number of threads we have currently
+			if (sem_getvalue(sem_threads, &sem_value_threads) == -1)
+			{
+				DEBUG_PRINT((P_ERROR "Failed to get value of the threads semaphore\n"));
+				return ERROR;
+			}
 
-			DEBUG_PRINT((P_INFO "Sent data to message queue (thread %d)\n", thread_num));
+			// If there are too many messages in the queue, launch a new thread
+			struct mq_attr attr;
+			if (mq_getattr(datagram_queue, &attr) == -1)
+			{
+				DEBUG_PRINT((P_ERROR "Failed to get attributes of datagram queue [%s]\n", strerror(errno)));
+				return ERROR;
+			}
+			if (attr.mq_curmsgs > (MAX_MSG_QUEUE / 2) || sem_value_threads == 0)
+			{
+				sem_post(sem_threads);
+				pthread_create(&threads[sem_value_threads], NULL, handle_comm, &other_addr);
+			}
 		}
-		
+
 		if (sem_getvalue(sem, &sem_value) == -1)
 		{
-			DEBUG_PRINT((P_ERROR "Failed to get value of the semaphore\n"));
+			DEBUG_PRINT((P_ERROR "Failed to get value of the stop semaphore\n"));
 			return ERROR;
 		}
 	}
+
+	// Wait for threads to stop
+	for (int i = 0; i < sem_value_threads; i++)
+		pthread_join(threads[i], NULL);
 
 	sem_close(sem);
 	close(datagram_queue);
@@ -268,56 +319,129 @@ int stop_server(char *ip, in_port_t port)
 
 void *handle_comm(void *socket)
 {
+	// TODO: Fix the fucking cleaning
+	// Open thread count semaphore 
+	sem_t *sem_threads = sem_open(THREADS_SEM, 0);
+	if (!sem_threads)
+	{
+		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to create the semaphore to count threads\n"));
+		pthread_exit(NULL);
+	}
+
+	// Get memory for buffer
+	char *data = calloc(MAX_UDP, sizeof(char));
+	if (!data)
+	{
+		DEBUG_PRINT((P_ERROR "Failed to get memory for data in handler\n"));
+
+		// Note that we are closing this thread
+		sem_trywait(sem_threads);
+
+		sem_close(sem_threads);
+		pthread_exit(NULL);
+	}
+	
 	// Get socket
-	const struct sockaddr_in *other = (struct sockaddr_in *) socket;
+	const struct sockaddr_in *other = (struct sockaddr_in *)socket;
 
 	// Open queue and consume one message
-	char *data = calloc(MAX_UDP, sizeof(char));
 	mqd_t mq = mq_open(SERVER_QUEUE, O_RDWR);
-	mq_receive(mq, data, MAX_UDP, 0);
+	if (mq == -1)
+	{
+		DEBUG_PRINT((P_ERROR "Failed to open queue in handler\n"));
+			
+		// Note that we are closing this thread
+		sem_trywait(sem_threads);
 
+		sem_close(sem_threads);
+		free(data);
+		pthread_exit(NULL);
+	}
+
+	// Create timer for the receive with timeout
+	struct timespec tm;
+	clock_gettime(CLOCK_REALTIME, &tm);
+	tm.tv_sec += HANDLER_TIMEOUT;
+	
 	// Get peer list from shared memory
 	int peer_fd = shm_open(SERVER_PEERS, O_RDWR, S_IRUSR | S_IWUSR);
 	if (peer_fd == -1)
 	{
 		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to create the shared memory for the server\n"));
+			
+		// Note that we are closing this thread
+		sem_trywait(sem_threads);
+
+		sem_close(sem_threads);
+		free(data);
+		mq_close(mq);
 		pthread_exit(NULL);
 	}
 	peer_list *peers = (peer_list *)mmap(NULL, sizeof(peer_list), PROT_WRITE | PROT_READ, MAP_SHARED, peer_fd, 0);
 	if (peers == MAP_FAILED)
 	{
 		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to truncate shared fd for peers\n"));
-		pthread_exit(NULL);
-	}
+			
+		// Note that we are closing this thread
+		sem_trywait(sem_threads);
 
-	// Check if the peer is trying to register
-	if (memcmp(data, INIT, COMM_LEN) == 0)
-	{
-		add_peer(peers, other, data);
+		sem_close(sem_threads);
 		free(data);
+		mq_close(mq);
+		close(peer_fd);
 		pthread_exit(NULL);
 	}
 
-	// Get the peer index
-	char peer_ip[INET_ADDRSTRLEN];
-	get_ip(other, peer_ip); // TODO: ERROR CONTROL
-	size_t peer_index;
-	get_peer(peers, peer_ip, &peer_index);
+	int ret = 0;
 
-	// TODO: turn this into a switch so gcc can optimize it to hash table
-	if (memcmp(data, PING, COMM_LEN) == 0)
+	// Exit only when there are no messages on queue for HANDLER_TIMEOUT seconds
+	DEBUG_PRINT((P_INFO "Adding to queue data received...\n"));
+	while (1)
 	{
-		DEBUG_PRINT((P_INFO "Received a ping from [%s:%d]\n", peers->ip[peer_index], peers->port[peer_index]));
-		upload_data(peers->ip[peer_index], peers->port[peer_index], PONG, COMM_LEN);
-	}
-	else if (memcmp(data, PONG, COMM_LEN) == 0)
-	{
-		DEBUG_PRINT((P_INFO "Received a pong from [%s:%d]\n", peers->ip[peer_index], peers->port[peer_index]));
-	}
+		DEBUG_PRINT((P_INFO "Start of the while(1)...\n"));
+	
+		ret = mq_timedreceive(mq, data, MAX_UDP, NULL, &tm);
+		if (ret == 0 || ret == -1)
+		{
+			DEBUG_PRINT((P_WARN "Handler timedout, stopping [%s]\n", strerror(errno)));
+			
+			// Note that we are closing this thread
+			sem_trywait(sem_threads);
 
-	free(data);
+			sem_close(sem_threads);
+			free(data);
+			mq_close(mq);
+			close(peer_fd);
+			munmap(peers, sizeof(peer_list));
+			pthread_exit(NULL);
+		}
 
-	pthread_exit(NULL);
+		// Check if the peer is trying to register
+		if (memcmp(data, INIT, COMM_LEN) == 0)
+		{
+			DEBUG_PRINT((P_WARN "Adding peer\n"));
+			add_peer(peers, other, data);
+		}
+
+		// Get the peer index
+		char peer_ip[INET_ADDRSTRLEN];
+		get_ip(other, peer_ip); // TODO: ERROR CONTROL
+		size_t peer_index;
+		get_peer(peers, peer_ip, &peer_index);
+
+		// TODO: turn this into a switch so gcc can optimize it to hash table
+		if (memcmp(data, PING, COMM_LEN) == 0)
+		{
+			DEBUG_PRINT((P_INFO "Received a ping from [%s:%d]\n", peers->ip[peer_index], peers->port[peer_index]));
+			upload_data(peers->ip[peer_index], peers->port[peer_index], PONG, COMM_LEN);
+		}
+		else if (memcmp(data, PONG, COMM_LEN) == 0)
+		{
+			DEBUG_PRINT((P_INFO "Received a pong from [%s:%d]\n", peers->ip[peer_index], peers->port[peer_index]));
+		}
+
+		memset(data, 0, MAX_UDP);
+	}
 }
 
 int get_peer(const peer_list *peers, const char *other_ip, size_t *index)
