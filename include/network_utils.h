@@ -32,7 +32,7 @@ int start_server(in_port_t port);
 int init_networking();
 int clean_networking();
 int get_ip(const struct sockaddr_in *socket, char *ip);
-int handle_comm(peer_list *peers, const struct sockaddr_in *other, const byte *data);
+void *handle_comm(void *socket);
 int add_peer(peer_list *peers, const struct sockaddr_in *other, const byte *data);
 int get_peer(const peer_list *peers, const char *other_ip, size_t *index);
 

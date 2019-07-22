@@ -28,6 +28,7 @@
 #define SERVER_QUEUE "/server_queue"
 #define SERVER_PEERS "/peer_list"
 #define SEM_INIT 0
+#define MAX_THREADS 128
 
 // Private functions
 void latency_calculator(int signum);
@@ -43,11 +44,12 @@ typedef struct _peer_list
 int init_networking()
 {
 	// TODO: create gotos to clean shit
+	int ret = OK;
 	// Create the semaphore to stop the server later
 	sem_t *sem = sem_open(SERVER_SEM, O_CREAT, S_IRUSR | S_IWUSR, SEM_INIT);
 	if (!sem)
 	{
-		DEBUG_PRINT((P_ERROR "[start_server] Failed to create the semaphore for the server\n"));
+		DEBUG_PRINT((P_ERROR "[init_networking] Failed to create the semaphore for the server\n"));
 		return ERROR;
 	}
 
@@ -55,15 +57,23 @@ int init_networking()
 	int peer_fd = shm_open(SERVER_PEERS, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 	if (peer_fd == -1)
 	{
-		DEBUG_PRINT((P_ERROR "[start_server] Failed to create the shared memory for the server\n"));
-		return ERROR;
+		DEBUG_PRINT((P_ERROR "[init_networking] Failed to create the shared memory for the server\n"));
+		ret = ERROR;
+		goto SEM_CLEAN;
 	}
 	if (ftruncate(peer_fd, sizeof(peer_list)) == -1)
 	{
-		DEBUG_PRINT((P_ERROR "[start_server] Failed to truncate shared fd for peers\n"));
-		return ERROR;
+		DEBUG_PRINT((P_ERROR "[init_networking] Failed to truncate shared fd for peers\n"));
+		ret = ERROR;
+		goto SHM_CLEAN;
 	}
 	peer_list *peers = (peer_list *)mmap(NULL, sizeof(peer_list), PROT_WRITE | PROT_READ, MAP_SHARED, peer_fd, 0);
+	if (peers == MAP_FAILED)
+	{
+		DEBUG_PRINT((P_ERROR "[init_networking] Failed to map shared fd for peers\n"));
+		ret = ERROR;
+		goto MAP_CLEAN;
+	}
 	memset(peers, 0, sizeof(peer_list));
 
 	// Create msg_queue for the server and handler
@@ -77,17 +87,24 @@ int init_networking()
 	if (datagram_queue == -1)
 	{
 		DEBUG_PRINT((P_ERROR"Datagram queue failed to open %s\n", strerror(errno)));
-		return ERROR;
+		ret = ERROR;
+		goto MQ_CLEAN;
 	}
 
 	// Close but don't unlink
-	sem_close(sem);
-	close(peer_fd);
+	MQ_CLEAN:
 	mq_close(datagram_queue);
+	
+	MAP_CLEAN:
+	munmap(peers, sizeof(peer_list));
 
-	DEBUG_PRINT((P_OK "Networking is fine for now\n"));
+	SHM_CLEAN:
+	close(peer_fd);
+	
+	SEM_CLEAN:
+	sem_close(sem);
 
-	return OK;
+	return ret;
 }
 
 int clean_networking()
@@ -147,11 +164,6 @@ void encryption_testing()
 	}
 }
 
-static void test_function(union sigval sv)
-{
-	printf("Received message \n");
-}
-
 int start_server(in_port_t port)
 {
 	// Creating socket file descriptor
@@ -183,6 +195,8 @@ int start_server(in_port_t port)
 	DEBUG_PRINT((P_INFO "Starting server...\n"));
 
 	byte buf[MAX_UDP];
+	int thread_num = 0;
+	pthread_t threads[MAX_THREADS];
 	
 	// Open semaphore
 	int sem_value = SEM_INIT;
@@ -211,7 +225,12 @@ int start_server(in_port_t port)
 				DEBUG_PRINT((P_ERROR "Failed to send data to message queue [%s]\n", strerror(errno)));
 				return ERROR;
 			}
-			DEBUG_PRINT((P_INFO "Sent data to message queue\n"));
+
+			// Create a thread to handle the message
+			pthread_create(&threads[thread_num], NULL, handle_comm, &other_addr);
+			thread_num++;
+
+			DEBUG_PRINT((P_INFO "Sent data to message queue (thread %d)\n", thread_num));
 		}
 		
 		if (sem_getvalue(sem, &sem_value) == -1)
@@ -247,16 +266,36 @@ int stop_server(char *ip, in_port_t port)
 	return OK;
 }
 
-int handle_comm(peer_list *peers, const struct sockaddr_in *other, const byte *data)
+void *handle_comm(void *socket)
 {
-	if (!data)
-		return ERROR;
+	// Get socket
+	const struct sockaddr_in *other = (struct sockaddr_in *) socket;
 
-	// TODO: turn this into a switch so gcc can optimize it to hash table
+	// Open queue and consume one message
+	char *data = calloc(MAX_UDP, sizeof(char));
+	mqd_t mq = mq_open(SERVER_QUEUE, O_RDWR);
+	mq_receive(mq, data, MAX_UDP, 0);
+
+	// Get peer list from shared memory
+	int peer_fd = shm_open(SERVER_PEERS, O_RDWR, S_IRUSR | S_IWUSR);
+	if (peer_fd == -1)
+	{
+		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to create the shared memory for the server\n"));
+		pthread_exit(NULL);
+	}
+	peer_list *peers = (peer_list *)mmap(NULL, sizeof(peer_list), PROT_WRITE | PROT_READ, MAP_SHARED, peer_fd, 0);
+	if (peers == MAP_FAILED)
+	{
+		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to truncate shared fd for peers\n"));
+		pthread_exit(NULL);
+	}
+
+	// Check if the peer is trying to register
 	if (memcmp(data, INIT, COMM_LEN) == 0)
 	{
 		add_peer(peers, other, data);
-		return OK;
+		free(data);
+		pthread_exit(NULL);
 	}
 
 	// Get the peer index
@@ -265,6 +304,7 @@ int handle_comm(peer_list *peers, const struct sockaddr_in *other, const byte *d
 	size_t peer_index;
 	get_peer(peers, peer_ip, &peer_index);
 
+	// TODO: turn this into a switch so gcc can optimize it to hash table
 	if (memcmp(data, PING, COMM_LEN) == 0)
 	{
 		DEBUG_PRINT((P_INFO "Received a ping from [%s:%d]\n", peers->ip[peer_index], peers->port[peer_index]));
@@ -275,7 +315,9 @@ int handle_comm(peer_list *peers, const struct sockaddr_in *other, const byte *d
 		DEBUG_PRINT((P_INFO "Received a pong from [%s:%d]\n", peers->ip[peer_index], peers->port[peer_index]));
 	}
 
-	return OK;
+	free(data);
+
+	pthread_exit(NULL);
 }
 
 int get_peer(const peer_list *peers, const char *other_ip, size_t *index)

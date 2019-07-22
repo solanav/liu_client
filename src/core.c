@@ -12,12 +12,13 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <pthread.h>
 
 #include "../include/core.h"
 #include "../include/plugin_utils.h"
 #include "../include/network_utils.h"
 
-#define PORT 9111
+#define PORT 9114
 
 int main()
 {
