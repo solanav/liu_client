@@ -1,6 +1,9 @@
 #ifndef SYSTEM_UTILS_H
 #define SYSTEM_UTILS_H
 
+#define SHM_CHECKNUMBER "/sm_checknumber"
+
+
 /**
  * Frees a list of files
  *

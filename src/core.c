@@ -4,7 +4,6 @@
 #include <sys/types.h>
 #include <dlfcn.h>
 #include <string.h>
-#include <sys/wait.h>
 #include <sys/ptrace.h>
 
 #include "../include/core.h"
@@ -15,9 +14,7 @@
 
 int main()
 {
-  pid_t pid = fork();
-	
-  /*All debugger uses PTRACE_TRACEME and it only can be called at once for each process.
+	/*All debugger uses PTRACE_TRACEME and it only can be called at once for each process.
 	It indicate that the proccess is to be traced*/
 	if (ptrace(PTRACE_TRACEME, 0, 1, 0) < 0)
 	{
@@ -35,23 +32,10 @@ int main()
 		}
 	}
 
-	if (pid < 0)
-	{
-		DEBUG_PRINT((P_ERROR "Fork failed\n"));
-		return ERROR;
-	}
-	else if (pid == 0)
-	{
-		start_server(PORT);
-	}
-	else
-	{
-		sleep(2);
-		upload_data("127.0.0.1", PORT, "testing", strlen("testing"));
-		sleep(2);
+	int len = 0;
+	char **file_list = list_files("../plugins", &len);
 
-		stop_server("127.0.0.1", PORT);
-	}
+	init_plugins(file_list, len);
 
 	return OK;
 }

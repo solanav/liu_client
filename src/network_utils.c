@@ -14,6 +14,8 @@
 #include <openssl/pem.h>
 
 #include "../include/types.h"
+#include "../include/network_utils.h"
+
 
 #define MAX_UDP 512
 #define SERVER_SEM "/server_stop"

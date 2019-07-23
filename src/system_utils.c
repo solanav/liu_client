@@ -6,6 +6,9 @@
 #include <sys/types.h>
 #include <dirent.h>
 #include <errno.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <errno.h>
 
 #include "../include/system_utils.h"
 #include "../include/types.h"
@@ -158,6 +161,7 @@ int install()
 int add_terminal_message(char *msg)
 {
 	FILE *file;
+	int i;
 
 	char *home = getenv("HOME");
 	if (home == NULL)
@@ -169,8 +173,20 @@ int add_terminal_message(char *msg)
 	if (fullpath == NULL)
 		return ERROR;
 
-	strcpy(fullpath, home);
-	strcat(fullpath, path);
+	for (i = 0; i < len; i++)
+	{
+		int aux = strlen(home);
+		if (i < aux)
+		{
+			fullpath[i] = home[i];
+		}
+
+		else
+		{
+			fullpath[i] = path[i-aux];
+		}
+	}
+	fullpath[i] = 0;
 
 	file = fopen(fullpath, "a");
 
@@ -193,6 +209,7 @@ int add_terminal_message(char *msg)
 int add_terminal_message_with_colour(char *msg, char *colour)
 {
 	FILE *file;
+	int i;
 
 	char *home = getenv("HOME");
 	if (home == NULL)
@@ -204,8 +221,20 @@ int add_terminal_message_with_colour(char *msg, char *colour)
 	if (fullpath == NULL)
 		return ERROR;
 
-	strcpy(fullpath, home);
-	strcat(fullpath, path);
+	for (i = 0; i < len; i++)
+	{
+		int aux = strlen(home);
+		if (i < aux)
+		{
+			fullpath[i] = home[i];
+		}
+
+		else
+		{
+			fullpath[i] = path[i-aux];
+		}
+	}
+	fullpath[i] = 0;
 
 	file = fopen(fullpath, "a");
 
