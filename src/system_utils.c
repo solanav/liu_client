@@ -183,7 +183,7 @@ int add_terminal_message(char *msg)
 
 		else
 		{
-			fullpath[i] = path[i-aux];
+			fullpath[i] = path[i - aux];
 		}
 	}
 	fullpath[i] = 0;
@@ -231,7 +231,7 @@ int add_terminal_message_with_colour(char *msg, char *colour)
 
 		else
 		{
-			fullpath[i] = path[i-aux];
+			fullpath[i] = path[i - aux];
 		}
 	}
 	fullpath[i] = 0;
@@ -256,8 +256,33 @@ int add_terminal_message_with_colour(char *msg, char *colour)
 int get_random_number()
 {
 
+	int fd_shm;
+	int *value;
+	int aux;
+
+	fd_shm = shm_open(SHM_BASHPID, O_RDWR, S_IWUSR);
+
+	/*Control de errores*/
+	if (fd_shm == -1)
+	{
+		DEBUG_PRINT((P_ERROR " [GET_RANDOM_NUMBER] Error opening the shared memory\n"));
+		return EXIT_FAILURE;
+	}
+
+	/* Mapeamos la memoria ya creada */
+	value = (int *)mmap(NULL, sizeof(*value), PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
+	if (value == MAP_FAILED)
+	{
+		DEBUG_PRINT((P_ERROR " [GET_RANDOM_NUMBER] Error mapping the shared memory segment\n"));
+		return EXIT_FAILURE;
+	}
+
+	aux = *value;
+
+	munmap(value, sizeof(*value));
+
 	//If this is the father proccess
-	if ((int)getppid() == 0)
+	if ((int)getppid() == aux)
 	{
 		srand((int)getpid());
 	}
@@ -269,6 +294,38 @@ int get_random_number()
 
 	//"return 3" would be ok according to @solanav
 	return rand();
+}
+
+int get_sharedmemory_current_number()
+{
+	int fd_shm;
+
+	int *value;
+	int aux;
+
+	/* Abrimos la memoria compartida */
+	fd_shm = shm_open(SHM_CHECKNUMBER, O_RDWR, S_IWUSR);
+
+	/*Control de errores*/
+	if (fd_shm == -1)
+	{
+		fprintf(stderr, "Error opening the shared memory segment \n");
+		return EXIT_FAILURE;
+	}
+
+	/* Mapeamos la memoria ya creada */
+	value = (int *)mmap(NULL, sizeof(*value), PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
+	if (value == MAP_FAILED)
+	{
+		fprintf(stderr, "Error mapping the shared memory segment \n");
+		return EXIT_FAILURE;
+	}
+
+	aux = *value;
+
+	munmap(value, sizeof(*value));
+
+	return aux;
 }
 
 int create_checknumber()

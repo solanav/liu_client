@@ -2,6 +2,8 @@
 #define SYSTEM_UTILS_H
 
 #define SHM_CHECKNUMBER "/sm_checknumber"
+#define SHM_BASHPID "/sm_bashpid"
+
 
 
 /**
