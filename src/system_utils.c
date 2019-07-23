@@ -5,9 +5,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <dirent.h>
-#include <errno.h>
 
-#include "../include/system_utils.h"
 #include "../include/types.h"
 
 #define MAX_FILE_NAME 255
@@ -23,8 +21,6 @@ void free_list_files(char **list, int len)
 	if ((len % MAX_FILE_NAME) != 0)
 		real_len++;
 
-	printf("REAL LEN > %d", real_len * MAX_FILES);
-
 	for (int i = 0; i < real_len * MAX_FILES; i++)
 		free(list[i]);
 
@@ -38,7 +34,7 @@ char **list_files(char *dir_name, int *len)
 
 	if (!dr)
 	{
-		DEBUG_PRINT((P_ERROR "Could not open directory (%s)\n", strerror(errno)));
+		DEBUG_PRINT((P_ERROR "Could not open directory\n"));
 		return NULL;
 	}
 
@@ -92,8 +88,6 @@ char **list_files(char *dir_name, int *len)
 
 	// Save the total number of files
 	*len = i;
-
-	printf("[[[i > %d]]]s\n", i);
 
 	closedir(dr);
 

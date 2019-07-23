@@ -1,22 +1,17 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <sys/types.h>
-#include <dlfcn.h>
-#include <string.h>
 #include <sys/wait.h>
-#include <sys/ptrace.h>
+#include <unistd.h>
 
 // Testing
-#include <mqueue.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <errno.h>
 #include <pthread.h>
+#include <semaphore.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <time.h>
 
 #include "../include/core.h"
-#include "../include/plugin_utils.h"
-#include "../include/network_utils.h"
+#include "../include/network_active.h"
 
 #define PORT 9114
 
@@ -37,34 +32,29 @@ int main()
 	}
 	else if (pid == 0)
 	{
-		start_server(PORT);
+		return start_server(PORT);
 	}
 	else
 	{
-		
 		sleep(1);
 
 		// Register as a peer
-		upload_data("127.0.0.1", PORT, "\x00\x04\x23\x9A", 4);
+		send_peerdata("127.0.0.1", PORT, PORT);
 		sleep(3);
 
 		// Send a ping
-		upload_data("127.0.0.1", PORT, "\x00\x01", 4);
+		send_ping("127.0.0.1", PORT);
 		sleep(1);
 
+		printf("Calling stop_server\n");
 		stop_server("127.0.0.1", PORT);
-
 	}
 
 	// Wait for server to stop
 	wait(NULL);
 
 	// Clean
-	if (clean_networking() == ERROR)
-	{
-		DEBUG_PRINT((P_ERROR "Error cleaning networking"));
-		return ERROR;
-	}
+	clean_networking();
 
 	return OK;
 }
