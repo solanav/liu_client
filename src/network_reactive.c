@@ -65,6 +65,7 @@ int start_server(in_port_t port)
 		return ERROR;
 	}
 
+
 	// Open message queue
 	mqd_t datagram_queue = mq_open(SERVER_QUEUE, O_RDWR);
 	if (datagram_queue == -1)

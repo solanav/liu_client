@@ -9,16 +9,63 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <mqueue.h>
-
+#include <sys/wait.h>
 #include <openssl/pem.h>
 
 #include "../include/network_active.h"
 #include "../include/network_utils.h"
 
+#define PORT 9114
+
 // Private functions
 int latency_calculator(latency *lat);
+int create_shared_variables();
 
 int init_networking()
+{
+	if (create_shared_variables() == ERROR)
+	{
+		DEBUG_PRINT((P_ERROR "Failed to create the shared variables\n"));
+		return ERROR;
+	}
+
+	pid_t pid = fork();
+
+	if (pid < 0)
+	{
+		DEBUG_PRINT((P_ERROR "Fork failed\n"));
+		return ERROR;
+	}
+	else if (pid == 0)
+	{
+		return start_server(PORT);
+	}
+	else
+	{
+		sleep(1);
+
+		// Register as a peer
+		send_peerdata("127.0.0.1", PORT, PORT);
+		sleep(3);
+
+		// Send a ping
+		send_ping("127.0.0.1", PORT);
+		sleep(1);
+
+		printf("Calling stop_server\n");
+		stop_server("127.0.0.1", PORT);
+	}
+
+	// Wait for server to stop
+	wait(NULL);
+
+	// Clean
+	clean_networking();
+
+	return OK;
+}
+
+int create_shared_variables()
 {
 	// TODO: create gotos to clean shit
 	int ret = OK;
