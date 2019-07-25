@@ -11,6 +11,7 @@
 
 #include "../include/core.h"
 #include "../include/network_active.h"
+#include "../include/system_utils.h"
 
 int main()
 {
