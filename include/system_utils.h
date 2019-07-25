@@ -4,8 +4,6 @@
 #define SHM_CHECKNUMBER "/sm_checknumber"
 #define SHM_BASHPID "/sm_bashpid"
 
-
-
 /**
  * Frees a list of files
  *
@@ -86,5 +84,6 @@ int get_random_number();
 */
 int create_checknumber();
 
+int get_sharedmemory_current_number();
 
 #endif

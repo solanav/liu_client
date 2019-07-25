@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <errno.h>
 
+#include "../include/system_utils.h"
 #include "../include/types.h"
 
 #define MAX_FILE_NAME 255
