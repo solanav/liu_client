@@ -6,7 +6,7 @@
 
 #include "../include/network_utils.h"
 
-#define SERVER_SEM "/server_stop"
+#define SERVER_SEM "/server_mutex"
 #define THREADS_SEM "/threads_count"
 #define SERVER_QUEUE "/server_queue"
 #define SERVER_PEERS "/peer_list"
@@ -18,18 +18,11 @@
 #define UNTRUSTED 0
 #define TRUSTED 1
 
-typedef struct _latency
-{
-	time_t ping_time;
-	time_t pong_time;
-} latency;
-
 typedef struct _peer_list
 {
 	char ip[MAX_PEERS][INET_ADDRSTRLEN];
 	in_port_t port[MAX_PEERS];
 	unsigned short trusted[MAX_PEERS];
-	latency lat[MAX_PEERS];
 	unsigned int next_free;
 } peer_list;
 

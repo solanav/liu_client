@@ -1,15 +1,15 @@
+#include <errno.h>
+#include <mqueue.h>
+#include <pthread.h>
+#include <semaphore.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <semaphore.h>
 #include <sys/mman.h>
 #include <unistd.h>
-#include <pthread.h>
-#include <mqueue.h>
-#include <errno.h>
 
-#include "../include/network_utils.h"
 #include "../include/network_active.h"
+#include "../include/network_utils.h"
 
 #define MAX_THREADS 128
 #define HANDLER_TIMEOUT 1 // in seconds
@@ -47,24 +47,27 @@ int start_server(in_port_t port)
 	byte buf[MAX_UDP];
 	pthread_t thread_ret;
 
-	// Open semaphore to stop server
-	int sem_value = SEM_INIT;
+	// Open semaphore for shared memory
 	sem_t *sem = sem_open(SERVER_SEM, 0);
 	if (sem == SEM_FAILED)
 	{
-		DEBUG_PRINT((P_ERROR "[start_server] Failed to create the semaphore to stop the server\n"));
+		DEBUG_PRINT((P_ERROR "Could not open semaphore to close server\n"));
 		return ERROR;
 	}
 
-	// Open semaphore to count threads
-	int sem_value_threads = 0;
-	sem_t *sem_threads = sem_open(THREADS_SEM, 0);
-	if (sem_threads == SEM_FAILED)
+	// Open shared memory
+	int shared_data_fd = shm_open(SERVER_PEERS, O_RDWR, S_IRUSR | S_IWUSR);
+	if (shared_data_fd == -1)
 	{
-		DEBUG_PRINT((P_ERROR "[start_server] Failed to create the semaphore to count threads\n"));
+		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to open the shared memory for the server [%s]\n", strerror(errno)));
 		return ERROR;
 	}
-
+	shared_data *sd = (shared_data *)mmap(NULL, sizeof(shared_data), PROT_WRITE | PROT_READ, MAP_SHARED, shared_data_fd, 0);
+	if (sd == MAP_FAILED)
+	{
+		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to truncate shared fd for peers\n"));
+		return ERROR;
+	}
 
 	// Open message queue
 	mqd_t datagram_queue = mq_open(SERVER_QUEUE, O_RDWR);
@@ -74,7 +77,12 @@ int start_server(in_port_t port)
 		return ERROR;
 	}
 
-	while (sem_value == SEM_INIT)
+	// Get stop signal
+	sem_wait(sem);
+	int stop = sd->server_info.stop;
+	sem_post(sem);
+
+	while (stop == 0)
 	{
 		int len = sizeof(other_addr);
 		int n = 0;
@@ -83,30 +91,21 @@ int start_server(in_port_t port)
 					 MSG_WAITALL, (struct sockaddr *)&other_addr,
 					 (socklen_t *)&len);
 
-		// Check right after reciving the packet just in case its the last one
-		if (sem_getvalue(sem, &sem_value) != 0)
-		{
-			DEBUG_PRINT((P_ERROR "Failed to get value of the stop semaphore\n"));
-			return ERROR;
-		}
+		// Get stop signal
+		sem_wait(sem);
+		stop = sd->server_info.stop;
+		sem_post(sem);
 
 		if (n == -1)
 		{
 			DEBUG_PRINT((P_ERROR "Failed to receive datagram from client\n"));
 		}
-		else if (sem_value == SEM_INIT)
+		else if (stop == 0)
 		{
 			// Add to message queue
 			if (mq_send(datagram_queue, (char *)buf, 10, 0) == -1)
 			{
 				DEBUG_PRINT((P_ERROR "Failed to send data to message queue [%s]\n", strerror(errno)));
-				return ERROR;
-			}
-
-			// Update the number of threads we have currently
-			if (sem_getvalue(sem_threads, &sem_value_threads) != 0)
-			{
-				DEBUG_PRINT((P_ERROR "Failed to get value of the threads semaphore\n"));
 				return ERROR;
 			}
 
@@ -118,33 +117,60 @@ int start_server(in_port_t port)
 				return ERROR;
 			}
 
-			if (attr.mq_curmsgs > (MAX_MSG_QUEUE / 2) || sem_value_threads == 0)
+			sem_wait(sem);
+			int num_threads = sd->server_info.num_threads;
+			sem_post(sem);
+
+			if ((attr.mq_curmsgs > (MAX_MSG_QUEUE / 2) || num_threads == 0) && num_threads < MAX_THREADS)
 			{
 				if (pthread_create(&thread_ret, NULL, handle_comm, &other_addr) != 0)
 					DEBUG_PRINT((P_ERROR "Failed to launch new thread\n"));
 				else
 				{
 					DEBUG_PRINT((P_INFO "Launching new thread\n"));
-					sem_post(sem_threads);
+
+					// Save pthread_t and add one to number of threads
+					sem_wait(sem);
+					sd->server_info.threads[sd->server_info.num_threads] = thread_ret;
+					sd->server_info.num_threads++;
+					sem_post(sem);
 				}
 			}
 		}
 	}
 
-	// Signal we are finished (sem_value will go from 1 to 2)
+	close(datagram_queue);
+
+	// Wait for all threads to close
+	int val = 0;
+	do
+	{
+		sleep(1);
+		sem_wait(sem);
+		val = sd->server_info.num_threads;
+		sem_post(sem);
+	} while (val != 0);
+
+	DEBUG_PRINT((P_OK "The server and threads have stopped correctly\n"));
+
+	// Set stop to 2 to signal we are done
+	sem_wait(sem);
+	sd->server_info.stop = 2;
 	sem_post(sem);
 
 	sem_close(sem);
-	sem_close(sem_threads);
-	close(datagram_queue);
 
-	DEBUG_PRINT((P_OK "The server has stopped correctly\n"));
+	munmap(sd, sizeof(shared_data));
+	close(shared_data_fd);
 
-	return 0;
+	return OK;
 }
 
 int stop_server(char *ip, in_port_t port)
 {
+	DEBUG_PRINT((P_INFO "Closing everything down...\n"));
+
+	// Open semaphore for shared memory
 	sem_t *sem = sem_open(SERVER_SEM, 0);
 	if (sem == SEM_FAILED)
 	{
@@ -152,40 +178,40 @@ int stop_server(char *ip, in_port_t port)
 		return ERROR;
 	}
 
-	sem_t *sem_threads = sem_open(THREADS_SEM, 0);
-	if (sem_threads == SEM_FAILED)
+	// Open shared memory
+	int shared_data_fd = shm_open(SERVER_PEERS, O_RDWR, S_IRUSR | S_IWUSR);
+	if (shared_data_fd == -1)
 	{
-		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to open the semaphore to count threads\n"));
+		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to open the shared memory for the server [%s]\n", strerror(errno)));
+		return ERROR;
+	}
+	shared_data *sd = (shared_data *)mmap(NULL, sizeof(shared_data), PROT_WRITE | PROT_READ, MAP_SHARED, shared_data_fd, 0);
+	if (sd == MAP_FAILED)
+	{
+		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to truncate shared fd for peers\n"));
 		return ERROR;
 	}
 
+	// Activate signal to stop server
+	sem_wait(sem);
+	sd->server_info.stop = 1;
 	sem_post(sem);
 
 	// Message to update the server so it stops asap
 	send_empty(ip, port);
 
-	// Wait until the value from the semaphore goes up two times,
-	// because that means server is out of the main loop
-	int sem_value = 0;
-	sem_getvalue(sem, &sem_value);
-	while (sem_value != 2)
+	// Wait for the server to exit the main loop
+	int val = 0;
+	do
 	{
 		sleep(1);
-		sem_getvalue(sem, &sem_value);
-	}
+		sem_wait(sem);
+		val = sd->server_info.stop;
+		sem_post(sem);
+	} while (val != 2);
 
 	sem_close(sem);
 
-	int sem_threads_value = 0;
-	sem_getvalue(sem_threads, &sem_threads_value);
-	while (sem_threads_value != 0)
-	{
-		sleep(1);
-		sem_getvalue(sem_threads, &sem_threads_value);
-	}
-
-	sem_close(sem_threads);
-	
 	DEBUG_PRINT((P_OK "All threads have been closed correctly\n"));
 
 	return OK;
@@ -195,17 +221,31 @@ void *handle_comm(void *socket)
 {
 	pthread_t self = pthread_self();
 
-	// Open thread count semaphore 
-	sem_t *sem_threads = sem_open(THREADS_SEM, 0);
-	if (sem_threads == SEM_FAILED)
+	// Open semaphore for shared memory
+	sem_t *sem = sem_open(SERVER_SEM, 0);
+	if (sem == SEM_FAILED)
 	{
-		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to open the semaphore to count threads\n"));
-		goto NONE_CLEAN;		
+		DEBUG_PRINT((P_ERROR "Could not open semaphore to close server\n"));
+		goto NONE_CLEAN;
+	}
+
+	// Open shared memory
+	int shared_data_fd = shm_open(SERVER_PEERS, O_RDWR, S_IRUSR | S_IWUSR);
+	if (shared_data_fd == -1)
+	{
+		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to open the shared memory for the server [%s]\n", strerror(errno)));
+		goto SEM_CLEAN;
+	}
+	shared_data *sd = (shared_data *)mmap(NULL, sizeof(shared_data), PROT_WRITE | PROT_READ, MAP_SHARED, shared_data_fd, 0);
+	if (sd == MAP_FAILED)
+	{
+		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to truncate shared fd for peers\n"));
+		goto FD_CLEAN;
 	}
 
 	// Get memory for buffer
 	char data[MAX_UDP];
-	
+
 	// Get socket
 	const struct sockaddr_in *other = (struct sockaddr_in *)socket;
 
@@ -214,26 +254,11 @@ void *handle_comm(void *socket)
 	if (mq == -1)
 	{
 		DEBUG_PRINT((P_ERROR "Failed to open queue in handler\n"));
-		goto SEMTHREADS_CLEAN;
-	}
-	
-	// Get peer list from shared memory
-	int peer_fd = shm_open(SERVER_PEERS, O_RDWR, S_IRUSR | S_IWUSR);
-	if (peer_fd == -1)
-	{
-		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to open the shared memory for the server [%s]\n", strerror(errno)));
-		goto MQ_CLEAN;
-	}
-	peer_list *peers = (peer_list *)mmap(NULL, sizeof(peer_list), PROT_WRITE | PROT_READ, MAP_SHARED, peer_fd, 0);
-	if (peers == MAP_FAILED)
-	{
-		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to truncate shared fd for peers\n"));
-		goto PEERFD_CLEAN;
+		goto SHARED_CLEAN;
 	}
 
 	struct timespec tm;
 	int ret = 0;
-
 	// Exit only when there are no messages on queue for HANDLER_TIMEOUT seconds
 	while (1)
 	{
@@ -243,38 +268,45 @@ void *handle_comm(void *socket)
 		tm.tv_sec += HANDLER_TIMEOUT;
 		tm.tv_nsec = 0;
 
+		DEBUG_PRINT((P_INFO "Waiting for datagram...\n"));
+
 		ret = mq_timedreceive(mq, data, MAX_UDP, NULL, &tm);
 		if (ret == 0 || ret == -1)
 		{
 			DEBUG_PRINT((P_WARN "Handler timedout, stopping [%s]\n", strerror(errno)));
-			goto MAP_CLEAN;
-		}		
+			goto MQ_CLEAN;
+		}
 
 		DEBUG_PRINT((P_INFO "Datagram received, analyzing...\n"));
+
+		// Get a copy of the peer list in shared memory and update it every time
+		sem_wait(sem);
+		peer_list peers = sd->peers;
+		sem_post(sem);
 
 		// Check if the peer is trying to register
 		if (memcmp(data, INIT, COMM_LEN) == 0)
 		{
-			add_peer(peers, other, (byte *) data);
+			add_peer(other, (byte *)data);
 		}
 
 		// Get the peer index
 		char peer_ip[INET_ADDRSTRLEN];
 		get_ip(other, peer_ip); // TODO: ERROR CONTROL
 		size_t peer_index;
-		get_peer(peers, peer_ip, &peer_index);
+		get_peer(peer_ip, &peer_index);
 
 		// TODO: turn this into a switch so gcc can optimize it to hash table
 		if (memcmp(data, PING, COMM_LEN) == 0)
 		{
-			DEBUG_PRINT((P_INFO "Received a ping from [%s:%d]\n", peers->ip[peer_index], peers->port[peer_index]));
-			DEBUG_PRINT((P_INFO "Sending a pong to [%s:%d]\n", peers->ip[peer_index], peers->port[peer_index]));
+			DEBUG_PRINT((P_INFO "Received a ping from [%s:%d]\n", peers.ip[peer_index], peers.port[peer_index]));
+			DEBUG_PRINT((P_INFO "Sending a pong to [%s:%d]\n", peers.ip[peer_index], peers.port[peer_index]));
 
-			send_pong(peers->ip[peer_index], peers->port[peer_index]);
+			send_pong(peers.ip[peer_index], peers.port[peer_index]);
 		}
 		else if (memcmp(data, PONG, COMM_LEN) == 0)
 		{
-			DEBUG_PRINT((P_INFO "Received a pong from [%s:%d]\n", peers->ip[peer_index], peers->port[peer_index]));
+			DEBUG_PRINT((P_INFO "Received a pong from [%s:%d]\n", peers.ip[peer_index], peers.port[peer_index]));
 		}
 		else if (memcmp(data, EMPTY, COMM_LEN) == 0)
 		{
@@ -284,21 +316,25 @@ void *handle_comm(void *socket)
 		memset(data, 0, MAX_UDP);
 	}
 
-MAP_CLEAN:
-	munmap(peers, sizeof(peer_list));
-
-PEERFD_CLEAN:
-	close(peer_fd);
-
 MQ_CLEAN:
 	mq_close(mq);
 
-SEMTHREADS_CLEAN:
+SHARED_CLEAN:
 	DEBUG_PRINT((P_OK "Closing thread correctly\n"));
 
-	sem_trywait(sem_threads);
-	sem_close(sem_threads);
-	
+	sem_wait(sem);
+	if (sd->server_info.num_threads > 0)
+		sd->server_info.num_threads--;
+	sem_post(sem);
+
+	munmap(sd, sizeof(shared_data));
+
+FD_CLEAN:
+	close(shared_data_fd);
+
+SEM_CLEAN:
+	sem_close(sem);
+
 NONE_CLEAN:
 	DEBUG_PRINT((P_OK "Detaching and exiting thread\n"));
 

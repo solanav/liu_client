@@ -1,13 +1,13 @@
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 
-#include "../include/network_utils.h"
 #include "../include/network_active.h"
+#include "../include/network_utils.h"
 
 // Private functions
 
@@ -27,28 +27,28 @@ size_t upload_data(char *ip, in_port_t port, unsigned char *data, size_t len);
 
 int send_ping(char *ip, in_port_t port)
 {
-    return upload_data(ip, port, (byte *) PING, COMM_LEN);
+	return upload_data(ip, port, (byte *)PING, COMM_LEN);
 }
 
 int send_pong(char *ip, in_port_t port)
 {
-    return upload_data(ip, port, (byte *) PONG, COMM_LEN);
+	return upload_data(ip, port, (byte *)PONG, COMM_LEN);
 }
 
 int send_empty(char *ip, in_port_t port)
 {
-    return upload_data(ip, port, (byte *) EMPTY, COMM_LEN);
+	return upload_data(ip, port, (byte *)EMPTY, COMM_LEN);
 }
 
 int send_peerdata(char *ip, in_port_t port, in_port_t self_port)
 {
-    unsigned char data[4] = {0};
-    memcpy(data, INIT, COMM_LEN);
+	unsigned char data[4] = {0};
+	memcpy(data, INIT, COMM_LEN);
 
-    data[PORTH] = (self_port >> 8) & 0x00ff;
-    data[PORTL] = self_port & 0x00ff;
+	data[PORTH] = (self_port >> 8) & 0x00ff;
+	data[PORTL] = self_port & 0x00ff;
 
-    return upload_data(ip, port, data, INIT_LEN);
+	return upload_data(ip, port, data, INIT_LEN);
 }
 
 size_t upload_data(char *ip, in_port_t port, byte *data, size_t len)

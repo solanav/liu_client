@@ -1,16 +1,16 @@
+#include <arpa/inet.h>
+#include <errno.h>
+#include <mqueue.h>
+#include <netinet/in.h>
+#include <openssl/pem.h>
+#include <semaphore.h>
 #include <stdio.h>
 #include <string.h>
-#include <arpa/inet.h>
-#include <semaphore.h>
-#include <sys/stat.h>
 #include <sys/mman.h>
-#include <unistd.h>
-#include <errno.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
-#include <mqueue.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
-#include <openssl/pem.h>
+#include <unistd.h>
 
 #include "../include/network_active.h"
 #include "../include/network_utils.h"
@@ -18,7 +18,6 @@
 #define PORT 9114
 
 // Private functions
-int latency_calculator(latency *lat);
 int create_shared_variables();
 
 int init_networking()
@@ -29,6 +28,48 @@ int init_networking()
 		return ERROR;
 	}
 
+	// Open shared memory
+	int shared_data_fd = shm_open(SERVER_PEERS, O_RDWR, S_IRUSR | S_IWUSR);
+	if (shared_data_fd == -1)
+	{
+		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to open the shared memory for the server [%s]\n", strerror(errno)));
+		return ERROR;
+	}
+	shared_data *sd = (shared_data *)mmap(NULL, sizeof(shared_data), PROT_WRITE | PROT_READ, MAP_SHARED, shared_data_fd, 0);
+	if (sd == MAP_FAILED)
+	{
+		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to truncate shared fd for peers\n"));
+		return ERROR;
+	}
+
+	for (int i = 0; i < MAX_DATAGRAMS - 10; i++)
+		add_req((const char *)"0.0.0.1", (const byte *)"\x76\x32");
+
+	rm_req(0);
+
+	add_req((const char *)"9.9.9.9", (const byte *)"\x76\x32");
+	add_req((const char *)"9.9.13.9", (const byte *)"\x76\x32");
+	add_req((const char *)"9.9.9.9", (const byte *)"\x76\x32");
+	add_req((const char *)"9.9.9.9", (const byte *)"\x76\x32");
+	add_req((const char *)"9.9.9.9", (const byte *)"\x76\x32");
+	add_req((const char *)"9.9.9.9", (const byte *)"\x76\x32");
+	add_req((const char *)"9.9.9.9", (const byte *)"\x76\x32");
+	add_req((const char *)"9.9.9.9", (const byte *)"\x76\x32");
+	add_req((const char *)"9.9.9.9", (const byte *)"\x76\x32");
+	add_req((const char *)"9.9.9.9", (const byte *)"\x76\x32");
+	add_req((const char *)"9.9.9.9", (const byte *)"\x76\x32");
+	add_req((const char *)"9.9.9.9", (const byte *)"\x76\x32");
+
+	int res = get_req((const char *)"9.9.13.9", (const byte *)"\x76\x32");
+
+	// Print the data
+	//for (int i = 0; i < MAX_DATAGRAMS; i++)
+	printf("FIRST [%d]\nLAST [%d]\nFOUND [%d]\n", sd->req_first, sd->req_last, res);
+
+	clean_networking();
+
+	return OK;
+
 	pid_t pid = fork();
 
 	if (pid < 0)
@@ -38,7 +79,9 @@ int init_networking()
 	}
 	else if (pid == 0)
 	{
-		return start_server(PORT);
+		start_server(PORT);
+		DEBUG_PRINT((P_OK "Exited server, closing process...\n"));
+		exit(EXIT_SUCCESS);
 	}
 	else
 	{
@@ -52,7 +95,28 @@ int init_networking()
 		send_ping("127.0.0.1", PORT);
 		sleep(1);
 
-		printf("Calling stop_server\n");
+		// Send a ping
+		send_ping("127.0.0.1", PORT);
+		send_ping("127.0.0.1", PORT);
+		send_ping("127.0.0.1", PORT);
+		send_ping("127.0.0.1", PORT);
+		send_ping("127.0.0.1", PORT);
+		send_ping("127.0.0.1", PORT);
+		send_ping("127.0.0.1", PORT);
+		send_ping("127.0.0.1", PORT);
+		send_ping("127.0.0.1", PORT);
+		send_ping("127.0.0.1", PORT);
+		send_ping("127.0.0.1", PORT);
+		send_ping("127.0.0.1", PORT);
+		send_ping("127.0.0.1", PORT);
+		send_ping("127.0.0.1", PORT);
+		send_ping("127.0.0.1", PORT);
+		send_ping("127.0.0.1", PORT);
+		send_ping("127.0.0.1", PORT);
+		send_ping("127.0.0.1", PORT);
+
+		sleep(5);
+
 		stop_server("127.0.0.1", PORT);
 	}
 
@@ -70,7 +134,7 @@ int create_shared_variables()
 	// TODO: create gotos to clean shit
 	int ret = OK;
 	// Create the semaphore to stop the server later
-	sem_t *sem = sem_open(SERVER_SEM, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, SEM_INIT);
+	sem_t *sem = sem_open(SERVER_SEM, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1);
 	if (sem == SEM_FAILED)
 	{
 		DEBUG_PRINT((P_ERROR "[init_networking] Failed to create the semaphore for the server\n"));
@@ -78,27 +142,30 @@ int create_shared_variables()
 	}
 
 	// Shared memory for peer list
-	int peer_fd = shm_open(SERVER_PEERS, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
-	if (peer_fd == -1)
+	int shared_data_fd = shm_open(SERVER_PEERS, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
+	if (shared_data_fd == -1)
 	{
 		DEBUG_PRINT((P_ERROR "[init_networking] Failed to create the shared memory for the server\n"));
 		ret = ERROR;
 		goto SEM_CLEAN;
 	}
-	if (ftruncate(peer_fd, sizeof(peer_list)) == -1)
+	if (ftruncate(shared_data_fd, sizeof(shared_data)) == -1)
 	{
-		DEBUG_PRINT((P_ERROR "[init_networking] Failed to truncate shared fd for peers\n"));
+		DEBUG_PRINT((P_ERROR "[init_networking] Failed to truncate shared fd for shared_data\n"));
 		ret = ERROR;
 		goto SHM_CLEAN;
 	}
-	peer_list *peers = (peer_list *)mmap(NULL, sizeof(peer_list), PROT_WRITE | PROT_READ, MAP_SHARED, peer_fd, 0);
-	if (peers == MAP_FAILED)
+	shared_data *sd = (shared_data *)mmap(NULL, sizeof(shared_data), PROT_WRITE | PROT_READ, MAP_SHARED, shared_data_fd, 0);
+	if (sd == MAP_FAILED)
 	{
-		DEBUG_PRINT((P_ERROR "[init_networking] Failed to map shared fd for peers\n"));
+		DEBUG_PRINT((P_ERROR "[init_networking] Failed to map shared fd for sd\n"));
 		ret = ERROR;
 		goto SHM_CLEAN;
 	}
-	memset(peers, 0, sizeof(peer_list));
+	memset(sd, 0, sizeof(shared_data));
+	//memset(sd->req.next, -1, sizeof(int) * MAX_DATAGRAMS);
+	//memset(sd->req.prev, -1, sizeof(int) * MAX_DATAGRAMS);
+	sd->req_last = -1;
 
 	// Create msg_queue for the server and handler
 	struct mq_attr attr;
@@ -115,27 +182,14 @@ int create_shared_variables()
 		goto MAP_CLEAN;
 	}
 
-	// Create semaphore to keep count of threads that are alive
-	sem_t *sem_threads = sem_open(THREADS_SEM, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 0);
-	if (!sem_threads)
-	{
-		DEBUG_PRINT((P_ERROR "[init_networking] Failed to create the semaphore for the server\n"));
-		ret = ERROR;
-		goto MQ_CLEAN;
-	}
-
-// Close but don't unlink
-//SEM2_CLEAN:
-	sem_close(sem_threads);
-
-MQ_CLEAN:
+	//MQ_CLEAN:
 	mq_close(datagram_queue);
 
 MAP_CLEAN:
-	munmap(peers, sizeof(peer_list));
+	munmap(sd, sizeof(shared_data));
 
 SHM_CLEAN:
-	close(peer_fd);
+	close(shared_data_fd);
 
 SEM_CLEAN:
 	sem_close(sem);
@@ -145,9 +199,7 @@ SEM_CLEAN:
 
 void clean_networking()
 {
-
 	sem_unlink(SERVER_SEM);
-	sem_unlink(THREADS_SEM);
 	shm_unlink(SERVER_PEERS);
 	mq_unlink(SERVER_QUEUE);
 
@@ -202,19 +254,45 @@ void encryption_testing()
 	}*/
 }
 
-int get_peer(const peer_list *peers, const char *other_ip, size_t *index)
+int get_peer(const char *other_ip, size_t *index)
 {
+	sem_t *mutex = sem_open(SERVER_SEM, 0);
+	if (mutex == SEM_FAILED)
+	{
+		DEBUG_PRINT((P_ERROR "Failed to open the semaphore for shared memory"));
+		return ERROR;
+	}
+
+	// Open shared memory
+	int shared_data_fd = shm_open(SERVER_PEERS, O_RDWR, S_IRUSR | S_IWUSR);
+	if (shared_data_fd == -1)
+	{
+		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to open the shared memory for the server [%s]\n", strerror(errno)));
+		return ERROR;
+	}
+	shared_data *sd = (shared_data *)mmap(NULL, sizeof(shared_data), PROT_WRITE | PROT_READ, MAP_SHARED, shared_data_fd, 0);
+	if (sd == MAP_FAILED)
+	{
+		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to truncate shared fd for peers\n"));
+		return ERROR;
+	}
+
+	sem_wait(mutex);
+
 	for (int i = 0; i < MAX_PEERS; i++)
 	{
-		if (strcmp(other_ip, peers->ip[i]) == 0)
+		if (strcmp(other_ip, sd->peers.ip[i]) == 0)
 		{
 			if (index)
 				*index = i;
 
+			sem_post(mutex);
 			return OK;
 		}
 	}
 
+	sem_post(mutex);
+	sem_close(mutex);
 	DEBUG_PRINT((P_WARN "Peer not found on peer_list\n"));
 
 	return ERROR;
@@ -231,12 +309,35 @@ int get_ip(const struct sockaddr_in *socket, char *ip)
 	return OK;
 }
 
-int add_peer(peer_list *peers, const struct sockaddr_in *other, const byte *data)
+int add_peer(const struct sockaddr_in *other, const byte *data)
 {
-	if (!peers || !other)
+	if (!other)
 		return ERROR;
 
-	int next = peers->next_free;
+	sem_t *mutex = sem_open(SERVER_SEM, 0);
+	if (mutex == SEM_FAILED)
+	{
+		DEBUG_PRINT((P_ERROR "Failed to open the semaphore for shared memory"));
+		return ERROR;
+	}
+
+	// Open shared memory
+	int shared_data_fd = shm_open(SERVER_PEERS, O_RDWR, S_IRUSR | S_IWUSR);
+	if (shared_data_fd == -1)
+	{
+		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to open the shared memory for the server [%s]\n", strerror(errno)));
+		return ERROR;
+	}
+	shared_data *sd = (shared_data *)mmap(NULL, sizeof(shared_data), PROT_WRITE | PROT_READ, MAP_SHARED, shared_data_fd, 0);
+	if (sd == MAP_FAILED)
+	{
+		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to truncate shared fd for peers\n"));
+		return ERROR;
+	}
+
+	sem_wait(mutex);
+	int next = sd->peers.next_free;
+	sem_post(mutex);
 
 	// Get the ip of the peer
 	char other_ip[INET_ADDRSTRLEN];
@@ -244,7 +345,7 @@ int add_peer(peer_list *peers, const struct sockaddr_in *other, const byte *data
 		return ERROR;
 
 	// Check if peer already on list
-	if (get_peer(peers, other_ip, NULL) == OK)
+	if (get_peer(other_ip, NULL) == OK)
 		return ERROR;
 
 	// Check if peer list is full
@@ -255,14 +356,180 @@ int add_peer(peer_list *peers, const struct sockaddr_in *other, const byte *data
 		return ERROR;
 	}
 
-	// Update struct's data (the port we don't know yet)
-	strncpy(peers->ip[next], other_ip, INET_ADDRSTRLEN);
-	peers->port[next] = (data[PORTH] << 8) + data[PORTL];
-	peers->trusted[next] = UNTRUSTED;
+	// Update struct's data
+	sem_wait(mutex);
 
-	DEBUG_PRINT((P_INFO "Added peer with data: [%s:%d]\n", peers->ip[next], peers->port[next]));
+	strncpy(sd->peers.ip[next], other_ip, INET_ADDRSTRLEN);
+	sd->peers.port[next] = (data[PORTH] << 8) + data[PORTL];
+	sd->peers.trusted[next] = UNTRUSTED;
 
-	peers->next_free += 1;
+	DEBUG_PRINT((P_INFO "Added peer with data: [%s:%d]\n", sd->peers.ip[next], sd->peers.port[next]));
+
+	sd->peers.next_free += 1;
+
+	sem_post(mutex);
+	sem_close(mutex);
 
 	return OK;
+}
+
+int add_req(const char *ip, const byte *header)
+{
+	// Open semaphore for shared memory
+	sem_t *sem = sem_open(SERVER_SEM, 0);
+	if (sem == SEM_FAILED)
+	{
+		DEBUG_PRINT((P_ERROR "[send_ping] Could not open semaphore to close server\n"));
+		return ERROR;
+	}
+
+	// Open shared memory
+	int shared_data_fd = shm_open(SERVER_PEERS, O_RDWR, S_IRUSR | S_IWUSR);
+	if (shared_data_fd == -1)
+	{
+		DEBUG_PRINT((P_ERROR "[send_ping] Failed to open the shared memory for the server [%s]\n", strerror(errno)));
+		return ERROR;
+	}
+	shared_data *sd = (shared_data *)mmap(NULL, sizeof(shared_data), PROT_WRITE | PROT_READ, MAP_SHARED, shared_data_fd, 0);
+	if (sd == MAP_FAILED)
+	{
+		DEBUG_PRINT((P_ERROR "[send_ping] Failed to truncate shared fd for peers\n"));
+		return ERROR;
+	}
+
+	// Save datagram in shared memory with timestamp
+	sem_wait(sem);
+
+	// Get an empty space to save the request in
+	int index = -1;
+	for (int i = 0; i < MAX_DATAGRAMS && index == -1; i++)
+	{
+		if (sd->req.free[i] == 0)
+			index = i;
+	}
+
+	if (index == -1)
+	{
+		DEBUG_PRINT((P_ERROR "No memory for new requests\n"));
+		sem_post(sem);
+		return ERROR;
+	}
+
+	// Copy data to req[index]
+	clock_gettime(CLOCK_MONOTONIC, &(sd->req.timestamp[index]));
+	strncpy(sd->req.ip[index], ip, INET_ADDRSTRLEN);
+	sd->req.header[index][0] = header[0];
+	sd->req.header[index][1] = header[1];
+
+	// Update variables of the list
+	if (sd->req_last != -1)
+	{
+		sd->req.next[sd->req_last] = index;
+		sd->req.next[index] = -1;
+		sd->req.prev[index] = sd->req_last;
+	}
+
+	sd->req_last = index;
+	sd->req.free[index] = 1;
+
+	sem_post(sem);
+
+	return OK;
+}
+
+int rm_req(int index)
+{
+	// Open semaphore for shared memory
+	sem_t *sem = sem_open(SERVER_SEM, 0);
+	if (sem == SEM_FAILED)
+	{
+		DEBUG_PRINT((P_ERROR "[send_ping] Could not open semaphore to close server\n"));
+		return ERROR;
+	}
+
+	// Open shared memory
+	int shared_data_fd = shm_open(SERVER_PEERS, O_RDWR, S_IRUSR | S_IWUSR);
+	if (shared_data_fd == -1)
+	{
+		DEBUG_PRINT((P_ERROR "[send_ping] Failed to open the shared memory for the server [%s]\n", strerror(errno)));
+		return ERROR;
+	}
+	shared_data *sd = (shared_data *)mmap(NULL, sizeof(shared_data), PROT_WRITE | PROT_READ, MAP_SHARED, shared_data_fd, 0);
+	if (sd == MAP_FAILED)
+	{
+		DEBUG_PRINT((P_ERROR "[send_ping] Failed to truncate shared fd for peers\n"));
+		return ERROR;
+	}
+
+	sem_wait(sem);
+
+	if (index == sd->req_first)
+		sd->req_first = sd->req.next[index];
+
+	int prev_index = sd->req.prev[index];
+	int next_index = sd->req.next[index];
+
+	sd->req.next[prev_index] = next_index;
+	sd->req.prev[next_index] = prev_index;
+
+	memset(sd->req.header[index], 0, COMM_LEN);
+	memset(sd->req.ip[index], 0, INET_ADDRSTRLEN);
+	sd->req.prev[index] = -1;
+	sd->req.next[index] = -1;
+	sd->req.free[index] = 0;
+
+	sem_post(sem);
+
+	return OK;
+}
+
+int get_req(const char *ip, const byte *header)
+{
+	// Open semaphore for shared memory
+	sem_t *sem = sem_open(SERVER_SEM, 0);
+	if (sem == SEM_FAILED)
+	{
+		DEBUG_PRINT((P_ERROR "[send_ping] Could not open semaphore to close server\n"));
+		return -1;
+	}
+
+	// Open shared memory
+	int shared_data_fd = shm_open(SERVER_PEERS, O_RDWR, S_IRUSR | S_IWUSR);
+	if (shared_data_fd == -1)
+	{
+		DEBUG_PRINT((P_ERROR "[send_ping] Failed to open the shared memory for the server [%s]\n", strerror(errno)));
+		return -1;
+	}
+	shared_data *sd = (shared_data *)mmap(NULL, sizeof(shared_data), PROT_WRITE | PROT_READ, MAP_SHARED, shared_data_fd, 0);
+	if (sd == MAP_FAILED)
+	{
+		DEBUG_PRINT((P_ERROR "[send_ping] Failed to truncate shared fd for peers\n"));
+		return -1;
+	}
+
+	struct _request req_copy;
+
+	sem_wait(sem);
+	req_copy = sd->req;
+	sem_post(sem);
+
+	int cont = sd->req_first;
+	int found = 0;
+	while (req_copy.next[cont] != -1 && found == 0)
+	{
+		printf("(%d)\t(%d) < [%s][%x%x] > (%d)\n", cont, sd->req.prev[cont], sd->req.ip[cont], sd->req.header[cont][0], sd->req.header[cont][1], sd->req.next[cont]);
+		if (strncmp((const char *) sd->req.ip[cont], (const char *) ip, INET_ADDRSTRLEN) == 0 &&
+			strncmp((const char *) sd->req.header[cont], (const char *) header, COMM_LEN) == 0)
+			found = 1;
+		else
+			cont = sd->req.next[cont];
+	}
+
+	if (found == 0)
+	{
+		DEBUG_PRINT((P_ERROR "Failed to find the request\n"));
+		return -1;
+	}
+
+	return cont;
 }
