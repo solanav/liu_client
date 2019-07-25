@@ -1,6 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <sys/types.h>
 #include <dlfcn.h>
 #include <string.h>
@@ -8,16 +6,14 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 #include "../include/core.h"
-#include "../include/plugin_utils.h"
-#include "../include/network_utils.h"
-
-#define PORT 9092
+#include "../include/network_active.h"
 
 int main()
 {
-
 	//________________________________________________________________________________
 	//__________________________ANTI DEBUG SYSTEM STUFF_______________________________
 	//________________________________________________________________________________
@@ -79,10 +75,12 @@ int main()
 	//_______________________END OF ANTI DEBUG SYSTEM STUFF___________________________
 	//________________________________________________________________________________
 
-	int len = 0;
-	char **file_list = list_files("../plugins", &len);
-
-	init_plugins(file_list, len);
+	// Launch networking
+	if (init_networking() == ERROR)
+	{
+		DEBUG_PRINT((P_ERROR "Failed to initialize the networking module\n"));
+		return ERROR;
+	}
 
 	return OK;
 }

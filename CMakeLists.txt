@@ -3,8 +3,11 @@ project(LIU_CLIENT)
 
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_C_COMPILER /usr/bin/gcc)
-find_library(LIBRT rt) 
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpedantic")
+
+find_library(LIBRT rt) 
 
 add_definitions(-DDEBUG)
 

@@ -1,6 +1,8 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+typedef unsigned char byte;
+
 #define OTHER 1
 #define OK 0
 #define ERROR -1

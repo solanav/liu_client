@@ -4,7 +4,6 @@
 #include <unistd.h>
 
 #include "../include/encrypt.h"
-#include "../include/hydrogen.h"
 #include "../include/types.h"
 #include "../include/system_utils.h"
 
@@ -129,7 +128,6 @@ int encrypt_file(char *file_name, uint8_t *key)
 
     long last_chunk_len = ftell(fp_original) - last_pos;
     fseek(fp_original, last_pos, SEEK_SET);
-    size_t last_chunk_read = fread(buf, 1, last_chunk_len, fp_original);
 
     // Read last chunk of data
     if (last_chunk_len > 0 && encrypted_flag == 0)
@@ -227,7 +225,6 @@ int decrypt_file(char *file_name, uint8_t *key)
     }
 
     long last_chunk_len = ftell(fp_encrypted) - last_pos;
-    size_t last_chunk_read = fseek(fp_encrypted, last_pos, SEEK_SET);
 
     // Read last chunk of data
     if (last_chunk_len > 0 && decrypted_flag == 0)
