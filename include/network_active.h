@@ -7,7 +7,7 @@
 #define EMPTY "\x00\x00"
 #define PING "\x00\x01"
 #define PONG "\x00\x02"
-#define GETIP "\x00\x03"
+#define GETPEERS "\x00\x03"
 #define INIT "\x00\x04" 
 
 #define INIT_LEN 4

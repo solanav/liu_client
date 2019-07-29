@@ -27,6 +27,9 @@ size_t upload_data(char *ip, in_port_t port, unsigned char *data, size_t len);
 
 int send_ping(char *ip, in_port_t port)
 {
+	if (add_req(ip, (byte *)PING) == ERROR)
+		return ERROR;
+
 	return upload_data(ip, port, (byte *)PING, COMM_LEN);
 }
 
@@ -49,6 +52,14 @@ int send_peerdata(char *ip, in_port_t port, in_port_t self_port)
 	data[PORTL] = self_port & 0x00ff;
 
 	return upload_data(ip, port, data, INIT_LEN);
+}
+
+int send_peerrequest(char *ip, in_port_t port)
+{
+	if (add_req(ip, (byte *)GETPEERS) == ERROR)
+		return ERROR;
+
+	return upload_data(ip, port, (byte *)GETPEERS, COMM_LEN);
 }
 
 size_t upload_data(char *ip, in_port_t port, byte *data, size_t len)

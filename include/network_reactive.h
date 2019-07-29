@@ -24,6 +24,7 @@ typedef struct _peer_list
 	in_port_t port[MAX_PEERS];
 	unsigned short trusted[MAX_PEERS];
 	unsigned int next_free;
+	struct timespec latency[MAX_PEERS];
 } peer_list;
 
 int start_server(in_port_t port);

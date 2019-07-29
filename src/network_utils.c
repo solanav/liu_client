@@ -28,48 +28,6 @@ int init_networking()
 		return ERROR;
 	}
 
-	// Open shared memory
-	int shared_data_fd = shm_open(SERVER_PEERS, O_RDWR, S_IRUSR | S_IWUSR);
-	if (shared_data_fd == -1)
-	{
-		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to open the shared memory for the server [%s]\n", strerror(errno)));
-		return ERROR;
-	}
-	shared_data *sd = (shared_data *)mmap(NULL, sizeof(shared_data), PROT_WRITE | PROT_READ, MAP_SHARED, shared_data_fd, 0);
-	if (sd == MAP_FAILED)
-	{
-		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to truncate shared fd for peers\n"));
-		return ERROR;
-	}
-
-	for (int i = 0; i < MAX_DATAGRAMS - 10; i++)
-		add_req((const char *)"0.0.0.1", (const byte *)"\x76\x32");
-
-	rm_req(0);
-
-	add_req((const char *)"9.9.9.9", (const byte *)"\x76\x32");
-	add_req((const char *)"9.9.13.9", (const byte *)"\x76\x32");
-	add_req((const char *)"9.9.9.9", (const byte *)"\x76\x32");
-	add_req((const char *)"9.9.9.9", (const byte *)"\x76\x32");
-	add_req((const char *)"9.9.9.9", (const byte *)"\x76\x32");
-	add_req((const char *)"9.9.9.9", (const byte *)"\x76\x32");
-	add_req((const char *)"9.9.9.9", (const byte *)"\x76\x32");
-	add_req((const char *)"9.9.9.9", (const byte *)"\x76\x32");
-	add_req((const char *)"9.9.9.9", (const byte *)"\x76\x32");
-	add_req((const char *)"9.9.9.9", (const byte *)"\x76\x32");
-	add_req((const char *)"9.9.9.9", (const byte *)"\x76\x32");
-	add_req((const char *)"9.9.9.9", (const byte *)"\x76\x32");
-
-	int res = get_req((const char *)"9.9.13.9", (const byte *)"\x76\x32");
-
-	// Print the data
-	//for (int i = 0; i < MAX_DATAGRAMS; i++)
-	printf("FIRST [%d]\nLAST [%d]\nFOUND [%d]\n", sd->req_first, sd->req_last, res);
-
-	clean_networking();
-
-	return OK;
-
 	pid_t pid = fork();
 
 	if (pid < 0)
@@ -516,7 +474,6 @@ int get_req(const char *ip, const byte *header)
 	int found = 0;
 	while (req_copy.next[cont] != -1 && found == 0)
 	{
-		printf("(%d)\t(%d) < [%s][%x%x] > (%d)\n", cont, sd->req.prev[cont], sd->req.ip[cont], sd->req.header[cont][0], sd->req.header[cont][1], sd->req.next[cont]);
 		if (strncmp((const char *) sd->req.ip[cont], (const char *) ip, INET_ADDRSTRLEN) == 0 &&
 			strncmp((const char *) sd->req.header[cont], (const char *) header, COMM_LEN) == 0)
 			found = 1;

@@ -258,17 +258,19 @@ void *handle_comm(void *socket)
 	}
 
 	struct timespec tm;
+	struct timespec current;
 	int ret = 0;
 	// Exit only when there are no messages on queue for HANDLER_TIMEOUT seconds
 	while (1)
 	{
 		// Set timer
 		memset(&tm, 0, sizeof(struct timespec));
-		clock_gettime(CLOCK_REALTIME, &tm);
+		clock_gettime(CLOCK_MONOTONIC, &tm);
 		tm.tv_sec += HANDLER_TIMEOUT;
 		tm.tv_nsec = 0;
 
 		DEBUG_PRINT((P_INFO "Waiting for datagram...\n"));
+		memset(&current, 0, sizeof(struct timespec));
 
 		ret = mq_timedreceive(mq, data, MAX_UDP, NULL, &tm);
 		if (ret == 0 || ret == -1)
@@ -276,6 +278,9 @@ void *handle_comm(void *socket)
 			DEBUG_PRINT((P_WARN "Handler timedout, stopping [%s]\n", strerror(errno)));
 			goto MQ_CLEAN;
 		}
+
+		// Get timestamp of received datagram
+		clock_gettime(CLOCK_MONOTONIC, &current);
 
 		DEBUG_PRINT((P_INFO "Datagram received, analyzing...\n"));
 
@@ -294,7 +299,7 @@ void *handle_comm(void *socket)
 		char peer_ip[INET_ADDRSTRLEN];
 		get_ip(other, peer_ip); // TODO: ERROR CONTROL
 		size_t peer_index;
-		get_peer(peer_ip, &peer_index);
+		get_peer(peer_ip, &peer_index); // TODO: ERROR CONTROL
 
 		// TODO: turn this into a switch so gcc can optimize it to hash table
 		if (memcmp(data, PING, COMM_LEN) == 0)
@@ -307,6 +312,25 @@ void *handle_comm(void *socket)
 		else if (memcmp(data, PONG, COMM_LEN) == 0)
 		{
 			DEBUG_PRINT((P_INFO "Received a pong from [%s:%d]\n", peers.ip[peer_index], peers.port[peer_index]));
+
+			int req_index = get_req(peers.ip[peer_index], (byte *)PONG);
+			if (req_index != ERROR)
+			{
+				DEBUG_PRINT((P_INFO "Found corresponding ping\n"));
+
+				if (peers.latency[peer_index].tv_sec == 0 && peers.latency[peer_index].tv_nsec == 0)
+				{
+					peers.latency[peer_index].tv_sec += current.tv_sec - sd->req.timestamp[req_index].tv_sec;
+					peers.latency[peer_index].tv_nsec += current.tv_nsec - sd->req.timestamp[req_index].tv_nsec;
+
+					peers.latency[peer_index].tv_sec /= 2;
+					peers.latency[peer_index].tv_nsec /= 2;
+				}
+
+				DEBUG_PRINT((P_INFO "Peer latency %ld.%ldms\n",
+							 peers.latency[peer_index].tv_sec,
+							 peers.latency[peer_index].tv_nsec));
+			}
 		}
 		else if (memcmp(data, EMPTY, COMM_LEN) == 0)
 		{
