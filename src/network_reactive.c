@@ -301,23 +301,28 @@ void *handle_comm(void *socket)
 		size_t peer_index;
 		get_peer(peer_ip, &peer_index); // TODO: ERROR CONTROL
 
+		sem_wait(sem);
+		in_port_t peer_port = peers.port[peer_index];
+		sem_post(sem);
+
 		// TODO: turn this into a switch so gcc can optimize it to hash table
 		if (memcmp(data, PING, COMM_LEN) == 0)
 		{
-			DEBUG_PRINT((P_INFO "Received a ping from [%s:%d]\n", peers.ip[peer_index], peers.port[peer_index]));
-			DEBUG_PRINT((P_INFO "Sending a pong to [%s:%d]\n", peers.ip[peer_index], peers.port[peer_index]));
+			DEBUG_PRINT((P_INFO "Received a ping from [%s:%d]\n", peer_ip, peer_port));
+			DEBUG_PRINT((P_INFO "Sending a pong to [%s:%d]\n", peer_ip, peer_port));
 
-			send_pong(peers.ip[peer_index], peers.port[peer_index]);
+			send_pong(peer_ip, peer_port);
 		}
 		else if (memcmp(data, PONG, COMM_LEN) == 0)
 		{
-			DEBUG_PRINT((P_INFO "Received a pong from [%s:%d]\n", peers.ip[peer_index], peers.port[peer_index]));
+			DEBUG_PRINT((P_INFO "Received a pong from [%s:%d]\n", peer_ip, peer_port));
 
-			int req_index = get_req(peers.ip[peer_index], (byte *)PONG);
+			int req_index = get_req(peer_ip, (byte *)PONG);
 			if (req_index != ERROR)
 			{
 				DEBUG_PRINT((P_INFO "Found corresponding ping\n"));
 
+				sem_wait(sem);
 				if (peers.latency[peer_index].tv_sec == 0 && peers.latency[peer_index].tv_nsec == 0)
 				{
 					peers.latency[peer_index].tv_sec += current.tv_sec - sd->req.timestamp[req_index].tv_sec;
@@ -327,9 +332,12 @@ void *handle_comm(void *socket)
 					peers.latency[peer_index].tv_nsec /= 2;
 				}
 
-				DEBUG_PRINT((P_INFO "Peer latency %ld.%ldms\n",
+				DEBUG_PRINT((P_INFO "Peer %ld has a latency of %ld.%ldms\n",
+							 peer_index,
 							 peers.latency[peer_index].tv_sec,
 							 peers.latency[peer_index].tv_nsec));
+				
+				sem_post(sem);
 			}
 		}
 		else if (memcmp(data, EMPTY, COMM_LEN) == 0)
