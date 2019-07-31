@@ -38,7 +38,7 @@ size_t upload_data(char *ip, in_port_t port, byte *data, size_t len);
  * 
  * It uploads big data
  */
-size_t upload_data_x(char *ip, in_port_t port, byte *data, size_t len, byte *header, byte *cont_header, size_t header_len, size_t cont_header_len);
+size_t upload_data_x(char *ip, in_port_t port, byte *data, size_t len, byte *header, byte *cont_header);
 
 /**
  * Create a packet
@@ -82,7 +82,7 @@ int send_selfdata(char *ip, in_port_t port, in_port_t self_port)
 	data[1] = self_port & 0x00ff;
 
 	byte packet[MAX_UDP];
-	forge_package((byte *)&packet, (byte *)EMPTY, 0, data, PORT_LEN);
+	forge_package((byte *)&packet, (byte *)INIT, 0, data, PORT_LEN);
 
 	return upload_data(ip, port, (byte *)&packet, MAX_UDP);
 }
@@ -119,8 +119,7 @@ int send_peerdata(char *ip, in_port_t port)
 								 (byte *)&copy,
 								 sizeof(peer_list),
 								 (byte *)SENDPEERS,
-								 (byte *)SENDPEERSC,
-								 COMM_LEN, COMM_LEN);
+								 (byte *)SENDPEERSC);
 
 	DEBUG_PRINT((P_OK "Uploaded %ld bytes\n", trans));
 
@@ -164,56 +163,26 @@ size_t upload_data(char *ip, in_port_t port, byte *data, size_t len)
 	return sendto(socket_desc, data, len, 0, (struct sockaddr *)&other_addr, sizeof(other_addr));
 }
 
-size_t upload_data_x(char *ip, in_port_t port, byte *data, size_t len, byte *header, byte *cont_header, size_t header_len, size_t cont_header_len)
+size_t upload_data_x(char *ip, in_port_t port, byte *data, size_t len, byte *header, byte *cont_header)
 {
-	//TODO Forge packets
-
-	byte datagram[MAX_UDP] = {0};
-	int packet_size = MAX_UDP - (header_len + cont_header_len);
-	int packet_num;
+	size_t packet_num;
 	size_t sent = 0;
+	byte datagram[MAX_UDP] = {0};
 
 	for (packet_num = 0; sent < len; packet_num++)
 	{
-		// Choose header or continuation header
-		if (packet_num == 0)
-			memcpy(datagram, header, header_len);
-		else
-			memcpy(datagram, cont_header, cont_header_len);
-
-		// Add number of the packet
-		datagram[2] = (packet_num >> 8) & 0x00ff;
-		datagram[3] = packet_num & 0x00ff;
-
-		// Add the main data
-		if ((len - sent) >= MAX_UDP)
+		if (sent == 0 && len > C_UDP_LEN)
 		{
-			memcpy(datagram + header_len + PACKET_NUM_LEN,
-				   data + sent,
-				   packet_size);
-
-			DEBUG_PRINT((P_INFO "DEBUG0 PACKET [%x][%x][%x][%x]\n",
-						 datagram[0], datagram[1], datagram[2], datagram[3]));
-
-			// Upload packet
-			upload_data(ip, port, datagram, packet_size);
-
-			sent += packet_size;
+			forge_package(datagram, header, packet_num, data + sent, C_UDP_LEN);
+			sent += C_UDP_LEN;
 		}
 		else
 		{
-			memcpy(datagram + header_len + PACKET_NUM_LEN,
-				   data + sent,
-				   len - sent);
-
-			DEBUG_PRINT((P_INFO "(%ld) DEBUG1 PACKET [%x][%x][%x][%x]\n",
-						 len - sent, datagram[0], datagram[1], datagram[2], datagram[3]));
-
-			// Upload packet
-			upload_data(ip, port, datagram, len - sent);
-
+			forge_package(datagram, cont_header, packet_num, data + sent, len - sent);
 			sent += len - sent;
 		}
+
+		upload_data(ip, port, datagram, MAX_UDP);
 
 		// Clean
 		memset(datagram, 0, MAX_UDP * sizeof(byte));
@@ -231,24 +200,24 @@ int forge_package(byte *datagram, byte *type, int packet_num, byte *data, size_t
 	memcpy(datagram, type, COMM_LEN);
 
 	// Copy packet num
-	datagram[2] = (packet_num >> 8) & 0x00ff;
-	datagram[3] = packet_num & 0x00ff;
+	datagram[COMM_LEN] = (packet_num >> 8) & 0x00ff;
+	datagram[COMM_LEN + 1] = packet_num & 0x00ff;
 
 	// Create cookie
 	getrandom(datagram + COMM_LEN + PACKET_NUM_LEN, COOKIE_SIZE, 0);
 
 	// Copy data if any
-	size_t data_offset = COMM_LEN + PACKET_NUM_LEN + COOKIE_SIZE;
-	if (data && data_size < (size_t)MAX_UDP - data_offset)
+	if (data && data_size <= (size_t)C_UDP_LEN)
 	{
-		memcpy(datagram + data_offset, data, data_size);
+		memcpy(datagram + C_UDP_HEADER, data, data_size);
 
 		// Fill the rest with zeros
-		memset(datagram + data_offset + data_size, 0, C_UDP_LEN - data_size);
+		// TODO: It's probably better to fill with noise or leave it with memory trash
+		memset(datagram + C_UDP_HEADER + data_size, 0, C_UDP_LEN - data_size);
 	}
 	else
 	{
-		DEBUG_PRINT((P_ERROR "No data or data too big\n"));
+		DEBUG_PRINT((P_WARN "No data or data too big\n"));
 		return ERROR;
 	}
 
