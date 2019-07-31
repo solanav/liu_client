@@ -1,6 +1,6 @@
 # How to build/compile
 
-1. Install [cmoka](https://cmocka.org/) for the tests.
+1. Use linux
 
 2. Create a folder called build (at the same level as src and the others) and cd inside:
 ```
