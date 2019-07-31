@@ -15,6 +15,32 @@
 #define MAX_THREADS 128
 #define MAX_DATAGRAMS 128
 
+#define EMPTY      "\x00\x00"
+#define INIT       "\x00\x01"
+#define PING       "\x00\x02"
+#define PONG       "\x00\x03"
+#define GETPEERS   "\x00\x04"
+#define SENDPEERS  "\x00\x05"
+#define SENDPEERSC "\x00\x06"
+
+#define COOKIE_SIZE 4
+
+#define COMM_LEN 2
+#define PORT_LEN 2
+#define PACKET_NUM_LEN 2
+
+#define C_UDP_HEADER (COMM_LEN + PACKET_NUM_LEN + COOKIE_SIZE)
+#define C_UDP_LEN (MAX_UDP - C_UDP_HEADER)
+
+#define PORTH 2
+#define PORTL 3
+
+union _request_data
+{
+	byte other_peers_buf[sizeof(peer_list)];
+};
+
+
 struct _request
 {
 	char ip[MAX_DATAGRAMS][INET_ADDRSTRLEN];
@@ -23,6 +49,8 @@ struct _request
 	int prev[MAX_DATAGRAMS];
 	int next[MAX_DATAGRAMS];
 	unsigned short free[MAX_DATAGRAMS];
+	union _request_data data;
+	byte cookie[MAX_DATAGRAMS][COOKIE_SIZE];
 };
 
 struct _server_info
@@ -65,8 +93,9 @@ void clean_networking();
 int get_ip(const struct sockaddr_in *socket, char *ip);
 int add_peer(const struct sockaddr_in *other, const byte *data);
 int get_peer(const char *other_ip, size_t *index);
-int add_req(const char *ip, const byte *header);
+int add_req(const char *ip, const byte *header, byte *cookie);
+int get_req(const byte *cookie);
 int rm_req(int index);
-int get_req(const char *ip, const byte *header);
+int create_shared_variables();
 
 #endif

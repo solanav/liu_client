@@ -87,6 +87,7 @@ int start_server(in_port_t port)
 		int len = sizeof(other_addr);
 		int n = 0;
 
+		memset(buf, 0, MAX_UDP * sizeof(byte));
 		n = recvfrom(socket_desc, buf, MAX_UDP,
 					 MSG_WAITALL, (struct sockaddr *)&other_addr,
 					 (socklen_t *)&len);
@@ -103,7 +104,7 @@ int start_server(in_port_t port)
 		else if (stop == 0)
 		{
 			// Add to message queue
-			if (mq_send(datagram_queue, (char *)buf, 10, 0) == -1)
+			if (mq_send(datagram_queue, (char *)buf, MAX_UDP, 0) == -1)
 			{
 				DEBUG_PRINT((P_ERROR "Failed to send data to message queue [%s]\n", strerror(errno)));
 				return ERROR;
@@ -219,8 +220,6 @@ int stop_server(char *ip, in_port_t port)
 
 void *handle_comm(void *socket)
 {
-	pthread_t self = pthread_self();
-
 	// Open semaphore for shared memory
 	sem_t *sem = sem_open(SERVER_SEM, 0);
 	if (sem == SEM_FAILED)
@@ -258,17 +257,19 @@ void *handle_comm(void *socket)
 	}
 
 	struct timespec tm;
+	struct timespec current;
 	int ret = 0;
 	// Exit only when there are no messages on queue for HANDLER_TIMEOUT seconds
 	while (1)
 	{
 		// Set timer
 		memset(&tm, 0, sizeof(struct timespec));
-		clock_gettime(CLOCK_REALTIME, &tm);
+		clock_gettime(CLOCK_MONOTONIC, &tm);
 		tm.tv_sec += HANDLER_TIMEOUT;
 		tm.tv_nsec = 0;
 
 		DEBUG_PRINT((P_INFO "Waiting for datagram...\n"));
+		memset(&current, 0, sizeof(struct timespec));
 
 		ret = mq_timedreceive(mq, data, MAX_UDP, NULL, &tm);
 		if (ret == 0 || ret == -1)
@@ -276,6 +277,9 @@ void *handle_comm(void *socket)
 			DEBUG_PRINT((P_WARN "Handler timedout, stopping [%s]\n", strerror(errno)));
 			goto MQ_CLEAN;
 		}
+
+		// Get timestamp of received datagram
+		clock_gettime(CLOCK_MONOTONIC, &current);
 
 		DEBUG_PRINT((P_INFO "Datagram received, analyzing...\n"));
 
@@ -294,26 +298,88 @@ void *handle_comm(void *socket)
 		char peer_ip[INET_ADDRSTRLEN];
 		get_ip(other, peer_ip); // TODO: ERROR CONTROL
 		size_t peer_index;
-		get_peer(peer_ip, &peer_index);
+		get_peer(peer_ip, &peer_index); // TODO: ERROR CONTROL
+
+		sem_wait(sem);
+		in_port_t peer_port = peers.port[peer_index];
+		sem_post(sem);
 
 		// TODO: turn this into a switch so gcc can optimize it to hash table
 		if (memcmp(data, PING, COMM_LEN) == 0)
 		{
-			DEBUG_PRINT((P_INFO "Received a ping from [%s:%d]\n", peers.ip[peer_index], peers.port[peer_index]));
-			DEBUG_PRINT((P_INFO "Sending a pong to [%s:%d]\n", peers.ip[peer_index], peers.port[peer_index]));
+			DEBUG_PRINT((P_INFO "Received a ping from [%s:%d]\n", peer_ip, peer_port));
+			DEBUG_PRINT((P_INFO "Sending a pong to [%s:%d]\n", peer_ip, peer_port));
 
-			send_pong(peers.ip[peer_index], peers.port[peer_index]);
+			send_pong(peer_ip, peer_port);
 		}
 		else if (memcmp(data, PONG, COMM_LEN) == 0)
 		{
-			DEBUG_PRINT((P_INFO "Received a pong from [%s:%d]\n", peers.ip[peer_index], peers.port[peer_index]));
+			DEBUG_PRINT((P_INFO "Received a pong from [%s:%d]\n", peer_ip, peer_port));
+
+			byte cookie[COOKIE_SIZE];
+			memcpy(&cookie, data + COMM_LEN, COOKIE_SIZE);
+
+			int req_index = get_req(cookie);
+			if (req_index != ERROR)
+			{
+				DEBUG_PRINT((P_INFO "Found corresponding ping\n"));
+
+				sem_wait(sem);
+				if (peers.latency[peer_index].tv_sec == 0 && peers.latency[peer_index].tv_nsec == 0)
+				{
+					peers.latency[peer_index].tv_sec += current.tv_sec - sd->req.timestamp[req_index].tv_sec;
+					peers.latency[peer_index].tv_nsec += current.tv_nsec - sd->req.timestamp[req_index].tv_nsec;
+
+					peers.latency[peer_index].tv_sec /= 2;
+					peers.latency[peer_index].tv_nsec /= 2;
+				}
+
+				DEBUG_PRINT((P_INFO "Peer %ld has a latency of %ld.%ldms\n",
+							 peer_index,
+							 peers.latency[peer_index].tv_sec,
+							 peers.latency[peer_index].tv_nsec));
+
+				sem_post(sem);
+			}
+		}
+		else if (memcmp(data, GETPEERS, COMM_LEN) == 0)
+		{
+			DEBUG_PRINT((P_INFO "Received a peer request from [%s:%d]\n", peer_ip, peer_port));
+
+			// TODO
+		}
+		else if (memcmp(data, SENDPEERS, COMM_LEN) == 0)
+		{
+			DEBUG_PRINT((P_INFO "Received a peer_list from [%s:%d]\n", peer_ip, peer_port));
+
+			sem_wait(sem);
+			memcpy(sd->req.data.other_peers_buf, data + C_UDP_HEADER, C_UDP_LEN);
+			sem_post(sem);
+		}
+		else if (memcmp(data, SENDPEERSC, COMM_LEN) == 0)
+		{
+			unsigned int packet_num = (data[PORTH] << 8) + data[PORTL];
+			DEBUG_PRINT((P_INFO "Received a peer_list continuation [%d] from [%s:%d]\n",
+						 packet_num, peer_ip, peer_port));
+
+			sem_wait(sem);
+			memcpy(sd->req.data.other_peers_buf + (C_UDP_LEN * packet_num), data + C_UDP_HEADER, C_UDP_LEN - (C_UDP_LEN * packet_num));
+			sem_post(sem);
+
+			// Check if this is the last package
+			if (sizeof(peer_list) - (C_UDP_LEN * packet_num) <= C_UDP_LEN)
+			{
+				peer_list test;
+				memcpy(&test, sd->req.data.other_peers_buf, sizeof(peer_list));
+				printf("[0] > %s:%d\n", test.ip[0], test.port[0]);
+			}
 		}
 		else if (memcmp(data, EMPTY, COMM_LEN) == 0)
 		{
 			DEBUG_PRINT((P_INFO "Received an empty message\n"));
 		}
 
-		memset(data, 0, MAX_UDP);
+		memset(data, 0, MAX_UDP * sizeof(char));
 	}
 
 MQ_CLEAN:
@@ -338,6 +404,6 @@ SEM_CLEAN:
 NONE_CLEAN:
 	DEBUG_PRINT((P_OK "Detaching and exiting thread\n"));
 
-	pthread_detach(self);
+	pthread_detach(pthread_self());
 	pthread_exit(NULL);
 }
