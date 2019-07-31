@@ -61,7 +61,7 @@ int init_plugins(char **file_list, int len)
 		}
 
 		dlclose(handle);
-		memset(plugin_path, '\0', strlen(plugin_path));
+		memset(plugin_path, 0, strlen(plugin_path) * sizeof(char));
 	}
 
 	free(plugin_path);

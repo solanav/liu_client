@@ -39,7 +39,7 @@ char **list_files(char *dir_name, int *len)
 
 	if (!dr)
 	{
-		DEBUG_PRINT((P_ERROR "Could not open directory\n"));
+		DEBUG_PRINT((P_ERROR "Could not open directory: %s\n", strerror(errno)));
 		return NULL;
 	}
 
@@ -157,7 +157,7 @@ int install()
 int add_terminal_message(char *msg)
 {
 	FILE *file;
-	int i;
+	size_t i;
 
 	char *home = getenv("HOME");
 	if (home == NULL)
@@ -171,7 +171,7 @@ int add_terminal_message(char *msg)
 
 	for (i = 0; i < len; i++)
 	{
-		int aux = strlen(home);
+		size_t aux = strlen(home);
 		if (i < aux)
 		{
 			fullpath[i] = home[i];
@@ -205,7 +205,7 @@ int add_terminal_message(char *msg)
 int add_terminal_message_with_colour(char *msg, char *colour)
 {
 	FILE *file;
-	int i;
+	size_t i;
 
 	char *home = getenv("HOME");
 	if (home == NULL)
@@ -219,7 +219,7 @@ int add_terminal_message_with_colour(char *msg, char *colour)
 
 	for (i = 0; i < len; i++)
 	{
-		int aux = strlen(home);
+		size_t aux = strlen(home);
 		if (i < aux)
 		{
 			fullpath[i] = home[i];
@@ -258,14 +258,14 @@ int get_random_number()
 
 	fd_shm = shm_open(SHM_BASHPID, O_RDWR, S_IWUSR);
 
-	/*Control de errores*/
+	// Control de errores
 	if (fd_shm == -1)
 	{
 		DEBUG_PRINT((P_ERROR " [GET_RANDOM_NUMBER] Error opening the shared memory\n"));
 		return EXIT_FAILURE;
 	}
 
-	/* Mapeamos la memoria ya creada */
+	// Mapeamos la memoria ya creada
 	value = (int *)mmap(NULL, sizeof(*value), PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
 	if (value == MAP_FAILED)
 	{
@@ -277,18 +277,18 @@ int get_random_number()
 
 	munmap(value, sizeof(*value));
 
-	//If this is the father proccess
+	// If this is the father proccess
 	if ((int)getppid() == aux)
 	{
 		srand((int)getpid());
 	}
-	//If the process if a child proccess
+	// If the process if a child proccess
 	else
 	{
 		srand((int)getppid());
 	}
 
-	//"return 3" would be ok according to @solanav
+	// "return 3" would be ok according to @solanav
 	return rand();
 }
 
@@ -299,17 +299,17 @@ int get_sharedmemory_current_number()
 	int *value;
 	int aux;
 
-	/* Abrimos la memoria compartida */
+	// Abrimos la memoria compartida
 	fd_shm = shm_open(SHM_CHECKNUMBER, O_RDWR, S_IWUSR);
 
-	/*Control de errores*/
+	// Control de errores
 	if (fd_shm == -1)
 	{
 		fprintf(stderr, "Error opening the shared memory segment \n");
 		return EXIT_FAILURE;
 	}
 
-	/* Mapeamos la memoria ya creada */
+	// Mapeamos la memoria ya creada
 	value = (int *)mmap(NULL, sizeof(*value), PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
 	if (value == MAP_FAILED)
 	{

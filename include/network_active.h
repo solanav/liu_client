@@ -1,21 +1,13 @@
 #ifndef NETWORK_ACTIVE_H
 #define NETWORK_ACTIVE_H
 
-#include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/socket.h>
 
-#define EMPTY "\x00\x00"
-#define PING "\x00\x01"
-#define PONG "\x00\x02"
-#define GETPEERS "\x00\x03"
-#define INIT "\x00\x04" 
+#include "../include/types.h"
+#include "../include/network_utils.h"
 
-#define INIT_LEN 4
-#define COMM_LEN 2
-
-#define PORTH 2
-#define PORTL 3
-
+int forge_package(byte *datagram, byte *type, int packet_num, byte *data, size_t data_size);
 /**
  * Empty send
  * 
@@ -30,7 +22,7 @@ int send_empty(char *ip, in_port_t port);
  * instead of peer_index because you will be asked your info by non-peers
  * and should be able to answer their requests.
  */
-int send_peerdata(char *ip, in_port_t port, in_port_t self_port);
+int send_selfdata(char *ip, in_port_t port, in_port_t self_port);
 
 /**
  * Send a ping
@@ -54,5 +46,12 @@ int send_pong(char *ip, in_port_t port);
  * The peer should respond with a peer_list. We will use this to fill our list.
  */
 int send_peerrequest(char *ip, in_port_t port);
+
+/**
+ * Sends the peer_list to a peer
+ * 
+ * This is a response to a peer request, it serves as a peer discovery method.
+ */
+int send_peerdata(char *ip, in_port_t port);
 
 #endif

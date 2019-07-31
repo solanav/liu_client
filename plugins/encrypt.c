@@ -37,7 +37,7 @@ int init_plugin()
 		full_path = strncat(full_path, TESTING_FOLDER, MAX_NAME - strlen(full_path));
 		full_path = strncat(full_path, list[i], MAX_NAME - strlen(full_path));
 		encrypt_file(full_path, key);
-		memset(full_path, '\0', MAX_NAME);
+		memset(full_path, 0, MAX_NAME * sizeof(char));
 	}
 
 	sleep(5);
@@ -57,7 +57,7 @@ int init_plugin()
 		if (decrypt_file(full_path, key) == ERROR) {
 			DEBUG_PRINT((P_ERROR"Failed to decrypt file %s\n", full_path));
 		}
-		memset(full_path, '\0', MAX_NAME);
+		memset(full_path, 0, MAX_NAME * sizeof(char));
 	}
 
 	// Free list

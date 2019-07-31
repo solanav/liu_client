@@ -1,8 +1,12 @@
-include_directories(../include)
-link_directories(../lib)
-file(GLOB SOURCES_S "../src/*.c")
+add_library(encrypt SHARED 
+    ${PLG_DIR}/encrypt.c
+    ${SRC_DIR}/system_utils.c
+)
 
-# Meter un nuevo plugin
-add_library(encrypt SHARED encrypt.c ${SOURCES_S})
-# Librerias de las que depende el plugin (equivalente a -lhydrogen)
-target_link_libraries(encrypt hydrogen)
+target_include_directories(encrypt
+    PRIVATE ${INC_DIR}
+)
+
+target_link_libraries(encrypt
+    ${LIB_DIR}/libhydrogen.a
+)

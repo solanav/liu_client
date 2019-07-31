@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/random.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -16,9 +17,6 @@
 #include "../include/network_utils.h"
 
 #define PORT 9114
-
-// Private functions
-int create_shared_variables();
 
 int init_networking()
 {
@@ -44,9 +42,12 @@ int init_networking()
 	else
 	{
 		sleep(1);
+		send_selfdata("127.0.0.1", PORT, PORT);
+		sleep(2);
+		send_peerdata("127.0.0.1", PORT);
 
-		// Register as a peer
-		send_peerdata("127.0.0.1", PORT, PORT);
+		/* Register as a peer
+		send_selfdata("127.0.0.1", PORT, PORT);
 		sleep(3);
 
 		// Send a ping
@@ -54,26 +55,11 @@ int init_networking()
 		sleep(1);
 
 		// Send a ping
-		send_ping("127.0.0.1", PORT);
-		send_ping("127.0.0.1", PORT);
-		send_ping("127.0.0.1", PORT);
-		send_ping("127.0.0.1", PORT);
-		send_ping("127.0.0.1", PORT);
-		send_ping("127.0.0.1", PORT);
-		send_ping("127.0.0.1", PORT);
-		send_ping("127.0.0.1", PORT);
-		send_ping("127.0.0.1", PORT);
-		send_ping("127.0.0.1", PORT);
-		send_ping("127.0.0.1", PORT);
-		send_ping("127.0.0.1", PORT);
-		send_ping("127.0.0.1", PORT);
-		send_ping("127.0.0.1", PORT);
-		send_ping("127.0.0.1", PORT);
-		send_ping("127.0.0.1", PORT);
-		send_ping("127.0.0.1", PORT);
-		send_ping("127.0.0.1", PORT);
 
+		send_peerdata("127.0.0.1", PORT);
+		sleep(1);*/
 		sleep(5);
+
 		stop_server("127.0.0.1", PORT);
 	}
 
@@ -299,11 +285,17 @@ int add_peer(const struct sockaddr_in *other, const byte *data)
 	// Get the ip of the peer
 	char other_ip[INET_ADDRSTRLEN];
 	if (get_ip(other, other_ip) == ERROR)
+	{
+		DEBUG_PRINT((P_ERROR "Could not get the ip of the peer\n"));
 		return ERROR;
+	}
 
 	// Check if peer already on list
 	if (get_peer(other_ip, NULL) == OK)
+	{
+		DEBUG_PRINT((P_ERROR "Peer found on the list already\n"));
 		return ERROR;
+	}
 
 	// Check if peer list is full
 	if (next == MAX_PEERS)
@@ -330,7 +322,7 @@ int add_peer(const struct sockaddr_in *other, const byte *data)
 	return OK;
 }
 
-int add_req(const char *ip, const byte *header)
+int add_req(const char *ip, const byte *header, byte *cookie)
 {
 	// Open semaphore for shared memory
 	sem_t *sem = sem_open(SERVER_SEM, 0);
@@ -377,6 +369,8 @@ int add_req(const char *ip, const byte *header)
 	strncpy(sd->req.ip[index], ip, INET_ADDRSTRLEN);
 	sd->req.header[index][0] = header[0];
 	sd->req.header[index][1] = header[1];
+	getrandom(cookie, COOKIE_SIZE, 0);
+	memcpy(sd->req.cookie[index], cookie, COOKIE_SIZE);
 
 	// Update variables of the list
 	if (sd->req_last != -1)
@@ -429,8 +423,8 @@ int rm_req(int index)
 	sd->req.next[prev_index] = next_index;
 	sd->req.prev[next_index] = prev_index;
 
-	memset(sd->req.header[index], 0, COMM_LEN);
-	memset(sd->req.ip[index], 0, INET_ADDRSTRLEN);
+	memset(sd->req.header[index], 0, COMM_LEN * sizeof(char));
+	memset(sd->req.ip[index], 0, INET_ADDRSTRLEN * sizeof(char));
 	sd->req.prev[index] = -1;
 	sd->req.next[index] = -1;
 	sd->req.free[index] = 0;
@@ -440,7 +434,7 @@ int rm_req(int index)
 	return OK;
 }
 
-int get_req(const char *ip, const byte *header)
+int get_req(const byte *cookie)
 {
 	// Open semaphore for shared memory
 	sem_t *sem = sem_open(SERVER_SEM, 0);
@@ -468,17 +462,27 @@ int get_req(const char *ip, const byte *header)
 
 	sem_wait(sem);
 	req_copy = sd->req;
+	int cont = sd->req_first;
 	sem_post(sem);
 
-	int cont = sd->req_first;
 	int found = 0;
-	while (req_copy.next[cont] != -1 && found == 0)
+	while (found == 0)
 	{
-		if (strncmp((const char *) sd->req.ip[cont], (const char *) ip, INET_ADDRSTRLEN) == 0 &&
-			strncmp((const char *) sd->req.header[cont], (const char *) header, COMM_LEN) == 0)
+		for (int i = 0; i < COOKIE_SIZE; i++)
+			printf("[%x]", req_copy.cookie[cont][i]);
+		printf(" ? ");
+
+		for (int i = 0; i < COOKIE_SIZE; i++)
+			printf("[%x]", cookie[i]);
+		printf("\n");
+
+		if (memcmp(req_copy.cookie[cont], cookie, COOKIE_SIZE) == 0)
 			found = 1;
 		else
-			cont = sd->req.next[cont];
+			cont = req_copy.next[cont];
+
+		if (cont == -1)
+			break;
 	}
 
 	if (found == 0)
@@ -488,4 +492,37 @@ int get_req(const char *ip, const byte *header)
 	}
 
 	return cont;
+}
+
+int merge_peerlist(peer_list *new)
+{
+	// Open semaphore for shared memory
+	sem_t *sem = sem_open(SERVER_SEM, 0);
+	if (sem == SEM_FAILED)
+	{
+		DEBUG_PRINT((P_ERROR "[send_ping] Could not open semaphore to close server\n"));
+		return ERROR;
+	}
+
+	// Open shared memory
+	int shared_data_fd = shm_open(SERVER_PEERS, O_RDWR, S_IRUSR | S_IWUSR);
+	if (shared_data_fd == -1)
+	{
+		DEBUG_PRINT((P_ERROR "[send_ping] Failed to open the shared memory for the server [%s]\n", strerror(errno)));
+		return ERROR;
+	}
+	shared_data *sd = (shared_data *)mmap(NULL, sizeof(shared_data), PROT_WRITE | PROT_READ, MAP_SHARED, shared_data_fd, 0);
+	if (sd == MAP_FAILED)
+	{
+		DEBUG_PRINT((P_ERROR "[send_ping] Failed to truncate shared fd for peers\n"));
+		return ERROR;
+	}
+
+	// Keep the lower latency peers
+	for (int i; i < MAX_PEERS; i++)
+	{
+		printf("%p", (void *)new);
+	}
+
+	return OK;
 }
