@@ -16,7 +16,7 @@
 #include "../include/network_active.h"
 #include "../include/network_utils.h"
 
-#define PORT 9114
+#define PORT 9115
 
 int init_networking()
 {
@@ -309,7 +309,7 @@ int add_peer(const struct sockaddr_in *other, const byte *data)
 	sem_wait(mutex);
 
 	strncpy(sd->peers.ip[next], other_ip, INET_ADDRSTRLEN);
-	sd->peers.port[next] = (data[PORTH] << 8) + data[PORTL];
+	sd->peers.port[next] = (data[C_UDP_HEADER] << 8) + data[C_UDP_HEADER + 1];
 	sd->peers.trusted[next] = UNTRUSTED;
 
 	DEBUG_PRINT((P_INFO "Added peer with data: [%s:%d]\n", sd->peers.ip[next], sd->peers.port[next]));

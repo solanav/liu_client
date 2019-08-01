@@ -32,9 +32,6 @@
 #define C_UDP_HEADER (COMM_LEN + PACKET_NUM_LEN + COOKIE_SIZE)
 #define C_UDP_LEN (MAX_UDP - C_UDP_HEADER)
 
-#define PORTH 2
-#define PORTL 3
-
 union _request_data
 {
 	byte other_peers_buf[sizeof(peer_list)];

@@ -243,7 +243,7 @@ void *handle_comm(void *socket)
 	}
 
 	// Get memory for buffer
-	char data[MAX_UDP];
+	byte data[MAX_UDP];
 
 	// Get socket
 	const struct sockaddr_in *other = (struct sockaddr_in *)socket;
@@ -271,7 +271,7 @@ void *handle_comm(void *socket)
 		DEBUG_PRINT((P_INFO "Waiting for datagram...\n"));
 		memset(&current, 0, sizeof(struct timespec));
 
-		ret = mq_timedreceive(mq, data, MAX_UDP, NULL, &tm);
+		ret = mq_timedreceive(mq, (char *) data, MAX_UDP, NULL, &tm);
 		if (ret == 0 || ret == -1)
 		{
 			DEBUG_PRINT((P_WARN "Handler timedout, stopping [%s]\n", strerror(errno)));
@@ -291,6 +291,7 @@ void *handle_comm(void *socket)
 		// Check if the peer is trying to register
 		if (memcmp(data, INIT, COMM_LEN) == 0)
 		{
+			DEBUG_PRINT((P_INFO "New peer found, going to register it on the list\n"));
 			add_peer(other, (byte *)data);
 		}
 
@@ -358,21 +359,15 @@ void *handle_comm(void *socket)
 		}
 		else if (memcmp(data, SENDPEERSC, COMM_LEN) == 0)
 		{
-			unsigned int packet_num = (data[PORTH] << 8) + data[PORTL];
-			DEBUG_PRINT((P_INFO "Received a peer_list continuation [%d] from [%s:%d]\n",
-						 packet_num, peer_ip, peer_port));
+			DEBUG_PRINT((P_INFO "Received a peer_list from [%s:%d]\n", peer_ip, peer_port));
 
 			sem_wait(sem);
-			memcpy(sd->req.data.other_peers_buf + (C_UDP_LEN * packet_num), data + C_UDP_HEADER, C_UDP_LEN - (C_UDP_LEN * packet_num));
+			memcpy(sd->req.data.other_peers_buf + C_UDP_LEN, data + C_UDP_HEADER, sizeof(peer_list) - C_UDP_LEN);
 			sem_post(sem);
 
-			// Check if this is the last package
-			if (sizeof(peer_list) - (C_UDP_LEN * packet_num) <= C_UDP_LEN)
-			{
-				peer_list test;
-				memcpy(&test, sd->req.data.other_peers_buf, sizeof(peer_list));
-				printf("[0] > %s:%d\n", test.ip[0], test.port[0]);
-			}
+			peer_list test;
+			memcpy(&test, sd->req.data.other_peers_buf, sizeof(peer_list));
+			printf(">> %s:%d\n", test.ip[0], test.port[0]);
 		}
 		else if (memcmp(data, EMPTY, COMM_LEN) == 0)
 		{

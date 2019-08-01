@@ -1,11 +1,6 @@
 add_executable(liu_client
+    $<TARGET_OBJECTS:liu_client_lib>
     ${SRC_DIR}/core.c
-    ${SRC_DIR}/keylogger.c
-    ${SRC_DIR}/network_active.c
-    ${SRC_DIR}/network_reactive.c
-    ${SRC_DIR}/network_utils.c
-    ${SRC_DIR}/plugin_utils.c
-    ${SRC_DIR}/system_utils.c    
 )
 
 target_include_directories(liu_client 
