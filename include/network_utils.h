@@ -6,6 +6,9 @@
 #include <time.h>
 #include <semaphore.h>
 
+#define LOCAL_IP "127.0.0.1"
+#define PORT 9117
+
 #define MAX_UDP 512
 #define MAX_THREADS 128
 #define MAX_DATAGRAMS 128

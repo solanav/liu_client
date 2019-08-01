@@ -75,6 +75,7 @@ void test_requests()
 	shared_data *sd = NULL;
 	assert(access_sd(&sem, &sd) == OK);
 
+    sem_wait(sem);
     assert(memcmp(sd->req.cookie[req_index], cookie, COOKIE_SIZE) == 0);
     assert(memcmp(sd->req.ip[req_index], "127.0.0.1", 9) == 0);
     assert(memcmp(sd->req.header[req_index], PONG, COMM_LEN) == 0);
@@ -83,6 +84,7 @@ void test_requests()
     assert(sd->req.next[req_index] == -1); // Because we are the first req
     assert(sd->req.prev[req_index] == -1); // Same as before
     assert(sd->req.timestamp != NULL);
+    sem_post(sem);
 
     // Remove first and last (edge case)
     assert(rm_req(0) == OK);
@@ -100,6 +102,7 @@ void test_requests()
     assert(req_index == 1);
     assert(memcmp(cookie, cookie2, COOKIE_SIZE) != 0);
 
+    sem_wait(sem);
     assert(memcmp(sd->req.cookie[req_index], cookie2, COOKIE_SIZE) == 0);
     assert(memcmp(sd->req.ip[req_index], "999.999.999.999", 15) == 0);
     assert(memcmp(sd->req.header[req_index], PING, COMM_LEN) == 0);
@@ -108,6 +111,7 @@ void test_requests()
     assert(sd->req.prev[req_index] == 0);
     assert(sd->req.next[0] == req_index);
     assert(sd->req.timestamp != NULL);
+    sem_post(sem);
 
     // Remove first (edge case)
     assert(rm_req(0) == OK);

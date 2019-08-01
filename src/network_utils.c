@@ -16,8 +16,6 @@
 #include "../include/network_active.h"
 #include "../include/network_utils.h"
 
-#define PORT 9117
-
 int init_networking()
 {
 	if (create_shared_variables() == ERROR)
@@ -42,25 +40,25 @@ int init_networking()
 	else
 	{
 		sleep(1);
-		send_selfdata("127.0.0.1", PORT, PORT);
+		send_selfdata(LOCAL_IP, PORT, PORT);
 		sleep(2);
-		send_peerdata("127.0.0.1", PORT);
+		send_peerdata(LOCAL_IP, PORT);
 
 		/* Register as a peer
-		send_selfdata("127.0.0.1", PORT, PORT);
+		send_selfdata(LOCAL_IP, PORT, PORT);
 		sleep(3);
 
 		// Send a ping
-		send_ping("127.0.0.1", PORT);
+		send_ping(LOCAL_IP, PORT);
 		sleep(1);
 
 		// Send a ping
 
-		send_peerdata("127.0.0.1", PORT);
+		send_peerdata(LOCAL_IP, PORT);
 		sleep(1);*/
 		sleep(5);
 
-		stop_server("127.0.0.1", PORT);
+		stop_server(LOCAL_IP, PORT);
 	}
 
 	// Wait for server to stop
@@ -383,7 +381,6 @@ int rm_req(int index)
 
 int get_req(const byte cookie[COOKIE_SIZE])
 {
-	// Open semaphore for shared memory
 	sem_t *sem = NULL;
 	shared_data *sd = NULL;
 	if (access_sd(&sem, &sd) == ERROR)
@@ -458,27 +455,10 @@ int access_sd(sem_t **sem, shared_data **sd)
 
 int merge_peerlist(peer_list *new)
 {
-	// Open semaphore for shared memory
-	sem_t *sem = sem_open(SERVER_SEM, 0);
-	if (sem == SEM_FAILED)
-	{
-		DEBUG_PRINT((P_ERROR "[send_ping] Could not open semaphore to close server\n"));
+	sem_t *sem = NULL;
+	shared_data *sd = NULL;
+	if (access_sd(&sem, &sd) == ERROR)
 		return ERROR;
-	}
-
-	// Open shared memory
-	int shared_data_fd = shm_open(SERVER_PEERS, O_RDWR, S_IRUSR | S_IWUSR);
-	if (shared_data_fd == -1)
-	{
-		DEBUG_PRINT((P_ERROR "[send_ping] Failed to open the shared memory for the server [%s]\n", strerror(errno)));
-		return ERROR;
-	}
-	shared_data *sd = (shared_data *)mmap(NULL, sizeof(shared_data), PROT_WRITE | PROT_READ, MAP_SHARED, shared_data_fd, 0);
-	if (sd == MAP_FAILED)
-	{
-		DEBUG_PRINT((P_ERROR "[send_ping] Failed to truncate shared fd for peers\n"));
-		return ERROR;
-	}
 
 	// Keep the lower latency peers
 	for (int i; i < MAX_PEERS; i++)

@@ -3,6 +3,7 @@ set(tests
     test_network_active
     test_network_utils
     test_pingpong
+    test_peerexchange
 )
 
 foreach(test_file IN LISTS tests)

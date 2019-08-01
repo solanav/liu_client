@@ -62,7 +62,7 @@ int send_pong(char *ip, in_port_t port, byte cookie[COOKIE_SIZE])
 
 int send_empty(char *ip, in_port_t port)
 {
-	byte packet[MAX_UDP];
+	byte packet[MAX_UDP] = {0};
 	forge_packet(packet, NULL, (byte *)EMPTY, 0, NULL, 0);
 
 	return upload_data(ip, port, packet, MAX_UDP);
@@ -98,6 +98,9 @@ int send_peerdata(char *ip, in_port_t port)
 								 (byte *)SENDPEERSC);
 
 	DEBUG_PRINT((P_OK "Uploaded %ld bytes\n", trans));
+
+	sem_close(sem);
+	munmap(sd, sizeof(shared_data));
 
 	return OK;
 }

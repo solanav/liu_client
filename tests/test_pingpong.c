@@ -7,9 +7,6 @@
 #include "../include/network_utils.h"
 #include "../include/network_reactive.h"
 
-#define LOCAL_IP "127.0.0.1"
-#define PORT 9119
-
 int main()
 {
     assert(create_shared_variables() == OK);

@@ -142,8 +142,8 @@ int start_server(in_port_t port)
 	sd->server_info.stop = 2;
 	sem_post(sem);
 
-	munmap(sd, sizeof(shared_data));
 	sem_close(sem);
+	munmap(sd, sizeof(shared_data));
 
 	return OK;
 }
