@@ -15,6 +15,20 @@ set(INC_DIR ${PROJECT_SOURCE_DIR}/include)
 set(PLG_DIR ${PROJECT_SOURCE_DIR}/plugins)
 set(TST_DIR ${PROJECT_SOURCE_DIR}/tests)
 
+# Create library to compile objects once only
+add_library(liu_client_lib OBJECT
+    ${SRC_DIR}/keylogger.c
+    ${SRC_DIR}/network_active.c
+    ${SRC_DIR}/network_reactive.c
+    ${SRC_DIR}/network_utils.c
+    ${SRC_DIR}/plugin_utils.c
+    ${SRC_DIR}/system_utils.c    
+)
+
+target_include_directories(liu_client_lib 
+    PRIVATE ${INC_DIR}
+)
+
 # Add the other cmake files
 add_subdirectory(src)
 add_subdirectory(plugins)
