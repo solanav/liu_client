@@ -4,10 +4,19 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 
-#include "../include/types.h"
 #include "../include/network_utils.h"
+#include "../include/types.h"
 
-int forge_package(byte *datagram, byte *type, int packet_num, byte *data, size_t data_size);
+/**
+ * Create package
+ * 
+ * Creates a standard package so that all messages are equal as they should.
+ * If a zero-cookie is provided, the function will fill it and use it.
+ * If a NULL is provided as cookie, the function will generate a new cookie and use that.
+ * If a cookie is provided that is not "\x00\x00\x00\x00", then that cookie will be used.
+ */
+int forge_packet(byte datagram[MAX_UDP], byte cookie[COOKIE_SIZE], const byte type[COMM_LEN], int packet_num, const byte *data, size_t data_size);
+
 /**
  * Empty send
  * 
@@ -38,7 +47,7 @@ int send_ping(char *ip, in_port_t port);
  * this request is in our peer list. This is to prevent access from external
  * agents.
  */
-int send_pong(char *ip, in_port_t port);
+int send_pong(char *ip, in_port_t port, byte cookie[COOKIE_SIZE]);
 
 /**
  * Asks a peer for other peers

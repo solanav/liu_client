@@ -40,39 +40,32 @@ size_t upload_data(char *ip, in_port_t port, byte *data, size_t len);
  */
 size_t upload_data_x(char *ip, in_port_t port, byte *data, size_t len, byte *header, byte *cont_header);
 
-/**
- * Create a packet
- * 
- * Handles the creation of a standard packet
- */
-//char *forge_package(byte *type, int packet_num, byte *data);
-
 int send_ping(char *ip, in_port_t port)
 {
-	byte cookie[COOKIE_SIZE];
+	byte cookie[COOKIE_SIZE] = {0};
 	byte packet[MAX_UDP];
-	forge_package((byte *)&packet, (byte *)PING, 0, NULL, 0);
+	forge_packet(packet, cookie, (byte *)PING, 0, NULL, 0);
 
-	if (add_req(ip, (byte *)PING, (byte *)&cookie) == ERROR)
+	if (add_req(ip, (byte *)PING, cookie) == ERROR)
 		return ERROR;
 
-	return upload_data(ip, port, (byte *)&packet, MAX_UDP);
+	return upload_data(ip, port, packet, MAX_UDP);
 }
 
-int send_pong(char *ip, in_port_t port)
+int send_pong(char *ip, in_port_t port, byte cookie[COOKIE_SIZE])
 {
 	byte packet[MAX_UDP];
-	forge_package((byte *)&packet, (byte *)PONG, 0, NULL, 0);
+	forge_packet(packet, cookie, (byte *)PONG, 0, NULL, 0);
 
-	return upload_data(ip, port, (byte *)&packet, MAX_UDP);
+	return upload_data(ip, port, packet, MAX_UDP);
 }
 
 int send_empty(char *ip, in_port_t port)
 {
 	byte packet[MAX_UDP];
-	forge_package((byte *)&packet, (byte *)EMPTY, 0, NULL, 0);
+	forge_packet(packet, NULL, (byte *)EMPTY, 0, NULL, 0);
 
-	return upload_data(ip, port, (byte *)packet, MAX_UDP);
+	return upload_data(ip, port, packet, MAX_UDP);
 }
 
 int send_selfdata(char *ip, in_port_t port, in_port_t self_port)
@@ -82,34 +75,17 @@ int send_selfdata(char *ip, in_port_t port, in_port_t self_port)
 	data[1] = self_port & 0x00ff;
 
 	byte packet[MAX_UDP];
-	forge_package((byte *)&packet, (byte *)INIT, 0, data, PORT_LEN);
+	forge_packet(packet, NULL, (byte *)INIT, 0, data, PORT_LEN);
 
-	return upload_data(ip, port, (byte *)&packet, MAX_UDP);
+	return upload_data(ip, port, packet, MAX_UDP);
 }
 
 int send_peerdata(char *ip, in_port_t port)
 {
-	// Open semaphore for shared memory
-	sem_t *sem = sem_open(SERVER_SEM, 0);
-	if (sem == SEM_FAILED)
-	{
-		DEBUG_PRINT((P_ERROR "Could not open semaphore to close server\n"));
+	sem_t *sem = NULL;
+	shared_data *sd = NULL;
+	if (access_sd(&sem, &sd) == ERROR)
 		return ERROR;
-	}
-
-	// Open shared memory
-	int shared_data_fd = shm_open(SERVER_PEERS, O_RDWR, S_IRUSR | S_IWUSR);
-	if (shared_data_fd == -1)
-	{
-		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to open the shared memory for the server [%s]\n", strerror(errno)));
-		return ERROR;
-	}
-	shared_data *sd = (shared_data *)mmap(NULL, sizeof(shared_data), PROT_WRITE | PROT_READ, MAP_SHARED, shared_data_fd, 0);
-	if (sd == MAP_FAILED)
-	{
-		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to truncate shared fd for peers\n"));
-		return ERROR;
-	}
 
 	sem_wait(sem);
 	peer_list copy = sd->peers;
@@ -130,13 +106,13 @@ int send_peerrequest(char *ip, in_port_t port)
 {
 	byte cookie[COOKIE_SIZE];
 
-	if (add_req(ip, (byte *)GETPEERS, (byte *)&cookie) == ERROR)
+	if (add_req(ip, (byte *)GETPEERS, cookie) == ERROR)
 		return ERROR;
 
 	return upload_data(ip, port, (byte *)GETPEERS, COMM_LEN);
 }
 
-size_t upload_data(char *ip, in_port_t port, byte *data, size_t len)
+size_t upload_data(char *ip, in_port_t port, byte data[], size_t len)
 {
 	if (len > MAX_UDP)
 	{
@@ -173,12 +149,12 @@ size_t upload_data_x(char *ip, in_port_t port, byte *data, size_t len, byte *hea
 	{
 		if (sent == 0 && len > C_UDP_LEN)
 		{
-			forge_package(datagram, header, packet_num, data + sent, C_UDP_LEN);
+			forge_packet(datagram, NULL, header, packet_num, data + sent, C_UDP_LEN);
 			sent += C_UDP_LEN;
 		}
 		else
 		{
-			forge_package(datagram, cont_header, packet_num, data + sent, len - sent);
+			forge_packet(datagram, NULL, cont_header, packet_num, data + sent, len - sent);
 			sent += len - sent;
 		}
 
@@ -191,7 +167,7 @@ size_t upload_data_x(char *ip, in_port_t port, byte *data, size_t len, byte *hea
 	return sent;
 }
 
-int forge_package(byte *datagram, byte *type, int packet_num, byte *data, size_t data_size)
+int forge_packet(byte datagram[MAX_UDP], byte cookie[COOKIE_SIZE], const byte type[COMM_LEN], int packet_num, const byte *data, size_t data_size)
 {
 	if (!type)
 		return ERROR;
@@ -204,7 +180,20 @@ int forge_package(byte *datagram, byte *type, int packet_num, byte *data, size_t
 	datagram[COMM_LEN + 1] = packet_num & 0x00ff;
 
 	// Create cookie
-	getrandom(datagram + COMM_LEN + PACKET_NUM_LEN, COOKIE_SIZE, 0);
+	if (cookie)
+	{
+		if (strcmp((char *) cookie, "\x00\x00\x00\x00") == 0)
+		{
+			DEBUG_PRINT((P_WARN "Cookie was empty, so we create a new one\n"));
+			getrandom(cookie, COOKIE_SIZE, 0);
+		}
+
+		memcpy(datagram + COMM_LEN + PACKET_NUM_LEN, cookie, COOKIE_SIZE);
+	}
+	else
+	{
+		getrandom(datagram + COMM_LEN + PACKET_NUM_LEN, COOKIE_SIZE, 0);
+	}
 
 	// Copy data if any
 	if (data && data_size <= (size_t)C_UDP_LEN)
@@ -215,9 +204,14 @@ int forge_package(byte *datagram, byte *type, int packet_num, byte *data, size_t
 		// TODO: It's probably better to fill with noise or leave it with memory trash
 		memset(datagram + C_UDP_HEADER + data_size, 0, C_UDP_LEN - data_size);
 	}
+	else if (!data)
+	{
+		DEBUG_PRINT((P_WARN "No data\n"));
+		return ERROR;
+	}
 	else
 	{
-		DEBUG_PRINT((P_WARN "No data or data too big\n"));
+		DEBUG_PRINT((P_WARN "Data too big\n"));
 		return ERROR;
 	}
 

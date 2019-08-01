@@ -4,12 +4,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <time.h>
-
-#include "../include/network_utils.h"
-#include "../include/system_utils.h"
-#include "../include/network_reactive.h"
-#include "../include/network_active.h"
-#include "../include/types.h"
+#include <semaphore.h>
 
 #define MAX_UDP 512
 #define MAX_THREADS 128
@@ -31,6 +26,11 @@
 
 #define C_UDP_HEADER (COMM_LEN + PACKET_NUM_LEN + COOKIE_SIZE)
 #define C_UDP_LEN (MAX_UDP - C_UDP_HEADER)
+
+#include "../include/system_utils.h"
+#include "../include/network_reactive.h"
+#include "../include/network_active.h"
+#include "../include/types.h"
 
 union _request_data
 {
@@ -87,12 +87,13 @@ int stop_server(char *ip, in_port_t port);
 
 int init_networking();
 void clean_networking();
-int get_ip(const struct sockaddr_in *socket, char *ip);
+int get_ip(const struct sockaddr_in *socket, char ip[INET_ADDRSTRLEN]);
 int add_peer(const struct sockaddr_in *other, const byte *data);
-int get_peer(const char *other_ip, size_t *index);
-int add_req(const char *ip, const byte *header, byte *cookie);
-int get_req(const byte *cookie);
+int get_peer(const char other_ip[INET_ADDRSTRLEN], size_t *index);
+int add_req(const char ip[INET_ADDRSTRLEN], const byte header[C_UDP_HEADER], const byte cookie[COOKIE_SIZE]);
+int get_req(const byte cookie[COOKIE_SIZE]);
 int rm_req(int index);
 int create_shared_variables();
+int access_sd(sem_t **sem, shared_data **sd);
 
 #endif
