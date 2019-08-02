@@ -4,8 +4,9 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "../include/network_utils.h"
-#include "../include/network_reactive.h"
+#include "network/peers.h"
+#include "network/reactive.h"
+#include "network/active.h"
 
 int main()
 {

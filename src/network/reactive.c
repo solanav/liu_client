@@ -7,12 +7,15 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
-
-#include "../include/network_active.h"
-#include "../include/network_utils.h"
+#include <netinet/in.h>
 
 #define MAX_THREADS 128
 #define HANDLER_TIMEOUT 1 // in seconds
+
+#include "network/reactive.h"
+#include "types.h"
+#include "network/netcore.h"
+#include "network/active.h"
 
 int start_server(in_port_t port)
 {

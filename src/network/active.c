@@ -14,8 +14,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "../include/network_active.h"
-#include "../include/network_utils.h"
+#include "network/active.h"
+#include "types.h"
 
 // Private functions
 

@@ -8,7 +8,7 @@
 #include <string.h>
 
 #include "keylogger.h"
-#include "../include/types.h"
+#include "types.h"
 
 #define KEYBOARD_PATH "/dev/input/by-id/usb-CM_Storm_Keyboard_--_Trigger_Z_gaming-event-kbd"
 

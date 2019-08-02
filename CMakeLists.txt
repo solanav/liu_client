@@ -11,22 +11,30 @@ set(CMAKE_BUILD_TYPE Debug)
 # Create variables to use in other files
 set(LIB_DIR ${PROJECT_SOURCE_DIR}/lib)
 set(SRC_DIR ${PROJECT_SOURCE_DIR}/src)
+set(NET_DIR ${SRC_DIR}/network)
 set(INC_DIR ${PROJECT_SOURCE_DIR}/include)
+set(INC_NET_DIR ${INC_DIR}/network)
 set(PLG_DIR ${PROJECT_SOURCE_DIR}/plugins)
 set(TST_DIR ${PROJECT_SOURCE_DIR}/tests)
 
 # Create library to compile objects once only
-add_library(liu_client_lib OBJECT
-    ${SRC_DIR}/keylogger.c
-    ${SRC_DIR}/network_active.c
-    ${SRC_DIR}/network_reactive.c
-    ${SRC_DIR}/network_utils.c
-    ${SRC_DIR}/plugin_utils.c
-    ${SRC_DIR}/system_utils.c    
+add_library(net_lib OBJECT
+    ${NET_DIR}/active.c
+    ${NET_DIR}/reactive.c
+    ${NET_DIR}/peers.c
+    ${NET_DIR}/netcore.c
+)
+target_include_directories(net_lib 
+    PUBLIC ${INC_DIR} ${INC_NET_DIR} 
 )
 
-target_include_directories(liu_client_lib 
-    PRIVATE ${INC_DIR}
+add_library(core_lib OBJECT
+    ${SRC_DIR}/keylogger.c
+    ${SRC_DIR}/plugin_utils.c
+    ${SRC_DIR}/system_utils.c
+)
+target_include_directories(core_lib 
+    PUBLIC ${INC_DIR} ${INC_NET_DIR} 
 )
 
 # Add the other cmake files

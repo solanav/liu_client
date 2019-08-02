@@ -4,8 +4,8 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 
-#include "../include/network_utils.h"
-#include "../include/types.h"
+#include "types.h"
+#include "network/netcore.h"
 
 /**
  * Create package

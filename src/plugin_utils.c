@@ -3,7 +3,7 @@
 #include <string.h>
 #include <dlfcn.h>
 
-#include "../include/core.h"
+#include "types.h"
 
 #define PLUGINS_DIR "plugins/"
 #define PLUGIN_EXT ".so"

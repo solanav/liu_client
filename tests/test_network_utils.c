@@ -20,10 +20,14 @@
 // socket
 #include <netinet/in.h>
 
-#include "../include/network_utils.h"
+// timestamps
+#include <time.h>
+
+#include "network/peers.h"
 
 void test_requests();
 void test_peers();
+void test_mergepeers();
 
 int main()
 {
@@ -31,11 +35,58 @@ int main()
     assert(create_shared_variables() == OK);
 
     test_requests();
+    
+    // Test to add peers
     test_peers();
+
+    // Create more peers and try to merge them
+    test_mergepeers();
 
     clean_networking();
 
     return 0;
+}
+
+void test_mergepeers()
+{
+    sem_t *sem = NULL;
+	shared_data *sd = NULL;
+	assert(access_sd(&sem, &sd) == OK);
+    
+    peer_list new;
+    memset(&new, 0, sizeof(peer_list));
+
+    memcpy(new.ip[0], "0.1.2.1", INET_ADDRSTRLEN);
+    memcpy(new.ip[3], "0.1.2.2", INET_ADDRSTRLEN);
+    memcpy(new.ip[7], "0.1.2.3", INET_ADDRSTRLEN);
+    memcpy(new.ip[15], "0.1.2.4", INET_ADDRSTRLEN);
+
+    new.port[0] = 9098;
+    new.port[3] = 9099;
+    new.port[7] = 9100;
+    new.port[15] = 9101;
+
+    struct timespec small_latency;
+    small_latency.tv_sec = 0;
+    small_latency.tv_nsec = 1;
+
+    new.latency[0] = small_latency;
+    new.latency[3] = small_latency;
+    new.latency[7] = small_latency;
+    new.latency[15] = small_latency;
+
+    for (int i = 0; i < MAX_PEERS; i++)
+    {
+        sem_wait(sem);
+        printf("[%2d] [%15s : %05d] [%ld.%ld]\n", i, 
+            new.ip[i],
+            new.port[i],
+            new.latency[i].tv_sec,
+            new.latency[i].tv_nsec);
+        sem_post(sem);
+    }
+
+    merge_peerlist(&new);
 }
 
 void test_peers()

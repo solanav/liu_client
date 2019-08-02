@@ -1,5 +1,6 @@
 add_executable(liu_client
-    $<TARGET_OBJECTS:liu_client_lib>
+    $<TARGET_OBJECTS:net_lib>
+    $<TARGET_OBJECTS:core_lib>
     ${SRC_DIR}/core.c
 )
 

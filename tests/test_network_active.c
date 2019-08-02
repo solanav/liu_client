@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../include/network_active.h"
+#include "network/active.h"
 
 void test_forge_packet();
 

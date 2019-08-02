@@ -1,10 +1,5 @@
-#ifndef NETWORK_UTILS_H
-#define NETWORK_UTILS_H
-
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <time.h>
-#include <semaphore.h>
+#ifndef NETCORE_H
+#define NETCORE_H
 
 #define LOCAL_IP "127.0.0.1"
 #define PORT 9117
@@ -30,16 +25,31 @@
 #define C_UDP_HEADER (COMM_LEN + PACKET_NUM_LEN + COOKIE_SIZE)
 #define C_UDP_LEN (MAX_UDP - C_UDP_HEADER)
 
-#include "../include/system_utils.h"
-#include "../include/network_reactive.h"
-#include "../include/network_active.h"
-#include "../include/types.h"
+typedef struct _double_peer_list double_peer_list;
+typedef struct _shared_data shared_data;
+
+#include "network/peers.h"
+
+typedef struct _double_peer_list
+{
+	char ip[MAX_PEERS * 2][INET_ADDRSTRLEN];
+	in_port_t port[MAX_PEERS * 2];
+	int free[MAX_PEERS * 2];
+	struct timespec latency[MAX_PEERS * 2];
+} double_peer_list;
+
+typedef struct _peer_list
+{
+	char ip[MAX_PEERS][INET_ADDRSTRLEN];
+	in_port_t port[MAX_PEERS];
+	int free[MAX_PEERS];
+	struct timespec latency[MAX_PEERS];
+} peer_list;
 
 union _request_data
 {
 	byte other_peers_buf[sizeof(peer_list)];
 };
-
 
 struct _request
 {
@@ -52,7 +62,6 @@ struct _request
 	union _request_data data;
 	byte cookie[MAX_DATAGRAMS][COOKIE_SIZE];
 };
-
 struct _server_info
 {
 	unsigned int num_threads;
@@ -69,34 +78,10 @@ typedef struct _shared_data
 	int req_last;
 } shared_data;
 
-/**
- * Stop the server
- * 
- * Changes the value of the semaphore to stop the server
- * 
- * Returns - OK or ERROR
- */
-int stop_server(char *ip, in_port_t port);
-
-/**
- * UDP Server
- *
- * Waits for instructions from the server
- *
- * port - Integer with the port we want to use
- *
- * Returns - The data or NULL in case of error
-*/
-
 int init_networking();
-void clean_networking();
-int get_ip(const struct sockaddr_in *socket, char ip[INET_ADDRSTRLEN]);
-int add_peer(const struct sockaddr_in *other, const byte *data);
-int get_peer(const char other_ip[INET_ADDRSTRLEN], size_t *index);
-int add_req(const char ip[INET_ADDRSTRLEN], const byte header[C_UDP_HEADER], const byte cookie[COOKIE_SIZE]);
-int get_req(const byte cookie[COOKIE_SIZE]);
-int rm_req(int index);
 int create_shared_variables();
+void clean_networking();
 int access_sd(sem_t **sem, shared_data **sd);
+int get_ip(const struct sockaddr_in *socket, char ip[INET_ADDRSTRLEN]);
 
 #endif

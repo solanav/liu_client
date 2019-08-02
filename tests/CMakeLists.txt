@@ -8,7 +8,8 @@ set(tests
 
 foreach(test_file IN LISTS tests)
     add_executable(${test_file}
-        $<TARGET_OBJECTS:liu_client_lib>
+    $<TARGET_OBJECTS:net_lib>
+    $<TARGET_OBJECTS:core_lib>
         ${TST_DIR}/${test_file}.c
     )
 

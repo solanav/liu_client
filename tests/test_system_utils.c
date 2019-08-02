@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "../include/system_utils.h"
+#include "system_utils.h"
 
 void test_list_files();
 
