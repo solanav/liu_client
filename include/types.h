@@ -49,6 +49,7 @@ typedef unsigned char byte;
 
 #ifdef DEBUG
 
+#include <stdio.h>
 # define DEBUG_PRINT(x) printf x 
 #else
 # define DEBUG_PRINT(x) do {} while (0) 

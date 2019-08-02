@@ -7,12 +7,15 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
-
-#include "../include/network_active.h"
-#include "../include/network_utils.h"
+#include <netinet/in.h>
 
 #define MAX_THREADS 128
 #define HANDLER_TIMEOUT 1 // in seconds
+
+#include "network/reactive.h"
+#include "types.h"
+#include "network/netcore.h"
+#include "network/active.h"
 
 int start_server(in_port_t port)
 {
@@ -47,27 +50,10 @@ int start_server(in_port_t port)
 	byte buf[MAX_UDP];
 	pthread_t thread_ret;
 
-	// Open semaphore for shared memory
-	sem_t *sem = sem_open(SERVER_SEM, 0);
-	if (sem == SEM_FAILED)
-	{
-		DEBUG_PRINT((P_ERROR "Could not open semaphore to close server\n"));
+	sem_t *sem = NULL;
+	shared_data *sd = NULL;
+	if (access_sd(&sem, &sd) == ERROR)
 		return ERROR;
-	}
-
-	// Open shared memory
-	int shared_data_fd = shm_open(SERVER_PEERS, O_RDWR, S_IRUSR | S_IWUSR);
-	if (shared_data_fd == -1)
-	{
-		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to open the shared memory for the server [%s]\n", strerror(errno)));
-		return ERROR;
-	}
-	shared_data *sd = (shared_data *)mmap(NULL, sizeof(shared_data), PROT_WRITE | PROT_READ, MAP_SHARED, shared_data_fd, 0);
-	if (sd == MAP_FAILED)
-	{
-		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to truncate shared fd for peers\n"));
-		return ERROR;
-	}
 
 	// Open message queue
 	mqd_t datagram_queue = mq_open(SERVER_QUEUE, O_RDWR);
@@ -160,9 +146,7 @@ int start_server(in_port_t port)
 	sem_post(sem);
 
 	sem_close(sem);
-
 	munmap(sd, sizeof(shared_data));
-	close(shared_data_fd);
 
 	return OK;
 }
@@ -171,27 +155,10 @@ int stop_server(char *ip, in_port_t port)
 {
 	DEBUG_PRINT((P_INFO "Closing everything down...\n"));
 
-	// Open semaphore for shared memory
-	sem_t *sem = sem_open(SERVER_SEM, 0);
-	if (sem == SEM_FAILED)
-	{
-		DEBUG_PRINT((P_ERROR "Could not open semaphore to close server\n"));
+	sem_t *sem = NULL;
+	shared_data *sd = NULL;
+	if (access_sd(&sem, &sd) == ERROR)
 		return ERROR;
-	}
-
-	// Open shared memory
-	int shared_data_fd = shm_open(SERVER_PEERS, O_RDWR, S_IRUSR | S_IWUSR);
-	if (shared_data_fd == -1)
-	{
-		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to open the shared memory for the server [%s]\n", strerror(errno)));
-		return ERROR;
-	}
-	shared_data *sd = (shared_data *)mmap(NULL, sizeof(shared_data), PROT_WRITE | PROT_READ, MAP_SHARED, shared_data_fd, 0);
-	if (sd == MAP_FAILED)
-	{
-		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to truncate shared fd for peers\n"));
-		return ERROR;
-	}
 
 	// Activate signal to stop server
 	sem_wait(sem);
@@ -220,27 +187,10 @@ int stop_server(char *ip, in_port_t port)
 
 void *handle_comm(void *socket)
 {
-	// Open semaphore for shared memory
-	sem_t *sem = sem_open(SERVER_SEM, 0);
-	if (sem == SEM_FAILED)
-	{
-		DEBUG_PRINT((P_ERROR "Could not open semaphore to close server\n"));
-		goto NONE_CLEAN;
-	}
-
-	// Open shared memory
-	int shared_data_fd = shm_open(SERVER_PEERS, O_RDWR, S_IRUSR | S_IWUSR);
-	if (shared_data_fd == -1)
-	{
-		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to open the shared memory for the server [%s]\n", strerror(errno)));
-		goto SEM_CLEAN;
-	}
-	shared_data *sd = (shared_data *)mmap(NULL, sizeof(shared_data), PROT_WRITE | PROT_READ, MAP_SHARED, shared_data_fd, 0);
-	if (sd == MAP_FAILED)
-	{
-		DEBUG_PRINT((P_ERROR "[handle_comm] Failed to truncate shared fd for peers\n"));
-		goto FD_CLEAN;
-	}
+	sem_t *sem = NULL;
+	shared_data *sd = NULL;
+	if (access_sd(&sem, &sd) == ERROR)
+		goto SHARED_CLEAN;
 
 	// Get memory for buffer
 	byte data[MAX_UDP];
@@ -311,14 +261,15 @@ void *handle_comm(void *socket)
 			DEBUG_PRINT((P_INFO "Received a ping from [%s:%d]\n", peer_ip, peer_port));
 			DEBUG_PRINT((P_INFO "Sending a pong to [%s:%d]\n", peer_ip, peer_port));
 
-			send_pong(peer_ip, peer_port);
+			// Send pong with the cookie from the ping
+			send_pong(peer_ip, peer_port, data + COMM_LEN + PACKET_NUM_LEN);
 		}
 		else if (memcmp(data, PONG, COMM_LEN) == 0)
 		{
 			DEBUG_PRINT((P_INFO "Received a pong from [%s:%d]\n", peer_ip, peer_port));
 
 			byte cookie[COOKIE_SIZE];
-			memcpy(&cookie, data + COMM_LEN, COOKIE_SIZE);
+			memcpy(&cookie, data + COMM_LEN + PACKET_NUM_LEN, COOKIE_SIZE);
 
 			int req_index = get_req(cookie);
 			if (req_index != ERROR)
@@ -389,14 +340,8 @@ SHARED_CLEAN:
 	sem_post(sem);
 
 	munmap(sd, sizeof(shared_data));
-
-FD_CLEAN:
-	close(shared_data_fd);
-
-SEM_CLEAN:
 	sem_close(sem);
 
-NONE_CLEAN:
 	DEBUG_PRINT((P_OK "Detaching and exiting thread\n"));
 
 	pthread_detach(pthread_self());

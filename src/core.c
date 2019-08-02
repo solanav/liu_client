@@ -1,17 +1,5 @@
-#include <stdio.h>
-#include <sys/types.h>
-#include <dlfcn.h>
-#include <string.h>
-#include <sys/ptrace.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/mman.h>
-#include <sys/wait.h>
-#include <unistd.h>
-
-#include "../include/core.h"
-#include "../include/network_active.h"
-#include "../include/system_utils.h"
+#include "types.h"
+#include "network/netcore.h"
 
 int main()
 {

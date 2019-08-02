@@ -3,9 +3,9 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "../include/encrypt.h"
-#include "../include/types.h"
-#include "../include/system_utils.h"
+#include "encrypt.h"
+#include "types.h"
+#include "system_utils.h"
 
 #define TESTING_FOLDER "/home/solanav/back/"
 #define MAX_NAME 255
