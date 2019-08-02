@@ -68,6 +68,16 @@ int send_empty(char *ip, in_port_t port)
 	return upload_data(ip, port, packet, MAX_UDP);
 }
 
+int send_discover(char *ip, in_port_t port)
+{
+	byte packet[MAX_UDP];
+
+	// Don't mid the cookie, we are blind
+	forge_packet(packet, NULL, (byte *)DISCOVER, 0, NULL, 0);
+
+	return upload_data(ip, port, packet, MAX_UDP);
+}
+
 int send_selfdata(char *ip, in_port_t port, in_port_t self_port)
 {
 	byte data[2];

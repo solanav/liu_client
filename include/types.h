@@ -7,6 +7,9 @@ typedef unsigned char byte;
 #define OK 0
 #define ERROR -1
 
+#define TRUE 1
+#define FALSE 0
+
 #define STD_SIZE 1024
 
 #define UPDATE_READY 200

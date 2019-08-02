@@ -151,7 +151,7 @@ int start_server(in_port_t port)
 	return OK;
 }
 
-int stop_server(char *ip, in_port_t port)
+int stop_server(in_port_t port)
 {
 	DEBUG_PRINT((P_INFO "Closing everything down...\n"));
 
@@ -166,7 +166,7 @@ int stop_server(char *ip, in_port_t port)
 	sem_post(sem);
 
 	// Message to update the server so it stops asap
-	send_empty(ip, port);
+	send_empty(LOCAL_IP, port);
 
 	// Wait for the server to exit the main loop
 	int val = 0;
@@ -221,6 +221,7 @@ void *handle_comm(void *socket)
 		DEBUG_PRINT((P_INFO "Waiting for datagram...\n"));
 		memset(&current, 0, sizeof(struct timespec));
 
+		memset(data, 0, MAX_UDP * sizeof(char));
 		ret = mq_timedreceive(mq, (char *) data, MAX_UDP, NULL, &tm);
 		if (ret == 0 || ret == -1)
 		{
@@ -239,21 +240,28 @@ void *handle_comm(void *socket)
 		sem_post(sem);
 
 		// Check if the peer is trying to register
+		int send_info = 0;
 		if (memcmp(data, INIT, COMM_LEN) == 0)
 		{
 			DEBUG_PRINT((P_INFO "New peer found, going to register it on the list\n"));
 			add_peer(other, (byte *)data);
+			send_info = 1;
 		}
 
 		// Get the peer index
 		char peer_ip[INET_ADDRSTRLEN];
 		get_ip(other, peer_ip); // TODO: ERROR CONTROL
 		size_t peer_index;
-		get_peer(peer_ip, &peer_index); // TODO: ERROR CONTROL
-
+		if (get_peer(peer_ip, &peer_index) == ERROR)
+			continue;
+			
 		sem_wait(sem);
 		in_port_t peer_port = peers.port[peer_index];
 		sem_post(sem);
+
+		// If we just added someone, send them our info
+		if (send_info == 1)
+			send_selfdata(peer_ip, peer_port, PORT);
 
 		// TODO: turn this into a switch so gcc can optimize it to hash table
 		if (memcmp(data, PING, COMM_LEN) == 0)
@@ -276,6 +284,7 @@ void *handle_comm(void *socket)
 			{
 				DEBUG_PRINT((P_INFO "Found corresponding ping\n"));
 
+				// Calculating latency
 				sem_wait(sem);
 				if (peers.latency[peer_index].tv_sec == 0 && peers.latency[peer_index].tv_nsec == 0)
 				{
@@ -320,12 +329,16 @@ void *handle_comm(void *socket)
 			memcpy(&test, sd->req.data.other_peers_buf, sizeof(peer_list));
 			printf(">> %s:%d\n", test.ip[0], test.port[0]);
 		}
+		else if (memcmp(data, DISCOVER, COMM_LEN) == 0)
+		{
+			DEBUG_PRINT((P_INFO "Received a discovery message\n"));
+
+			send_selfdata(peer_ip, peer_port, PORT);
+		}
 		else if (memcmp(data, EMPTY, COMM_LEN) == 0)
 		{
 			DEBUG_PRINT((P_INFO "Received an empty message\n"));
 		}
-
-		memset(data, 0, MAX_UDP * sizeof(char));
 	}
 
 MQ_CLEAN:

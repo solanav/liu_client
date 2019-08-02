@@ -28,7 +28,7 @@ int main()
 		assert(send_ping(LOCAL_IP, PORT) != -1);
 
 		sleep(1);
-		assert(stop_server(LOCAL_IP, PORT) == OK);
+		assert(stop_server(PORT) == OK);
 	}
 
 	// Wait for server to stop

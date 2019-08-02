@@ -25,6 +25,15 @@ int forge_packet(byte datagram[MAX_UDP], byte cookie[COOKIE_SIZE], const byte ty
 int send_empty(char *ip, in_port_t port);
 
 /**
+ * Send a discover request
+ * 
+ * Used by randomly sending this packets to ips on the internet, when another
+ * computer running this program receives it, it will respond by sending it's
+ * data with send_selfdata.
+ */
+int send_discover(char *ip, in_port_t port);
+
+/**
  * Send your data to a peer
  *  
  * Sends your port to a peer so it can add you as peer. It uses ip and port

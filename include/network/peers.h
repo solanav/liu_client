@@ -20,7 +20,7 @@ typedef struct _peer_list peer_list;
  * 
  * Returns - OK or ERROR
  */
-int stop_server(char *ip, in_port_t port);
+int stop_server(in_port_t port);
 
 /**
  * UDP Server

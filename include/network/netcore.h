@@ -4,9 +4,9 @@
 #define LOCAL_IP "127.0.0.1"
 #define PORT 9117
 
-#define MAX_UDP 512
-#define MAX_THREADS 128
-#define MAX_DATAGRAMS 128
+#define MAX_UDP 512 // Max size of a packet
+#define MAX_THREADS 128 // Max number of threads
+#define MAX_DATAGRAMS 128 // Max number of requests
 
 #define EMPTY      "\x00\x00"
 #define INIT       "\x00\x01"
@@ -15,6 +15,7 @@
 #define GETPEERS   "\x00\x04"
 #define SENDPEERS  "\x00\x05"
 #define SENDPEERSC "\x00\x06"
+#define DISCOVER   "\x00\x07"
 
 #define COOKIE_SIZE 4
 

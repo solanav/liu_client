@@ -15,6 +15,8 @@
 #include "network/reactive.h"
 #include "network/active.h"
 
+int peer_discovery();
+
 int init_networking()
 {
 	if (create_shared_variables() == ERROR)
@@ -38,14 +40,11 @@ int init_networking()
 	}
 	else
 	{
-		sleep(1);
-		send_selfdata(LOCAL_IP, PORT, PORT);
-        
-		sleep(2);
-		send_peerdata(LOCAL_IP, PORT);
+		// Look for peers until our list is full
+		peer_discovery();
 
-		sleep(5);
-		stop_server(LOCAL_IP, PORT);
+		sleep(1);
+		stop_server(PORT);
 	}
 
 	// Wait for server to stop
@@ -170,6 +169,31 @@ int access_sd(sem_t **sem, shared_data **sd)
 		close(shared_data_fd);
 		return ERROR;
 	}
+
+	return OK;
+}
+
+int peer_discovery()
+{
+	sem_t *sem = NULL;
+	shared_data *sd = NULL;
+	if (access_sd(&sem, &sd) == ERROR)
+		return ERROR;
+
+	sem_wait(sem);
+	while (sd->peers.free[15] == 0)
+	{
+		sem_post(sem);
+		for (int i = 0; i < 100; i++)
+		{
+			char ip[INET_ADDRSTRLEN];
+			sprintf(ip, "10.0.0.%d", i);
+			send_discover(ip, PORT);
+		}
+		sleep(3);
+		sem_wait(sem);
+	}
+	sem_post(sem);
 
 	return OK;
 }
