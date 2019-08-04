@@ -2,7 +2,7 @@
 #define NETCORE_H
 
 #define LOCAL_IP "127.0.0.1"
-#define PORT 9117
+#define PORT 9121
 
 #define MAX_UDP 512 // Max size of a packet
 #define MAX_THREADS 128 // Max number of threads

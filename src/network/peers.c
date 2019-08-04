@@ -85,42 +85,32 @@ int sort_peers(double_peer_list *peers)
 	return OK;
 }
 
-int get_peer(const char other_ip[INET_ADDRSTRLEN], size_t *index)
+int get_peer(const char other_ip[INET_ADDRSTRLEN], size_t *index, sem_t *sem, shared_data *sd)
 {
-	sem_t *sem = NULL;
-	shared_data *sd = NULL;
-	if (access_sd(&sem, &sd) == ERROR)
-		return ERROR;
-
-	sem_wait(sem);
-
 	for (int i = 0; i < MAX_PEERS; i++)
 	{
+		sem_wait(sem);
 		if (strcmp(other_ip, sd->peers.ip[i]) == 0)
 		{
+			sem_post(sem);
+
 			if (index)
 				*index = i;
 
-			sem_post(sem);
 			return OK;
 		}
+		else
+		{
+			sem_post(sem);
+		}
 	}
-
-	sem_post(sem);
-	sem_close(sem);
-	DEBUG_PRINT((P_WARN "Peer not found on peer_list\n"));
 
 	return ERROR;
 }
 
-int add_peer(const struct sockaddr_in *other, const byte *data)
+int add_peer(const struct sockaddr_in *other, const byte *data, sem_t *sem, shared_data *sd)
 {
 	if (!other)
-		return ERROR;
-
-	sem_t *sem = NULL;
-	shared_data *sd = NULL;
-	if (access_sd(&sem, &sd) == ERROR)
 		return ERROR;
 
 	// Get the ip of the peer
@@ -132,7 +122,7 @@ int add_peer(const struct sockaddr_in *other, const byte *data)
 	}
 
 	// Check if peer already on list
-	if (get_peer(other_ip, NULL) == OK)
+	if (get_peer(other_ip, NULL, sem, sd) == OK)
 	{
 		DEBUG_PRINT((P_ERROR "Peer found on the list already\n"));
 		return ERROR;
@@ -164,18 +154,11 @@ int add_peer(const struct sockaddr_in *other, const byte *data)
 	DEBUG_PRINT((P_INFO "Added peer with data: [%s:%d]\n", sd->peers.ip[free], sd->peers.port[free]));
 	sem_post(sem);
 
-	sem_close(sem);
-
 	return OK;
 }
 
-int add_req(const char ip[INET_ADDRSTRLEN], const byte header[C_UDP_HEADER], const byte cookie[COOKIE_SIZE])
+int add_req(const char ip[INET_ADDRSTRLEN], const byte header[C_UDP_HEADER], const byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
 {
-	sem_t *sem = NULL;
-	shared_data *sd = NULL;
-	if (access_sd(&sem, &sd) == ERROR)
-		return ERROR;
-
 	// Save datagram in shared memory with timestamp
 	sem_wait(sem);
 
@@ -230,13 +213,8 @@ int add_req(const char ip[INET_ADDRSTRLEN], const byte header[C_UDP_HEADER], con
 	return OK;
 }
 
-int rm_req(int index)
+int rm_req(int index, sem_t *sem, shared_data *sd)
 {
-	sem_t *sem = NULL;
-	shared_data *sd = NULL;
-	if (access_sd(&sem, &sd) == ERROR)
-		return ERROR;
-
 	sem_wait(sem);
 
 	if (index == sd->req_first)
@@ -262,13 +240,8 @@ int rm_req(int index)
 	return OK;
 }
 
-int get_req(const byte cookie[COOKIE_SIZE])
+int get_req(const byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
 {
-	sem_t *sem = NULL;
-	shared_data *sd = NULL;
-	if (access_sd(&sem, &sd) == ERROR)
-		return ERROR;
-
 	struct _request req_copy;
 
 	sem_wait(sem);
@@ -306,13 +279,8 @@ int get_req(const byte cookie[COOKIE_SIZE])
 	return cont;
 }
 
-int merge_peerlist(peer_list *new)
+int merge_peerlist(peer_list *new, sem_t *sem, shared_data *sd)
 {
-	sem_t *sem = NULL;
-	shared_data *sd = NULL;
-	if (access_sd(&sem, &sd) == ERROR)
-		return ERROR;
-
 	// Sort the new peer_list
 	double_peer_list all_peers;
 	sem_wait(sem);

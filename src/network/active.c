@@ -40,13 +40,13 @@ size_t upload_data(char *ip, in_port_t port, byte *data, size_t len);
  */
 size_t upload_data_x(char *ip, in_port_t port, byte *data, size_t len, byte *header, byte *cont_header);
 
-int send_ping(char *ip, in_port_t port)
+int send_ping(char *ip, in_port_t port, sem_t *sem, shared_data *sd)
 {
 	byte cookie[COOKIE_SIZE] = {0};
 	byte packet[MAX_UDP];
 	forge_packet(packet, cookie, (byte *)PING, 0, NULL, 0);
 
-	if (add_req(ip, (byte *)PING, cookie) == ERROR)
+	if (add_req(ip, (byte *)PING, cookie, sem, sd) == ERROR)
 		return ERROR;
 
 	return upload_data(ip, port, packet, MAX_UDP);
@@ -68,12 +68,14 @@ int send_empty(char *ip, in_port_t port)
 	return upload_data(ip, port, packet, MAX_UDP);
 }
 
-int send_discover(char *ip, in_port_t port)
+int send_discover(char *ip, in_port_t port, in_port_t self_port)
 {
-	byte packet[MAX_UDP];
+	byte data[2];
+	data[0] = (self_port >> 8) & 0x00ff;
+	data[1] = self_port & 0x00ff;
 
-	// Don't mid the cookie, we are blind
-	forge_packet(packet, NULL, (byte *)DISCOVER, 0, NULL, 0);
+	byte packet[MAX_UDP];
+	forge_packet(packet, NULL, (byte *)INIT, 0, data, PORT_LEN);
 
 	return upload_data(ip, port, packet, MAX_UDP);
 }
@@ -90,13 +92,8 @@ int send_selfdata(char *ip, in_port_t port, in_port_t self_port)
 	return upload_data(ip, port, packet, MAX_UDP);
 }
 
-int send_peerdata(char *ip, in_port_t port)
+int send_peerdata(char *ip, in_port_t port, sem_t *sem, shared_data *sd)
 {
-	sem_t *sem = NULL;
-	shared_data *sd = NULL;
-	if (access_sd(&sem, &sd) == ERROR)
-		return ERROR;
-
 	sem_wait(sem);
 	peer_list copy = sd->peers;
 	sem_post(sem);
@@ -109,17 +106,14 @@ int send_peerdata(char *ip, in_port_t port)
 
 	DEBUG_PRINT((P_OK "Uploaded %ld bytes\n", trans));
 
-	sem_close(sem);
-	munmap(sd, sizeof(shared_data));
-
 	return OK;
 }
 
-int send_peerrequest(char *ip, in_port_t port)
+int send_peerrequest(char *ip, in_port_t port, sem_t *sem, shared_data *sd)
 {
 	byte cookie[COOKIE_SIZE];
 
-	if (add_req(ip, (byte *)GETPEERS, cookie) == ERROR)
+	if (add_req(ip, (byte *)GETPEERS, cookie, sem, sd) == ERROR)
 		return ERROR;
 
 	return upload_data(ip, port, (byte *)GETPEERS, COMM_LEN);
@@ -149,7 +143,11 @@ size_t upload_data(char *ip, in_port_t port, byte data[], size_t len)
 	other_addr.sin_addr.s_addr = inet_addr(ip);
 	other_addr.sin_port = htons(port);
 
-	return sendto(socket_desc, data, len, 0, (struct sockaddr *)&other_addr, sizeof(other_addr));
+	int res = sendto(socket_desc, data, len, 0, (struct sockaddr *)&other_addr, sizeof(other_addr));
+
+	close(socket_desc);
+
+	return res;
 }
 
 size_t upload_data_x(char *ip, in_port_t port, byte *data, size_t len, byte *header, byte *cont_header)
@@ -195,7 +193,7 @@ int forge_packet(byte datagram[MAX_UDP], byte cookie[COOKIE_SIZE], const byte ty
 	// Create cookie
 	if (cookie)
 	{
-		if (strcmp((char *) cookie, "\x00\x00\x00\x00") == 0)
+		if (strcmp((char *)cookie, "\x00\x00\x00\x00") == 0)
 		{
 			DEBUG_PRINT((P_WARN "Cookie was empty, so we create a new one\n"));
 			getrandom(cookie, COOKIE_SIZE, 0);
@@ -217,12 +215,7 @@ int forge_packet(byte datagram[MAX_UDP], byte cookie[COOKIE_SIZE], const byte ty
 		// TODO: It's probably better to fill with noise or leave it with memory trash
 		memset(datagram + C_UDP_HEADER + data_size, 0, C_UDP_LEN - data_size);
 	}
-	else if (!data)
-	{
-		DEBUG_PRINT((P_WARN "No data\n"));
-		return ERROR;
-	}
-	else
+	else if (data_size > (size_t)C_UDP_LEN)
 	{
 		DEBUG_PRINT((P_WARN "Data too big\n"));
 		return ERROR;

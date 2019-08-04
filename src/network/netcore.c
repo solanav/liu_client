@@ -15,7 +15,7 @@
 #include "network/reactive.h"
 #include "network/active.h"
 
-int peer_discovery();
+int peer_discovery(sem_t *sem, shared_data *sd);
 
 int init_networking()
 {
@@ -24,6 +24,11 @@ int init_networking()
 		DEBUG_PRINT((P_ERROR "Failed to create the shared variables\n"));
 		return ERROR;
 	}
+
+	sem_t *sem = NULL;
+	shared_data *sd = NULL;
+	if (access_sd(&sem, &sd) == ERROR)
+		return ERROR;
 
 	pid_t pid = fork();
 
@@ -34,21 +39,24 @@ int init_networking()
 	}
 	else if (pid == 0)
 	{
-		start_server(PORT);
+		start_server(PORT, sem, sd);
 		DEBUG_PRINT((P_OK "Exited server, closing process...\n"));
 		exit(EXIT_SUCCESS);
 	}
 	else
 	{
 		// Look for peers until our list is full
-		peer_discovery();
+		peer_discovery(sem, sd);
 
 		sleep(1);
-		stop_server(PORT);
+		stop_server(PORT, sem, sd);
 	}
 
 	// Wait for server to stop
 	wait(NULL);
+
+	sem_close(sem);
+	munmap(sd, sizeof(shared_data));
 
 	// Clean
 	clean_networking();
@@ -118,7 +126,6 @@ SHM_CLEAN:
 	close(shared_data_fd);
 
 SEM_CLEAN:
-	sem_close(sem);
 
 	return ret;
 }
@@ -173,24 +180,21 @@ int access_sd(sem_t **sem, shared_data **sd)
 	return OK;
 }
 
-int peer_discovery()
+int peer_discovery(sem_t *sem, shared_data *sd)
 {
-	sem_t *sem = NULL;
-	shared_data *sd = NULL;
-	if (access_sd(&sem, &sd) == ERROR)
-		return ERROR;
-
 	sem_wait(sem);
-	while (sd->peers.free[15] == 0)
+	while (sd->peers.free[1] == 0)
 	{
 		sem_post(sem);
-		for (int i = 0; i < 100; i++)
+		for (int i = 0; i < 256; i++)
 		{
 			char ip[INET_ADDRSTRLEN];
-			sprintf(ip, "10.0.0.%d", i);
-			send_discover(ip, PORT);
+			sprintf(ip, "10.8.0.%d", i);
+			if (get_peer(ip, NULL, sem, sd) == ERROR) // If we have it already don't
+				send_discover(ip, PORT, PORT);
+
+			usleep(50000);
 		}
-		sleep(3);
 		sem_wait(sem);
 	}
 	sem_post(sem);

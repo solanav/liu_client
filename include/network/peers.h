@@ -20,7 +20,7 @@ typedef struct _peer_list peer_list;
  * 
  * Returns - OK or ERROR
  */
-int stop_server(in_port_t port);
+int stop_server(in_port_t port, sem_t *sem, shared_data *sd);
 
 /**
  * UDP Server
@@ -35,14 +35,14 @@ int stop_server(in_port_t port);
 int init_networking();
 void clean_networking();
 int get_ip(const struct sockaddr_in *socket, char ip[INET_ADDRSTRLEN]);
-int add_peer(const struct sockaddr_in *other, const byte *data);
-int get_peer(const char other_ip[INET_ADDRSTRLEN], size_t *index);
-int add_req(const char ip[INET_ADDRSTRLEN], const byte header[C_UDP_HEADER], const byte cookie[COOKIE_SIZE]);
-int get_req(const byte cookie[COOKIE_SIZE]);
-int rm_req(int index);
+int add_peer(const struct sockaddr_in *other, const byte *data, sem_t *sem, shared_data *sd);
+int get_peer(const char other_ip[INET_ADDRSTRLEN], size_t *index, sem_t *sem, shared_data *sd);
+int add_req(const char ip[INET_ADDRSTRLEN], const byte header[C_UDP_HEADER], const byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd);
+int get_req(const byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd);
+int rm_req(int index, sem_t *sem, shared_data *sd);
 int create_shared_variables();
 int access_sd(sem_t **sem, shared_data **sd);
-int merge_peerlist(peer_list *new);
+int merge_peerlist(peer_list *new, sem_t *sem, shared_data *sd);
 int sort_peers(double_peer_list *peers);
 
 #endif

@@ -86,11 +86,18 @@ void test_mergepeers()
         sem_post(sem);
     }
 
-    merge_peerlist(&new);
+    merge_peerlist(&new, sem, sd);
+
+    sem_close(sem);
+    munmap(sd, sizeof(shared_data));
 }
 
 void test_peers()
 {
+    sem_t *sem = NULL;
+	shared_data *sd = NULL;
+	assert(access_sd(&sem, &sd) == OK);
+
     struct sockaddr_in test;
     test.sin_addr.s_addr = 16777343;
     char ip[INET_ADDRSTRLEN];
@@ -102,29 +109,32 @@ void test_peers()
     for (size_t i = 0; i < MAX_PEERS; i++)
     {
         test.sin_addr.s_addr = 16777343 + 1 + i;
-        assert(add_peer(&test, (byte *)"\x23\x89") == OK);
+        assert(add_peer(&test, (byte *)"\x23\x89", sem, sd) == OK);
         size_t index;
         get_ip(&test, ip);
-        assert(get_peer(ip, &index) == OK);
+        assert(get_peer(ip, &index, sem, sd) == OK);
         assert(index == i);
     }
 
     // Not enough space
     test.sin_addr.s_addr = 16777544;
-    assert(add_peer(&test, (byte *)"\x23\x89") == ERROR);
+    assert(add_peer(&test, (byte *)"\x23\x89", sem, sd) == ERROR);
+
+    sem_close(sem);
+    munmap(sd, sizeof(shared_data));
 }
 
 void test_requests()
 {
-    byte cookie[COOKIE_SIZE];
-    assert(add_req("127.0.0.1", (byte *)PONG, cookie) == OK);
-    int req_index = get_req(cookie);
-    printf("req > %d\n", req_index);
-    assert(req_index == 0);
-    
     sem_t *sem = NULL;
 	shared_data *sd = NULL;
 	assert(access_sd(&sem, &sd) == OK);
+
+    byte cookie[COOKIE_SIZE];
+    assert(add_req("127.0.0.1", (byte *)PONG, cookie, sem, sd) == OK);
+    int req_index = get_req(cookie, sem, sd);
+    printf("req > %d\n", req_index);
+    assert(req_index == 0);
 
     sem_wait(sem);
     assert(memcmp(sd->req.cookie[req_index], cookie, COOKIE_SIZE) == 0);
@@ -138,18 +148,18 @@ void test_requests()
     sem_post(sem);
 
     // Remove first and last (edge case)
-    assert(rm_req(0) == OK);
-    assert(get_req(cookie) == ERROR);
+    assert(rm_req(0, sem, sd) == OK);
+    assert(get_req(cookie, sem, sd) == ERROR);
     
     // Add it again
-    assert(add_req("127.0.0.1", (byte *)PONG, cookie) == OK);
-    assert(get_req(cookie) == 0);
+    assert(add_req("127.0.0.1", (byte *)PONG, cookie, sem, sd) == OK);
+    assert(get_req(cookie, sem, sd) == 0);
 
     // Check cookies are ok
     byte cookie2[COOKIE_SIZE] = "\x12\x34\x56\x78";
-    assert(add_req("999.999.999.999", (byte *)PING, cookie2) == OK);
+    assert(add_req("999.999.999.999", (byte *)PING, cookie2, sem, sd) == OK);
     
-    req_index = get_req(cookie2);
+    req_index = get_req(cookie2, sem, sd);
     assert(req_index == 1);
     assert(memcmp(cookie, cookie2, COOKIE_SIZE) != 0);
 
@@ -165,24 +175,27 @@ void test_requests()
     sem_post(sem);
 
     // Remove first (edge case)
-    assert(rm_req(0) == OK);
-    assert(get_req(cookie) == ERROR);
+    assert(rm_req(0, sem, sd) == OK);
+    assert(get_req(cookie, sem, sd) == ERROR);
     
     // Add it again
-    assert(add_req("127.0.0.1", (byte *)PONG, cookie) == OK);
-    assert(get_req(cookie) == 0);
+    assert(add_req("127.0.0.1", (byte *)PONG, cookie, sem, sd) == OK);
+    assert(get_req(cookie, sem, sd) == 0);
 
     // Remove last
-    assert(rm_req(0) == 0);
-    assert(get_req(cookie) == ERROR);
+    assert(rm_req(0, sem, sd) == 0);
+    assert(get_req(cookie, sem, sd) == ERROR);
 
     // Add it again
-    assert(add_req("127.0.0.1", (byte *)PONG, cookie) == OK);
-    assert(get_req(cookie) == 0);
+    assert(add_req("127.0.0.1", (byte *)PONG, cookie, sem, sd) == OK);
+    assert(get_req(cookie, sem, sd) == 0);
 
     for (int i = 0; i < MAX_DATAGRAMS - 2; i++)
-        assert(add_req("127.0.0.1", (byte *)PONG, cookie) == OK);
+        assert(add_req("127.0.0.1", (byte *)PONG, cookie, sem, sd) == OK);
 
     // Too many requests
-    assert(add_req("127.0.0.1", (byte *)PONG, cookie) == ERROR);
+    assert(add_req("127.0.0.1", (byte *)PONG, cookie, sem, sd) == ERROR);
+
+    sem_close(sem);
+    munmap(sd, sizeof(shared_data));
 }

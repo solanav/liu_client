@@ -31,7 +31,7 @@ int send_empty(char *ip, in_port_t port);
  * computer running this program receives it, it will respond by sending it's
  * data with send_selfdata.
  */
-int send_discover(char *ip, in_port_t port);
+int send_discover(char *ip, in_port_t port, in_port_t self_port);
 
 /**
  * Send your data to a peer
@@ -47,7 +47,7 @@ int send_selfdata(char *ip, in_port_t port, in_port_t self_port);
  * 
  * The peer should respond with a pong. Saves the time of the ping in a shm.
  */
-int send_ping(char *ip, in_port_t port);
+int send_ping(char *ip, in_port_t port, sem_t *sem, shared_data *sd);
 
 /**
  * Send a pong
@@ -63,13 +63,13 @@ int send_pong(char *ip, in_port_t port, byte cookie[COOKIE_SIZE]);
  * 
  * The peer should respond with a peer_list. We will use this to fill our list.
  */
-int send_peerrequest(char *ip, in_port_t port);
+int send_peerrequest(char *ip, in_port_t port, sem_t *sem, shared_data *sd);
 
 /**
  * Sends the peer_list to a peer
  * 
  * This is a response to a peer request, it serves as a peer discovery method.
  */
-int send_peerdata(char *ip, in_port_t port);
+int send_peerdata(char *ip, in_port_t port, sem_t *sem, shared_data *sd);
 
 #endif

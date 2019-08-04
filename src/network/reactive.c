@@ -17,7 +17,14 @@
 #include "network/netcore.h"
 #include "network/active.h"
 
-int start_server(in_port_t port)
+// We can pass the pointer because threads share address space
+struct handler_data {
+	struct sockaddr_in *socket;
+	sem_t *sem;
+	shared_data *sd;
+};
+
+int start_server(in_port_t port, sem_t *sem, shared_data *sd)
 {
 	// Creating socket file descriptor
 	int socket_desc;
@@ -49,11 +56,6 @@ int start_server(in_port_t port)
 
 	byte buf[MAX_UDP];
 	pthread_t thread_ret;
-
-	sem_t *sem = NULL;
-	shared_data *sd = NULL;
-	if (access_sd(&sem, &sd) == ERROR)
-		return ERROR;
 
 	// Open message queue
 	mqd_t datagram_queue = mq_open(SERVER_QUEUE, O_RDWR);
@@ -110,7 +112,13 @@ int start_server(in_port_t port)
 
 			if ((attr.mq_curmsgs > (MAX_MSG_QUEUE / 2) || num_threads == 0) && num_threads < MAX_THREADS)
 			{
-				if (pthread_create(&thread_ret, NULL, handle_comm, &other_addr) != 0)
+				// Pack data for thread
+				struct handler_data hd;
+				hd.socket = &other_addr;
+				hd.sem = sem;
+				hd.sd = sd;
+
+				if (pthread_create(&thread_ret, NULL, handle_comm, &hd) != 0)
 					DEBUG_PRINT((P_ERROR "Failed to launch new thread\n"));
 				else
 				{
@@ -145,20 +153,12 @@ int start_server(in_port_t port)
 	sd->server_info.stop = 2;
 	sem_post(sem);
 
-	sem_close(sem);
-	munmap(sd, sizeof(shared_data));
-
 	return OK;
 }
 
-int stop_server(in_port_t port)
+int stop_server(in_port_t port, sem_t *sem, shared_data *sd)
 {
 	DEBUG_PRINT((P_INFO "Closing everything down...\n"));
-
-	sem_t *sem = NULL;
-	shared_data *sd = NULL;
-	if (access_sd(&sem, &sd) == ERROR)
-		return ERROR;
 
 	// Activate signal to stop server
 	sem_wait(sem);
@@ -178,25 +178,21 @@ int stop_server(in_port_t port)
 		sem_post(sem);
 	} while (val != 2);
 
-	sem_close(sem);
-
 	DEBUG_PRINT((P_OK "All threads have been closed correctly\n"));
 
 	return OK;
 }
 
-void *handle_comm(void *socket)
+void *handle_comm(void *hdata)
 {
-	sem_t *sem = NULL;
-	shared_data *sd = NULL;
-	if (access_sd(&sem, &sd) == ERROR)
-		goto SHARED_CLEAN;
-
 	// Get memory for buffer
 	byte data[MAX_UDP];
 
-	// Get socket
-	const struct sockaddr_in *other = (struct sockaddr_in *)socket;
+	// Extract data
+	struct handler_data *hd = (struct handler_data *) hdata;
+	const struct sockaddr_in *other = hd->socket;
+	sem_t *sem = hd->sem;
+	shared_data *sd = hd->sd;
 
 	// Open queue and consume one message
 	mqd_t mq = mq_open(SERVER_QUEUE, O_RDWR);
@@ -244,7 +240,12 @@ void *handle_comm(void *socket)
 		if (memcmp(data, INIT, COMM_LEN) == 0)
 		{
 			DEBUG_PRINT((P_INFO "New peer found, going to register it on the list\n"));
-			add_peer(other, (byte *)data);
+			add_peer(other, (byte *)data, sem, sd);
+		}
+		else if (memcmp(data, DISCOVER, COMM_LEN) == 0)
+		{
+			DEBUG_PRINT((P_INFO "Received a discovery message, adding peer\n"));
+			add_peer(other, (byte *)data, sem, sd);
 			send_info = 1;
 		}
 
@@ -252,14 +253,14 @@ void *handle_comm(void *socket)
 		char peer_ip[INET_ADDRSTRLEN];
 		get_ip(other, peer_ip); // TODO: ERROR CONTROL
 		size_t peer_index;
-		if (get_peer(peer_ip, &peer_index) == ERROR)
+		if (get_peer(peer_ip, &peer_index, sem, sd) == ERROR)
 			continue;
 			
 		sem_wait(sem);
 		in_port_t peer_port = peers.port[peer_index];
 		sem_post(sem);
 
-		// If we just added someone, send them our info
+		// After receiving a discovery, we send our info too
 		if (send_info == 1)
 			send_selfdata(peer_ip, peer_port, PORT);
 
@@ -279,7 +280,7 @@ void *handle_comm(void *socket)
 			byte cookie[COOKIE_SIZE];
 			memcpy(&cookie, data + COMM_LEN + PACKET_NUM_LEN, COOKIE_SIZE);
 
-			int req_index = get_req(cookie);
+			int req_index = get_req(cookie, sem, sd);
 			if (req_index != ERROR)
 			{
 				DEBUG_PRINT((P_INFO "Found corresponding ping\n"));
@@ -329,12 +330,6 @@ void *handle_comm(void *socket)
 			memcpy(&test, sd->req.data.other_peers_buf, sizeof(peer_list));
 			printf(">> %s:%d\n", test.ip[0], test.port[0]);
 		}
-		else if (memcmp(data, DISCOVER, COMM_LEN) == 0)
-		{
-			DEBUG_PRINT((P_INFO "Received a discovery message\n"));
-
-			send_selfdata(peer_ip, peer_port, PORT);
-		}
 		else if (memcmp(data, EMPTY, COMM_LEN) == 0)
 		{
 			DEBUG_PRINT((P_INFO "Received an empty message\n"));
@@ -351,9 +346,6 @@ SHARED_CLEAN:
 	if (sd->server_info.num_threads > 0)
 		sd->server_info.num_threads--;
 	sem_post(sem);
-
-	munmap(sd, sizeof(shared_data));
-	sem_close(sem);
 
 	DEBUG_PRINT((P_OK "Detaching and exiting thread\n"));
 
