@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <sys/mman.h>
 
 #include "network/peers.h"
 #include "network/reactive.h"

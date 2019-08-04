@@ -182,8 +182,9 @@ int access_sd(sem_t **sem, shared_data **sd)
 
 int peer_discovery(sem_t *sem, shared_data *sd)
 {
+	int lap_counter = 0;
 	sem_wait(sem);
-	while (sd->peers.free[1] == 0)
+	while (sd->peers.free[1] == 0 && lap_counter < 10)
 	{
 		sem_post(sem);
 		for (int i = 0; i < 256; i++)
@@ -195,6 +196,9 @@ int peer_discovery(sem_t *sem, shared_data *sd)
 
 			usleep(50000);
 		}
+
+		lap_counter++;
+
 		sem_wait(sem);
 	}
 	sem_post(sem);
