@@ -194,7 +194,7 @@ int peer_discovery(sem_t *sem, shared_data *sd)
 			if (get_peer(ip, NULL, sem, sd) == ERROR) // If we have it already don't
 				send_discover(ip, PORT, PORT);
 
-			usleep(50000);
+			usleep(10000);
 		}
 
 		lap_counter++;

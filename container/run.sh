@@ -10,4 +10,4 @@ cp $DIR/../build/src/liu_client $DIR/files/liu_client
 docker build . -t $IMAGE_NAME
 
 # Run it
-docker run -t --cap-add=NET_ADMIN --device=/dev/net/tun $IMAGE_NAME
+docker run -t -d --cap-add=NET_ADMIN --device=/dev/net/tun $IMAGE_NAME
