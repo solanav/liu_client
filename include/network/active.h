@@ -56,7 +56,7 @@ int send_ping(char *ip, in_port_t port, sem_t *sem, shared_data *sd);
  * this request is in our peer list. This is to prevent access from external
  * agents.
  */
-int send_pong(char *ip, in_port_t port, byte cookie[COOKIE_SIZE], char *self_ip);
+int send_pong(char *ip, in_port_t port, byte cookie[COOKIE_SIZE]);
 
 /**
  * Asks a peer for other peers

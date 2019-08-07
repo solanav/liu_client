@@ -1,3 +1,4 @@
+#include <arpa/inet.h>
 #include <errno.h>
 #include <mqueue.h>
 #include <netinet/in.h>
@@ -8,7 +9,6 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
-#include <arpa/inet.h>
 
 #define MAX_THREADS 128
 #define HANDLER_TIMEOUT 1 // in seconds
@@ -277,7 +277,7 @@ void *handle_comm(void *hdata)
 			DEBUG_PRINT((P_INFO "Sending a pong to [%s:%d]\n", peer_ip, peer_port));
 
 			// Send pong with the cookie from the ping
-			send_pong(peer_ip, peer_port, data + COMM_LEN + PACKET_NUM_LEN, peer_ip);
+			send_pong(peer_ip, peer_port, data + COMM_LEN + PACKET_NUM_LEN);
 		}
 		else if (memcmp(data, PONG, COMM_LEN) == 0)
 		{
@@ -308,20 +308,6 @@ void *handle_comm(void *hdata)
 							 peers.latency[peer_index].tv_nsec));
 
 				sem_post(sem);
-
-				// Get self ip
-				in_addr_t ip = 0;
-				ip = (( (uint64_t) data[C_UDP_HEADER + 0]) << 32)
-				   + (( (uint64_t) data[C_UDP_HEADER + 1]) << 16)
-				   + (( (uint64_t) data[C_UDP_HEADER + 2]) << 8)
-				   + (( (uint64_t) data[C_UDP_HEADER + 3]));
-				
-				struct in_addr tmp;
-				tmp.s_addr = ip;
-
-				char self_ip[INET_ADDRSTRLEN];
-				inet_ntop(AF_INET, &tmp, self_ip, INET_ADDRSTRLEN);
-				printf("\nIP >>> %s\n\n", self_ip);
 			}
 		}
 		else if (memcmp(data, GETPEERS, COMM_LEN) == 0)

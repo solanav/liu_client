@@ -11,11 +11,11 @@ COPY files/* /app/
 RUN apt-get -qq update \
     && apt-get -qq -y install openvpn
 
-# Make port 80 available to the world outside this container
-#EXPOSE 80
+# Make port available to the world outside this container
+EXPOSE 9121
 
 # Define environment variable
 ENV NAME World
 
 # Run app.py when the container launches
-CMD ["bash", "start.sh"]
+CMD ["./start.sh"]

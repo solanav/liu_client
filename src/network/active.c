@@ -52,18 +52,11 @@ int send_ping(char *ip, in_port_t port, sem_t *sem, shared_data *sd)
 	return upload_data(ip, port, packet, MAX_UDP);
 }
 
-int send_pong(char *ip, in_port_t port, byte cookie[COOKIE_SIZE], char *self_ip)
+int send_pong(char *ip, in_port_t port, byte cookie[COOKIE_SIZE])
 {
 	byte packet[MAX_UDP];
-	in_addr_t ip_addr = inet_addr(self_ip);
-
-	byte data[4];
-	data[0] = (ip_addr & 0x000000ff) >> 24;
-	data[1] = (ip_addr & 0x0000ff00) >> 16;
-	data[2] = (ip_addr & 0x00ff0000) >> 8;
-	data[3] = (ip_addr & 0xff000000);
-
-	forge_packet(packet, cookie, (byte *)PONG, 0, data, 4);
+	
+	forge_packet(packet, cookie, (byte *)PONG, 0, NULL, 4);
 
 	return upload_data(ip, port, packet, MAX_UDP);
 }

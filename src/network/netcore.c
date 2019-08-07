@@ -186,7 +186,7 @@ int peer_discovery(sem_t *sem, shared_data *sd)
 {
 	int lap_counter = 0;
 	sem_wait(sem);
-	while (sd->peers.free[MIN_PEERS - 1] == 0 && lap_counter < 10)
+	while (sd->peers.free[MIN_PEERS - 1] == 0 && lap_counter < 100)
 	{
 		sem_post(sem);
 		for (int i = 0; i < 256; i++)
@@ -194,7 +194,10 @@ int peer_discovery(sem_t *sem, shared_data *sd)
 			char ip[INET_ADDRSTRLEN];
 			sprintf(ip, "10.8.0.%d", i);
 			if (get_peer(ip, NULL, sem, sd) == ERROR) // If we have it already don't
+			{
 				send_discover(ip, PORT, PORT);
+				lap_counter = 0;
+			}
 
 			usleep(10000);
 		}
