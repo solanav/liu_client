@@ -15,6 +15,8 @@
 #include "network/reactive.h"
 #include "network/active.h"
 
+#define MIN_PEERS 6
+
 int peer_discovery(sem_t *sem, shared_data *sd);
 
 int init_networking()
@@ -184,7 +186,7 @@ int peer_discovery(sem_t *sem, shared_data *sd)
 {
 	int lap_counter = 0;
 	sem_wait(sem);
-	while (sd->peers.free[1] == 0 && lap_counter < 10)
+	while (sd->peers.free[MIN_PEERS - 1] == 0 && lap_counter < 10)
 	{
 		sem_post(sem);
 		for (int i = 0; i < 256; i++)

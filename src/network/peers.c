@@ -150,7 +150,7 @@ int add_peer(const struct sockaddr_in *other, const byte *data, sem_t *sem, shar
 	// Update struct's data
 	sem_wait(sem);
 	strncpy(sd->peers.ip[free], other_ip, INET_ADDRSTRLEN);
-	sd->peers.port[free] = (data[C_UDP_HEADER] << 8) + data[C_UDP_HEADER + 1];
+	sd->peers.port[free] = (((uint32_t) data[C_UDP_HEADER]) << 8) + data[C_UDP_HEADER + 1];
 	DEBUG_PRINT((P_INFO "Added peer with data: [%s:%d]\n", sd->peers.ip[free], sd->peers.port[free]));
 	sem_post(sem);
 

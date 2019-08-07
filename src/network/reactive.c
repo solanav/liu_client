@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <mqueue.h>
+#include <netinet/in.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include <stdio.h>
@@ -7,18 +8,19 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
-#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #define MAX_THREADS 128
 #define HANDLER_TIMEOUT 1 // in seconds
 
+#include "network/active.h"
+#include "network/netcore.h"
 #include "network/reactive.h"
 #include "types.h"
-#include "network/netcore.h"
-#include "network/active.h"
 
 // We can pass the pointer because threads share address space
-struct handler_data {
+struct handler_data
+{
 	struct sockaddr_in *socket;
 	sem_t *sem;
 	shared_data *sd;
@@ -189,7 +191,7 @@ void *handle_comm(void *hdata)
 	byte data[MAX_UDP];
 
 	// Extract data
-	struct handler_data *hd = (struct handler_data *) hdata;
+	struct handler_data *hd = (struct handler_data *)hdata;
 	const struct sockaddr_in *other = hd->socket;
 	sem_t *sem = hd->sem;
 	shared_data *sd = hd->sd;
@@ -218,7 +220,7 @@ void *handle_comm(void *hdata)
 		memset(&current, 0, sizeof(struct timespec));
 
 		memset(data, 0, MAX_UDP * sizeof(char));
-		ret = mq_timedreceive(mq, (char *) data, MAX_UDP, NULL, &tm);
+		ret = mq_timedreceive(mq, (char *)data, MAX_UDP, NULL, &tm);
 		if (ret == 0 || ret == -1)
 		{
 			DEBUG_PRINT((P_WARN "Handler timedout, stopping [%s]\n", strerror(errno)));
@@ -229,11 +231,6 @@ void *handle_comm(void *hdata)
 		clock_gettime(CLOCK_MONOTONIC, &current);
 
 		DEBUG_PRINT((P_INFO "Datagram received, analyzing...\n"));
-
-		// Get a copy of the peer list in shared memory and update it every time
-		sem_wait(sem);
-		peer_list peers = sd->peers;
-		sem_post(sem);
 
 		// Check if the peer is trying to register
 		int send_info = 0;
@@ -249,20 +246,29 @@ void *handle_comm(void *hdata)
 			send_info = 1;
 		}
 
+		// Get a copy of the peer list
+		sem_wait(sem);
+		peer_list peers = sd->peers;
+		sem_post(sem);
+
 		// Get the peer index
 		char peer_ip[INET_ADDRSTRLEN];
-		get_ip(other, peer_ip); // TODO: ERROR CONTROL
+		get_ip(other, peer_ip); // Get ip from packet
 		size_t peer_index;
 		if (get_peer(peer_ip, &peer_index, sem, sd) == ERROR)
 			continue;
-			
+
+		// Get the port
 		sem_wait(sem);
 		in_port_t peer_port = peers.port[peer_index];
 		sem_post(sem);
 
 		// After receiving a discovery, we send our info too
 		if (send_info == 1)
+		{
+			DEBUG_PRINT((P_INFO "Sending self data to [%s:%d]\n", peer_ip, peer_port));
 			send_selfdata(peer_ip, peer_port, PORT);
+		}
 
 		// TODO: turn this into a switch so gcc can optimize it to hash table
 		if (memcmp(data, PING, COMM_LEN) == 0)
@@ -271,7 +277,7 @@ void *handle_comm(void *hdata)
 			DEBUG_PRINT((P_INFO "Sending a pong to [%s:%d]\n", peer_ip, peer_port));
 
 			// Send pong with the cookie from the ping
-			send_pong(peer_ip, peer_port, data + COMM_LEN + PACKET_NUM_LEN);
+			send_pong(peer_ip, peer_port, data + COMM_LEN + PACKET_NUM_LEN, peer_ip);
 		}
 		else if (memcmp(data, PONG, COMM_LEN) == 0)
 		{
@@ -302,6 +308,20 @@ void *handle_comm(void *hdata)
 							 peers.latency[peer_index].tv_nsec));
 
 				sem_post(sem);
+
+				// Get self ip
+				in_addr_t ip = 0;
+				ip = (( (uint64_t) data[C_UDP_HEADER + 0]) << 32)
+				   + (( (uint64_t) data[C_UDP_HEADER + 1]) << 16)
+				   + (( (uint64_t) data[C_UDP_HEADER + 2]) << 8)
+				   + (( (uint64_t) data[C_UDP_HEADER + 3]));
+				
+				struct in_addr tmp;
+				tmp.s_addr = ip;
+
+				char self_ip[INET_ADDRSTRLEN];
+				inet_ntop(AF_INET, &tmp, self_ip, INET_ADDRSTRLEN);
+				printf("\nIP >>> %s\n\n", self_ip);
 			}
 		}
 		else if (memcmp(data, GETPEERS, COMM_LEN) == 0)

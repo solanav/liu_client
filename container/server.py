@@ -47,7 +47,7 @@ def log_clean(logs):
 
     logs_lines = logs.split("<br>")
 
-    return '<br>'.join(logs_lines[-10:])[:-1]
+    return '<br>'.join(logs_lines[-20:])[:-1]
 
 def add_footer(html_code):
     return html_code + "</div></body></html>"
