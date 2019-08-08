@@ -76,7 +76,7 @@ int init_plugin()
 
 			//TODO: print buffer somewhere
 
-			fprintf(f,"%c", buffer);
+			fwrite(&buffer, sizeof(char), 1, f);
 		}
 
 	}
