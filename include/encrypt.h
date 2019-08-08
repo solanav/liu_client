@@ -1,7 +1,7 @@
 #ifndef ENCRYPT_H
 #define ENCRYPT_H
 
-#include "../include/hydrogen.h"
+#include "hydrogen.h"
 
 /**
  * Encrypts a file

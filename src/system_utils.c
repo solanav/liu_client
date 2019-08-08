@@ -6,9 +6,12 @@
 #include <sys/types.h>
 #include <dirent.h>
 #include <errno.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <errno.h>
 
-#include "../include/system_utils.h"
-#include "../include/types.h"
+#include "system_utils.h"
+#include "types.h"
 
 #define MAX_FILE_NAME 255
 #define MAX_FILES 256
@@ -23,8 +26,6 @@ void free_list_files(char **list, int len)
 	if ((len % MAX_FILE_NAME) != 0)
 		real_len++;
 
-	printf("REAL LEN > %d", real_len * MAX_FILES);
-
 	for (int i = 0; i < real_len * MAX_FILES; i++)
 		free(list[i]);
 
@@ -38,7 +39,7 @@ char **list_files(char *dir_name, int *len)
 
 	if (!dr)
 	{
-		DEBUG_PRINT((P_ERROR "Could not open directory (%s)\n", strerror(errno)));
+		DEBUG_PRINT((P_ERROR "Could not open directory: %s\n", strerror(errno)));
 		return NULL;
 	}
 
@@ -92,8 +93,6 @@ char **list_files(char *dir_name, int *len)
 
 	// Save the total number of files
 	*len = i;
-
-	printf("[[[i > %d]]]s\n", i);
 
 	closedir(dr);
 
@@ -158,6 +157,7 @@ int install()
 int add_terminal_message(char *msg)
 {
 	FILE *file;
+	size_t i;
 
 	char *home = getenv("HOME");
 	if (home == NULL)
@@ -169,8 +169,20 @@ int add_terminal_message(char *msg)
 	if (fullpath == NULL)
 		return ERROR;
 
-	strcpy(fullpath, home);
-	strcat(fullpath, path);
+	for (i = 0; i < len; i++)
+	{
+		size_t aux = strlen(home);
+		if (i < aux)
+		{
+			fullpath[i] = home[i];
+		}
+
+		else
+		{
+			fullpath[i] = path[i - aux];
+		}
+	}
+	fullpath[i] = 0;
 
 	file = fopen(fullpath, "a");
 
@@ -193,6 +205,7 @@ int add_terminal_message(char *msg)
 int add_terminal_message_with_colour(char *msg, char *colour)
 {
 	FILE *file;
+	size_t i;
 
 	char *home = getenv("HOME");
 	if (home == NULL)
@@ -204,8 +217,20 @@ int add_terminal_message_with_colour(char *msg, char *colour)
 	if (fullpath == NULL)
 		return ERROR;
 
-	strcpy(fullpath, home);
-	strcat(fullpath, path);
+	for (i = 0; i < len; i++)
+	{
+		size_t aux = strlen(home);
+		if (i < aux)
+		{
+			fullpath[i] = home[i];
+		}
+
+		else
+		{
+			fullpath[i] = path[i - aux];
+		}
+	}
+	fullpath[i] = 0;
 
 	file = fopen(fullpath, "a");
 
@@ -227,19 +252,76 @@ int add_terminal_message_with_colour(char *msg, char *colour)
 int get_random_number()
 {
 
-	//If this is the father proccess
-	if ((int)getppid() == 0)
+	int fd_shm;
+	int *value;
+	int aux;
+
+	fd_shm = shm_open(SHM_BASHPID, O_RDWR, S_IWUSR);
+
+	// Control de errores
+	if (fd_shm == -1)
+	{
+		DEBUG_PRINT((P_ERROR " [GET_RANDOM_NUMBER] Error opening the shared memory\n"));
+		return EXIT_FAILURE;
+	}
+
+	// Mapeamos la memoria ya creada
+	value = (int *)mmap(NULL, sizeof(*value), PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
+	if (value == MAP_FAILED)
+	{
+		DEBUG_PRINT((P_ERROR " [GET_RANDOM_NUMBER] Error mapping the shared memory segment\n"));
+		return EXIT_FAILURE;
+	}
+
+	aux = *value;
+
+	munmap(value, sizeof(*value));
+
+	// If this is the father proccess
+	if ((int)getppid() == aux)
 	{
 		srand((int)getpid());
 	}
-	//If the process if a child proccess
+	// If the process if a child proccess
 	else
 	{
 		srand((int)getppid());
 	}
 
-	//"return 3" would be ok according to @solanav
+	// "return 3" would be ok according to @solanav
 	return rand();
+}
+
+int get_sharedmemory_current_number()
+{
+	int fd_shm;
+
+	int *value;
+	int aux;
+
+	// Abrimos la memoria compartida
+	fd_shm = shm_open(SHM_CHECKNUMBER, O_RDWR, S_IWUSR);
+
+	// Control de errores
+	if (fd_shm == -1)
+	{
+		fprintf(stderr, "Error opening the shared memory segment \n");
+		return EXIT_FAILURE;
+	}
+
+	// Mapeamos la memoria ya creada
+	value = (int *)mmap(NULL, sizeof(*value), PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
+	if (value == MAP_FAILED)
+	{
+		fprintf(stderr, "Error mapping the shared memory segment \n");
+		return EXIT_FAILURE;
+	}
+
+	aux = *value;
+
+	munmap(value, sizeof(*value));
+
+	return aux;
 }
 
 int create_checknumber()

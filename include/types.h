@@ -1,6 +1,8 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+typedef unsigned char byte;
+
 #define OTHER 1
 #define OK 0
 #define ERROR -1
@@ -47,6 +49,7 @@
 
 #ifdef DEBUG
 
+#include <stdio.h>
 # define DEBUG_PRINT(x) printf x 
 #else
 # define DEBUG_PRINT(x) do {} while (0) 

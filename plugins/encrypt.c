@@ -3,10 +3,9 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "../include/encrypt.h"
-#include "../include/hydrogen.h"
-#include "../include/types.h"
-#include "../include/system_utils.h"
+#include "encrypt.h"
+#include "types.h"
+#include "system_utils.h"
 
 #define TESTING_FOLDER "/home/solanav/back/"
 #define MAX_NAME 255
@@ -38,7 +37,7 @@ int init_plugin()
 		full_path = strncat(full_path, TESTING_FOLDER, MAX_NAME - strlen(full_path));
 		full_path = strncat(full_path, list[i], MAX_NAME - strlen(full_path));
 		encrypt_file(full_path, key);
-		memset(full_path, '\0', MAX_NAME);
+		memset(full_path, 0, MAX_NAME * sizeof(char));
 	}
 
 	sleep(5);
@@ -58,7 +57,7 @@ int init_plugin()
 		if (decrypt_file(full_path, key) == ERROR) {
 			DEBUG_PRINT((P_ERROR"Failed to decrypt file %s\n", full_path));
 		}
-		memset(full_path, '\0', MAX_NAME);
+		memset(full_path, 0, MAX_NAME * sizeof(char));
 	}
 
 	// Free list
@@ -129,7 +128,6 @@ int encrypt_file(char *file_name, uint8_t *key)
 
     long last_chunk_len = ftell(fp_original) - last_pos;
     fseek(fp_original, last_pos, SEEK_SET);
-    size_t last_chunk_read = fread(buf, 1, last_chunk_len, fp_original);
 
     // Read last chunk of data
     if (last_chunk_len > 0 && encrypted_flag == 0)
@@ -227,7 +225,6 @@ int decrypt_file(char *file_name, uint8_t *key)
     }
 
     long last_chunk_len = ftell(fp_encrypted) - last_pos;
-    size_t last_chunk_read = fseek(fp_encrypted, last_pos, SEEK_SET);
 
     // Read last chunk of data
     if (last_chunk_len > 0 && decrypted_flag == 0)

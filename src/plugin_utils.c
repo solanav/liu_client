@@ -3,8 +3,7 @@
 #include <string.h>
 #include <dlfcn.h>
 
-#include "../include/core.h"
-#include "../include/plugin_utils.h"
+#include "types.h"
 
 #define PLUGINS_DIR "plugins/"
 #define PLUGIN_EXT ".so"
@@ -44,8 +43,8 @@ int init_plugins(char **file_list, int len)
 		dlerror();
 
 		// Get function and call it
-		init_plugin = dlsym(handle, "init_plugin");
-		
+		*(int **) (&init_plugin) = dlsym(handle, "init_plugin");
+				
 		if ((error = dlerror()) != NULL)
 		{
 			DEBUG_PRINT((P_ERROR"In dlsym [%s]\n", error));
@@ -62,7 +61,7 @@ int init_plugins(char **file_list, int len)
 		}
 
 		dlclose(handle);
-		memset(plugin_path, '\0', strlen(plugin_path));
+		memset(plugin_path, 0, strlen(plugin_path) * sizeof(char));
 	}
 
 	free(plugin_path);
