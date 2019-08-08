@@ -16,6 +16,7 @@
 
 #include "network/active.h"
 #include "types.h"
+#include "hydrogen.h"
 
 // Private functions
 
@@ -42,6 +43,7 @@ size_t upload_data_x(char *ip, in_port_t port, byte *data, size_t len, byte *hea
 
 int send_ping(char *ip, in_port_t port, sem_t *sem, shared_data *sd)
 {
+	// Create cookie with zeros to get a new one and add it to requests
 	byte cookie[COOKIE_SIZE] = {0};
 	byte packet[MAX_UDP];
 	forge_packet(packet, cookie, (byte *)PING, 0, NULL, 0);
@@ -118,6 +120,74 @@ int send_peerrequest(char *ip, in_port_t port, sem_t *sem, shared_data *sd)
 		return ERROR;
 
 	return upload_data(ip, port, (byte *)GETPEERS, COMM_LEN);
+}
+
+int send_dtls1(char *ip, in_port_t port, sem_t *sem, shared_data *sd)
+{
+	// Create packet for dtls handshake and update state
+	uint8_t packet1[hydro_kx_XX_PACKET1BYTES];
+	sem_wait(sem);
+	hydro_kx_xx_1(&(sd->dtls.state), packet1, NULL);
+	sem_post(sem);
+
+	// Create udp packet with cookie and packet1 as data
+	byte cookie[COOKIE_SIZE] = {0}; // Create new cookie for dtls
+	byte packet[MAX_UDP];
+	forge_packet(packet, NULL, (byte *)DTLS1, 0, packet1, hydro_kx_XX_PACKET1BYTES);
+
+	// Add a request (removed in step 3)
+	if (add_req(ip, (byte *)DTLS1, cookie, sem, sd) == ERROR)
+		return ERROR;
+
+	return upload_data(ip, port, packet, MAX_UDP);
+}
+
+int send_dtls2(char *ip, in_port_t port, uint8_t packet1[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
+{
+	uint8_t packet2[hydro_kx_XX_PACKET2BYTES];
+	sem_wait(sem);
+	if (hydro_kx_xx_2(&(sd->dtls.state), packet2, packet1, NULL, &(sd->dtls.kp)) != 0) {
+		DEBUG_PRINT((P_ERROR "Failed step 2 of dtls handshake\n"));
+		sem_post(sem);
+		return ERROR;
+	}
+	sem_post(sem);
+
+	// Create packet with the cookie from dtls1 and add packet2 as data
+	byte packet[MAX_UDP];
+	forge_packet(packet, cookie, (byte *)DTLS2, 0, packet2, hydro_kx_XX_PACKET1BYTES);
+
+	// Add a request (removed in step 4)
+	if (add_req(ip, (byte *)DTLS2, cookie, sem, sd) == ERROR)
+		return ERROR;
+
+	return upload_data(ip, port, packet, MAX_UDP);
+}
+
+int send_dtls3(char *ip, in_port_t port, uint8_t packet2[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
+{
+	size_t peer_index;
+	if (get_peer(ip, &peer_index, sem, sd) == ERROR)
+	{
+		DEBUG_PRINT((P_ERROR "Failed to find peer in peer_list in dtls step 3\n"));
+		return ERROR;
+	}
+	
+	uint8_t packet3[hydro_kx_XX_PACKET3BYTES];
+	sem_wait(sem);
+	if (hydro_kx_xx_3(&(sd->dtls.state), &(sd->peers.kp[peer_index]), packet3, NULL, packet2, NULL,
+                  &(sd->dtls.kp)) != 0) {
+		DEBUG_PRINT((P_ERROR "Failed step 3 of dtls handshake\n"));
+		sem_post(sem);
+		return ERROR;
+	}
+	sem_post(sem);
+
+	// Create packet with the cookie from dtls1 and add packet3 as data
+	byte packet[MAX_UDP];
+	forge_packet(packet, cookie, (byte *)DTLS3, 0, packet3, hydro_kx_XX_PACKET1BYTES);
+
+	return upload_data(ip, port, packet, MAX_UDP);
 }
 
 size_t upload_data(char *ip, in_port_t port, byte data[], size_t len)

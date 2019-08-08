@@ -45,7 +45,7 @@ int comp_peers(struct timespec p1, struct timespec p2)
 
 	return 0;
 }
-
+/*
 int sort_peers(double_peer_list *peers)
 {
 	int max;
@@ -83,7 +83,7 @@ int sort_peers(double_peer_list *peers)
 	}
 
 	return OK;
-}
+} */
 
 int get_peer(const char other_ip[INET_ADDRSTRLEN], size_t *index, sem_t *sem, shared_data *sd)
 {
@@ -159,9 +159,16 @@ int add_peer(const struct sockaddr_in *other, const byte *data, sem_t *sem, shar
 
 int add_req(const char ip[INET_ADDRSTRLEN], const byte header[C_UDP_HEADER], const byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
 {
+	// Check if request is already there
+	if (get_req(cookie, sem, sd) != -1)
+	{
+		DEBUG_PRINT((P_ERROR "Request already there\n"));
+		return ERROR;
+	}
+
 	// Save datagram in shared memory with timestamp
 	sem_wait(sem);
-
+	
 	// Get an empty space to save the request in
 	int index = -1;
 	for (int i = 0; i < MAX_DATAGRAMS && index == -1; i++)
@@ -180,8 +187,8 @@ int add_req(const char ip[INET_ADDRSTRLEN], const byte header[C_UDP_HEADER], con
 	// Copy data to req[index]
 	clock_gettime(CLOCK_MONOTONIC, &(sd->req.timestamp[index]));
 	strncpy(sd->req.ip[index], ip, INET_ADDRSTRLEN);
-	sd->req.header[index][0] = header[0];
-	sd->req.header[index][1] = header[1];
+	sd->req.comm[index][0] = header[0];
+	sd->req.comm[index][1] = header[1];
 	memcpy(sd->req.cookie[index], cookie, COOKIE_SIZE);
 
 	// Update variables of the list
@@ -199,8 +206,8 @@ int add_req(const char ip[INET_ADDRSTRLEN], const byte header[C_UDP_HEADER], con
 		printf("(%2d) < [%15s:%02x|%02x] [%02x][%02x][%02x][%02x] {%d} > (%2d)\n",
 			   sd->req.prev[i],
 			   sd->req.ip[i],
-			   sd->req.header[i][0],
-			   sd->req.header[i][1],
+			   sd->req.comm[i][0],
+			   sd->req.comm[i][1],
 			   sd->req.cookie[i][0],
 			   sd->req.cookie[i][1],
 			   sd->req.cookie[i][2],
@@ -229,7 +236,7 @@ int rm_req(int index, sem_t *sem, shared_data *sd)
 	sd->req.next[prev_index] = next_index;
 	sd->req.prev[next_index] = prev_index;
 
-	memset(sd->req.header[index], 0, COMM_LEN * sizeof(char));
+	memset(sd->req.comm[index], 0, COMM_LEN * sizeof(char));
 	memset(sd->req.ip[index], 0, INET_ADDRSTRLEN * sizeof(char));
 	sd->req.prev[index] = -1;
 	sd->req.next[index] = -1;
@@ -279,6 +286,7 @@ int get_req(const byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
 	return cont;
 }
 
+/*
 int merge_peerlist(peer_list *new, sem_t *sem, shared_data *sd)
 {
 	// Sort the new peer_list
@@ -317,4 +325,4 @@ int merge_peerlist(peer_list *new, sem_t *sem, shared_data *sd)
     }
 	
 	return OK;
-}
+}*/

@@ -234,16 +234,18 @@ void *handle_comm(void *hdata)
 
 		// Check if the peer is trying to register
 		int send_info = 0;
-		if (memcmp(data, INIT, COMM_LEN) == 0)
+		if (memcmp(data, DISCOVER, COMM_LEN) == 0) // Add peer and send an INIT
+		{
+			DEBUG_PRINT((P_INFO "Received a discovery message, adding peer\n"));
+			if (add_peer(other, (byte *)data, sem, sd) != ERROR)
+				send_info = 1;
+		}
+		else if (memcmp(data, INIT, COMM_LEN) == 0) // Add peer and try to stablish DTLS
 		{
 			DEBUG_PRINT((P_INFO "New peer found, going to register it on the list\n"));
 			add_peer(other, (byte *)data, sem, sd);
-		}
-		else if (memcmp(data, DISCOVER, COMM_LEN) == 0)
-		{
-			DEBUG_PRINT((P_INFO "Received a discovery message, adding peer\n"));
-			add_peer(other, (byte *)data, sem, sd);
-			send_info = 1;
+			if (add_peer(other, (byte *)data, sem, sd) != ERROR)
+				send_info = 2;
 		}
 
 		// Get a copy of the peer list
@@ -269,9 +271,13 @@ void *handle_comm(void *hdata)
 			DEBUG_PRINT((P_INFO "Sending self data to [%s:%d]\n", peer_ip, peer_port));
 			send_selfdata(peer_ip, peer_port, PORT);
 		}
+		else if(send_info == 2)
+		{
+			DEBUG_PRINT((P_INFO "Starting DTLS handshake with [%s:%d]\n", peer_ip, peer_port));
+			send_dtls1(peer_ip, peer_port, sem, sd);
+		}
 
-		// TODO: turn this into a switch so gcc can optimize it to hash table
-		if (memcmp(data, PING, COMM_LEN) == 0)
+		if (memcmp(data, PING, COMM_LEN) == 0) // Peer wants info about our latency and online status
 		{
 			DEBUG_PRINT((P_INFO "Received a ping from [%s:%d]\n", peer_ip, peer_port));
 			DEBUG_PRINT((P_INFO "Sending a pong to [%s:%d]\n", peer_ip, peer_port));
@@ -279,15 +285,19 @@ void *handle_comm(void *hdata)
 			// Send pong with the cookie from the ping
 			send_pong(peer_ip, peer_port, data + COMM_LEN + PACKET_NUM_LEN);
 		}
-		else if (memcmp(data, PONG, COMM_LEN) == 0)
+		else if (memcmp(data, PONG, COMM_LEN) == 0) // We sent a ping, now we get the info we wanted
 		{
 			DEBUG_PRINT((P_INFO "Received a pong from [%s:%d]\n", peer_ip, peer_port));
 
 			byte cookie[COOKIE_SIZE];
-			memcpy(&cookie, data + COMM_LEN + PACKET_NUM_LEN, COOKIE_SIZE);
+			memcpy(cookie, data + COMM_LEN + PACKET_NUM_LEN, COOKIE_SIZE);
 
 			int req_index = get_req(cookie, sem, sd);
-			if (req_index != ERROR)
+			if (req_index == -1)
+			{
+				DEBUG_PRINT((P_ERROR "Failed to find request for the pong we received\n"));
+			}
+			else
 			{
 				DEBUG_PRINT((P_INFO "Found corresponding ping\n"));
 
@@ -303,20 +313,20 @@ void *handle_comm(void *hdata)
 				}
 
 				DEBUG_PRINT((P_INFO "Peer %ld has a latency of %ld.%ldms\n",
-							 peer_index,
-							 peers.latency[peer_index].tv_sec,
-							 peers.latency[peer_index].tv_nsec));
+							peer_index,
+							peers.latency[peer_index].tv_sec,
+							peers.latency[peer_index].tv_nsec));
 
 				sem_post(sem);
 			}
 		}
-		else if (memcmp(data, GETPEERS, COMM_LEN) == 0)
+		else if (memcmp(data, GETPEERS, COMM_LEN) == 0) // Peer wants to get our peer_list
 		{
 			DEBUG_PRINT((P_INFO "Received a peer request from [%s:%d]\n", peer_ip, peer_port));
 
 			// TODO
 		}
-		else if (memcmp(data, SENDPEERS, COMM_LEN) == 0)
+		else if (memcmp(data, SENDPEERS, COMM_LEN) == 0) // Peer sent us their peer_list (step 1)
 		{
 			DEBUG_PRINT((P_INFO "Received a peer_list from [%s:%d]\n", peer_ip, peer_port));
 
@@ -324,7 +334,7 @@ void *handle_comm(void *hdata)
 			memcpy(sd->req.data.other_peers_buf, data + C_UDP_HEADER, C_UDP_LEN);
 			sem_post(sem);
 		}
-		else if (memcmp(data, SENDPEERSC, COMM_LEN) == 0)
+		else if (memcmp(data, SENDPEERSC, COMM_LEN) == 0) // Peer sent us their peer_list (step 2)
 		{
 			DEBUG_PRINT((P_INFO "Received a peer_list from [%s:%d]\n", peer_ip, peer_port));
 
@@ -336,7 +346,45 @@ void *handle_comm(void *hdata)
 			memcpy(&test, sd->req.data.other_peers_buf, sizeof(peer_list));
 			printf(">> %s:%d\n", test.ip[0], test.port[0]);
 		}
-		else if (memcmp(data, EMPTY, COMM_LEN) == 0)
+		else if (memcmp(data, DTLS1, COMM_LEN) == 0) // Peer sent DTLS1, respond with DTLS2
+		{
+			DEBUG_PRINT((P_INFO "Received DTLS step 1 from [%s:%d]\n", peer_ip, peer_port));
+
+			// Extract cookie and packet data
+			uint8_t packet1[hydro_kx_XX_PACKET1BYTES];
+			byte cookie[COOKIE_SIZE];
+			memcpy(cookie, data + COMM_LEN + PACKET_NUM_LEN, COOKIE_SIZE);
+			memcpy(packet1, data + C_UDP_HEADER, hydro_kx_XX_PACKET1BYTES);
+
+			send_dtls2(peer_ip, peer_port, packet1, cookie, sem, sd);
+		}
+		else if (memcmp(data, DTLS2, COMM_LEN) == 0) // Peer sent DTLS2, respond with DTLS3
+		{
+			DEBUG_PRINT((P_INFO "Received DTLS step 2 from [%s:%d]\n", peer_ip, peer_port));
+
+			// Extract cookie and packet data
+			uint8_t packet2[hydro_kx_XX_PACKET2BYTES];
+			byte cookie[COOKIE_SIZE];
+			memcpy(cookie, data + COMM_LEN + PACKET_NUM_LEN, COOKIE_SIZE);
+			memcpy(packet2, data + C_UDP_HEADER, hydro_kx_XX_PACKET2BYTES);
+
+			send_dtls3(peer_ip, peer_port, packet2, cookie, sem, sd);
+		}
+		else if (memcmp(data, DTLS3, COMM_LEN) == 0) // Peer sent DTLS3, process and save key
+		{
+			DEBUG_PRINT((P_INFO "Received DTLS step 3 from [%s:%d]\n", peer_ip, peer_port));
+
+			// Extract cookie and packet data
+			uint8_t packet3[hydro_kx_XX_PACKET3BYTES];
+			byte cookie[COOKIE_SIZE];
+			memcpy(cookie, data + COMM_LEN + PACKET_NUM_LEN, COOKIE_SIZE);
+			memcpy(packet3, data + C_UDP_HEADER, hydro_kx_XX_PACKET2BYTES);
+
+			if (hydro_kx_xx_4(&(sd->dtls.state), &(sd->peers.kp[peer_index]), NULL, packet3, NULL) != 0) {
+				DEBUG_PRINT((P_ERROR "Failed to execute step 4 of DTLS\n"));
+			}
+		}
+		else if (memcmp(data, EMPTY, COMM_LEN) == 0) // Used by the stop_server function
 		{
 			DEBUG_PRINT((P_INFO "Received an empty message\n"));
 		}

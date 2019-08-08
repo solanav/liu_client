@@ -72,4 +72,16 @@ int send_peerrequest(char *ip, in_port_t port, sem_t *sem, shared_data *sd);
  */
 int send_peerdata(char *ip, in_port_t port, sem_t *sem, shared_data *sd);
 
+/**
+ * Create a DTLS session
+ * 
+ * client: send_dtls1()
+ * server: receives dtls1, send_dtls2()
+ * client: receives dtls2, send_dtls3(), [key OK]
+ * server: receives dtls3, [key OK]
+ */
+int send_dtls1(char *ip, in_port_t port, sem_t *sem, shared_data *sd);
+int send_dtls2(char *ip, in_port_t port, uint8_t packet1[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd);
+int send_dtls3(char *ip, in_port_t port, uint8_t packet2[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd);
+
 #endif

@@ -21,5 +21,6 @@ foreach(test_file IN LISTS tests)
         rt
         pthread
         dl
+        ${LIB_DIR}/libhydrogen.a
     )
 endforeach(test_file)

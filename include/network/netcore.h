@@ -16,6 +16,10 @@
 #define SENDPEERS  "\x00\x05"
 #define SENDPEERSC "\x00\x06"
 #define DISCOVER   "\x00\x07"
+#define DTLS1	   "\x00\x08"
+#define DTLS2	   "\x00\x09"
+#define DTLS3	   "\x00\x0A"
+#define DTLS4	   "\x00\x0B"
 
 #define COOKIE_SIZE 4
 
@@ -30,32 +34,26 @@ typedef struct _double_peer_list double_peer_list;
 typedef struct _shared_data shared_data;
 
 #include "network/peers.h"
-
-typedef struct _double_peer_list
-{
-	char ip[MAX_PEERS * 2][INET_ADDRSTRLEN];
-	in_port_t port[MAX_PEERS * 2];
-	int free[MAX_PEERS * 2];
-	struct timespec latency[MAX_PEERS * 2];
-} double_peer_list;
+#include "hydrogen.h"
 
 typedef struct _peer_list
 {
-	char ip[MAX_PEERS][INET_ADDRSTRLEN];
-	in_port_t port[MAX_PEERS];
-	int free[MAX_PEERS];
-	struct timespec latency[MAX_PEERS];
+	char ip[MAX_PEERS][INET_ADDRSTRLEN]; 	// Ip of the peer
+	in_port_t port[MAX_PEERS];				// Port of the peer
+	int free[MAX_PEERS];					// 1 if the space is free
+	struct timespec latency[MAX_PEERS];		// Latency with the peer
+	hydro_kx_session_keypair kp[MAX_PEERS]; // Keypair for DTLS
 } peer_list;
 
 union _request_data
 {
-	byte other_peers_buf[sizeof(peer_list)];
+	byte other_peers_buf[sizeof(peer_list)];   // Buffer for receiving a peer_list
 };
 
 struct _request
 {
 	char ip[MAX_DATAGRAMS][INET_ADDRSTRLEN];
-	byte header[MAX_DATAGRAMS][COMM_LEN];
+	byte comm[MAX_DATAGRAMS][COMM_LEN];
 	struct timespec timestamp[MAX_DATAGRAMS];
 	int prev[MAX_DATAGRAMS];
 	int next[MAX_DATAGRAMS];
@@ -63,6 +61,13 @@ struct _request
 	union _request_data data;
 	byte cookie[MAX_DATAGRAMS][COOKIE_SIZE];
 };
+
+struct _dtls_data
+{
+	hydro_kx_keypair kp;
+	hydro_kx_state state;
+};
+
 struct _server_info
 {
 	unsigned int num_threads;
@@ -73,7 +78,8 @@ struct _server_info
 typedef struct _shared_data
 {
 	peer_list peers;
-	struct _server_info server_info; 
+	struct _server_info server_info;
+	struct _dtls_data dtls; 
 	struct _request req;
 	int req_first;
 	int req_last;

@@ -4,7 +4,7 @@ add_library(encrypt SHARED
 )
 
 target_include_directories(encrypt
-    PRIVATE ${INC_DIR}
+    PRIVATE ${INC_DIR} ${INC_NET_DIR} 
 )
 
 target_link_libraries(encrypt

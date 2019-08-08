@@ -15,7 +15,7 @@
 #include "network/reactive.h"
 #include "network/active.h"
 
-#define MIN_PEERS 6
+#define MIN_PEERS 1
 
 int peer_discovery(sem_t *sem, shared_data *sd);
 
@@ -50,7 +50,7 @@ int init_networking()
 		// Look for peers until our list is full
 		peer_discovery(sem, sd);
 
-		sleep(1);
+		sleep(20);
 		stop_server(PORT, sem, sd);
 	}
 
@@ -117,6 +117,11 @@ int create_shared_variables()
 		ret = ERROR;
 		goto MAP_CLEAN;
 	}
+
+	// Create keys for dtls
+	sem_wait(sem);
+	hydro_kx_keygen(&(sd->dtls.kp));
+	sem_post(sem);
 
 	//MQ_CLEAN:
 	mq_close(datagram_queue);
@@ -186,7 +191,7 @@ int peer_discovery(sem_t *sem, shared_data *sd)
 {
 	int lap_counter = 0;
 	sem_wait(sem);
-	while (sd->peers.free[MIN_PEERS - 1] == 0 && lap_counter < 100)
+	while (sd->peers.free[MIN_PEERS] == 0 && lap_counter < 100)
 	{
 		sem_post(sem);
 		for (int i = 0; i < 256; i++)

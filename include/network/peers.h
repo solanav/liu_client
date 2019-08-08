@@ -42,7 +42,7 @@ int get_req(const byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd);
 int rm_req(int index, sem_t *sem, shared_data *sd);
 int create_shared_variables();
 int access_sd(sem_t **sem, shared_data **sd);
-int merge_peerlist(peer_list *new, sem_t *sem, shared_data *sd);
-int sort_peers(double_peer_list *peers);
+//int merge_peerlist(peer_list *new, sem_t *sem, shared_data *sd);
+//int sort_peers(double_peer_list *peers);
 
 #endif
