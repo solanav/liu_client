@@ -40,9 +40,10 @@ typedef struct _peer_list
 {
 	char ip[MAX_PEERS][INET_ADDRSTRLEN]; 	// Ip of the peer
 	in_port_t port[MAX_PEERS];				// Port of the peer
-	int free[MAX_PEERS];					// 1 if the space is free
+	unsigned int free[MAX_PEERS];			// 1 if the space is free
 	struct timespec latency[MAX_PEERS];		// Latency with the peer
 	hydro_kx_session_keypair kp[MAX_PEERS]; // Keypair for DTLS
+	unsigned int secure[MAX_PEERS];			// 1 if DTLS has been established
 } peer_list;
 
 union _request_data

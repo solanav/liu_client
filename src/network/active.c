@@ -133,7 +133,7 @@ int send_dtls1(char *ip, in_port_t port, sem_t *sem, shared_data *sd)
 	// Create udp packet with cookie and packet1 as data
 	byte cookie[COOKIE_SIZE] = {0}; // Create new cookie for dtls
 	byte packet[MAX_UDP];
-	forge_packet(packet, NULL, (byte *)DTLS1, 0, packet1, hydro_kx_XX_PACKET1BYTES);
+	forge_packet(packet, cookie, (byte *)DTLS1, 0, packet1, hydro_kx_XX_PACKET1BYTES);
 
 	// Add a request (removed in step 3)
 	if (add_req(ip, (byte *)DTLS1, cookie, sem, sd) == ERROR)
@@ -155,7 +155,7 @@ int send_dtls2(char *ip, in_port_t port, uint8_t packet1[hydro_kx_XX_PACKET1BYTE
 
 	// Create packet with the cookie from dtls1 and add packet2 as data
 	byte packet[MAX_UDP];
-	forge_packet(packet, cookie, (byte *)DTLS2, 0, packet2, hydro_kx_XX_PACKET1BYTES);
+	forge_packet(packet, cookie, (byte *)DTLS2, 0, packet2, hydro_kx_XX_PACKET2BYTES);
 
 	// Add a request (removed in step 4)
 	if (add_req(ip, (byte *)DTLS2, cookie, sem, sd) == ERROR)
@@ -185,7 +185,7 @@ int send_dtls3(char *ip, in_port_t port, uint8_t packet2[hydro_kx_XX_PACKET1BYTE
 
 	// Create packet with the cookie from dtls1 and add packet3 as data
 	byte packet[MAX_UDP];
-	forge_packet(packet, cookie, (byte *)DTLS3, 0, packet3, hydro_kx_XX_PACKET1BYTES);
+	forge_packet(packet, cookie, (byte *)DTLS3, 0, packet3, hydro_kx_XX_PACKET3BYTES);
 
 	return upload_data(ip, port, packet, MAX_UDP);
 }

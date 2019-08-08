@@ -167,23 +167,25 @@ int add_req(const char ip[INET_ADDRSTRLEN], const byte header[C_UDP_HEADER], con
 	}
 
 	// Save datagram in shared memory with timestamp
-	sem_wait(sem);
 	
 	// Get an empty space to save the request in
 	int index = -1;
 	for (int i = 0; i < MAX_DATAGRAMS && index == -1; i++)
 	{
+		sem_wait(sem);
 		if (sd->req.free[i] == 0)
 			index = i;
+		sem_post(sem);
 	}
 
 	if (index == -1)
 	{
 		DEBUG_PRINT((P_ERROR "No memory for new requests\n"));
-		sem_post(sem);
 		return ERROR;
 	}
 
+	sem_wait(sem);
+	
 	// Copy data to req[index]
 	clock_gettime(CLOCK_MONOTONIC, &(sd->req.timestamp[index]));
 	strncpy(sd->req.ip[index], ip, INET_ADDRSTRLEN);
@@ -201,19 +203,6 @@ int add_req(const char ip[INET_ADDRSTRLEN], const byte header[C_UDP_HEADER], con
 	sd->req.next[index] = -1;
 	sd->req_last = index;
 	sd->req.free[index] = 1;
-
-	for (int i = 0; i < MAX_DATAGRAMS; i++)
-		printf("(%2d) < [%15s:%02x|%02x] [%02x][%02x][%02x][%02x] {%d} > (%2d)\n",
-			   sd->req.prev[i],
-			   sd->req.ip[i],
-			   sd->req.comm[i][0],
-			   sd->req.comm[i][1],
-			   sd->req.cookie[i][0],
-			   sd->req.cookie[i][1],
-			   sd->req.cookie[i][2],
-			   sd->req.cookie[i][3],
-			   sd->req.free[i],
-			   sd->req.next[i]);
 
 	sem_post(sem);
 

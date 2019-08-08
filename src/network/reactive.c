@@ -243,7 +243,6 @@ void *handle_comm(void *hdata)
 		else if (memcmp(data, INIT, COMM_LEN) == 0) // Add peer and try to stablish DTLS
 		{
 			DEBUG_PRINT((P_INFO "New peer found, going to register it on the list\n"));
-			add_peer(other, (byte *)data, sem, sd);
 			if (add_peer(other, (byte *)data, sem, sd) != ERROR)
 				send_info = 2;
 		}
@@ -369,6 +368,13 @@ void *handle_comm(void *hdata)
 			memcpy(packet2, data + C_UDP_HEADER, hydro_kx_XX_PACKET2BYTES);
 
 			send_dtls3(peer_ip, peer_port, packet2, cookie, sem, sd);
+
+			// Indicate this connection is now secure
+			sem_wait(sem);
+			sd->peers.secure[peer_index] = 1;
+			sem_post(sem);
+
+			DEBUG_PRINT((P_OK "Secure connection has been established with [%s:%d]\n", peer_ip, peer_port));
 		}
 		else if (memcmp(data, DTLS3, COMM_LEN) == 0) // Peer sent DTLS3, process and save key
 		{
@@ -383,6 +389,13 @@ void *handle_comm(void *hdata)
 			if (hydro_kx_xx_4(&(sd->dtls.state), &(sd->peers.kp[peer_index]), NULL, packet3, NULL) != 0) {
 				DEBUG_PRINT((P_ERROR "Failed to execute step 4 of DTLS\n"));
 			}
+
+			// Indicate this connection is now secure
+			sem_wait(sem);
+			sd->peers.secure[peer_index] = 1;
+			sem_post(sem);
+			
+			DEBUG_PRINT((P_OK "Secure connection has been established with [%s:%d]\n", peer_ip, peer_port));
 		}
 		else if (memcmp(data, EMPTY, COMM_LEN) == 0) // Used by the stop_server function
 		{
