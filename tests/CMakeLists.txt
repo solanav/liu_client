@@ -4,6 +4,7 @@ set(tests
     test_network_utils
     test_pingpong
     test_peerexchange
+    test_plugins
 )
 
 foreach(test_file IN LISTS tests)
