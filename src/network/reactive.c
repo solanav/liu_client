@@ -325,19 +325,9 @@ int handle_known(const byte data[MAX_UDP], char *peer_ip, in_port_t peer_port, i
 		memcpy(key, sd->peers.kp[peer_index].rx, hydro_secretbox_KEYBYTES);
 		sem_post(sem);
 
-		for (int i = 0; i < 32; i += 8)
-			printf("KEY >> [%02x][%02x][%02x][%02x] [%02x][%02x][%02x][%02x]\n",
-				key[i], key[i + 1], key[i + 2], key[i + 3],
-				key[i + 4], key[i + 5], key[i + 6], key[i + 7]);
-
-		for (int i = 0; i < MAX_UDP; i += 8)
-			printf("RECEIVED >> [%02x][%02x][%02x][%02x] [%02x][%02x][%02x][%02x]\n",
-				data[i], data[i + 1], data[i + 2], data[i + 3],
-				data[i + 4], data[i + 5], data[i + 6], data[i + 7]);
-
 		if (hydro_secretbox_decrypt(decrypted_data, data,
 									MAX_UDP, 0,
-									"debug", key) != 0)
+									SSL_CTX, key) == -1)
 		{
 			DEBUG_PRINT(P_ERROR "Failed to decrypt the message\n");
 			return ERROR;
@@ -503,7 +493,7 @@ int handle_known(const byte data[MAX_UDP], char *peer_ip, in_port_t peer_port, i
 	{
 		DEBUG_PRINT(P_OK "Debug message from [%s:%d]\n", peer_ip, peer_port);
 
-		printf("DECRYPTED >> [%02x][%02x][%02x][%02x]\n",
+		DEBUG_PRINT(P_INFO "[%02x][%02x][%02x][%02x]\n",
 			   decrypted_data[8], decrypted_data[9], decrypted_data[10], decrypted_data[11]);
 	}
 	else if (memcmp(decrypted_data, EMPTY, COMM_LEN) == 0) // Used by the stop_server function

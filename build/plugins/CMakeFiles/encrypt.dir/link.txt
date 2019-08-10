@@ -1,1 +1,0 @@
-/usr/bin/cc -fPIC -g  -shared -Wl,-soname,libencrypt.so -o libencrypt.so CMakeFiles/encrypt.dir/encrypt.c.o CMakeFiles/encrypt.dir/__/src/system_utils.c.o ../../lib/libhydrogen.a 

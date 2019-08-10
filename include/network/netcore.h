@@ -33,6 +33,8 @@
 #define C_UDP_HEADER (COMM_LEN + PACKET_NUM_LEN + COOKIE_SIZE)
 #define C_UDP_LEN (MAX_UDP - C_UDP_HEADER - hydro_secretbox_HEADERBYTES)
 
+#define SSL_CTX "jfu9m3wy"
+
 typedef struct _double_peer_list double_peer_list;
 typedef struct _shared_data shared_data;
 

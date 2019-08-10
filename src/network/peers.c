@@ -244,14 +244,6 @@ int get_req(const byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
 	int found = 0;
 	while (found == 0)
 	{
-		for (int i = 0; i < COOKIE_SIZE; i++)
-			printf("[%x]", req_copy.cookie[cont][i]);
-		printf(" ? ");
-
-		for (int i = 0; i < COOKIE_SIZE; i++)
-			printf("[%x]", cookie[i]);
-		printf("\n");
-
 		if (memcmp(req_copy.cookie[cont], cookie, COOKIE_SIZE) == 0)
 			found = 1;
 		else

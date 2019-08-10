@@ -363,18 +363,8 @@ int e_forge_packet(byte datagram[MAX_UDP], byte cookie[COOKIE_SIZE], const byte 
 		getrandom(all_data + C_UDP_HEADER + data_size, C_UDP_LEN - data_size, 0);
 
 		uint8_t encrypted_data[MAX_UDP];
-		hydro_secretbox_encrypt(encrypted_data, all_data, MAX_UDP - hydro_secretbox_HEADERBYTES, 0, "debug", key);
+		hydro_secretbox_encrypt(encrypted_data, all_data, MAX_UDP - hydro_secretbox_HEADERBYTES, 0, SSL_CTX, key);
 		memcpy(datagram, encrypted_data, MAX_UDP);
-
-		for (int i = 0; i < 32; i += 8)
-			printf("KEY >> [%02x][%02x][%02x][%02x] [%02x][%02x][%02x][%02x]\n",
-				key[i], key[i + 1], key[i + 2], key[i + 3],
-				key[i + 4], key[i + 5], key[i + 6], key[i + 7]);
-
-		for (int i = 0; i < MAX_UDP; i += 8)
-			printf("SENDING >> [%02x][%02x][%02x][%02x] [%02x][%02x][%02x][%02x]\n",
-				datagram[i], datagram[i + 1], datagram[i + 2], datagram[i + 3],
-				datagram[i + 4], datagram[i + 5], datagram[i + 6], datagram[i + 7]);
 	}
 	else if (data_size > (size_t)C_UDP_LEN)
 	{
