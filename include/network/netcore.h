@@ -1,6 +1,8 @@
 #ifndef NETCORE_H
 #define NETCORE_H
 
+#include "hydrogen.h"
+
 #define LOCAL_IP "127.0.0.1"
 #define PORT 9121
 
@@ -20,6 +22,7 @@
 #define DTLS2	   "\x00\x09"
 #define DTLS3	   "\x00\x0A"
 #define DTLS4	   "\x00\x0B"
+#define DEBUG_MSG  "\x00\x0C"
 
 #define COOKIE_SIZE 4
 
@@ -28,13 +31,12 @@
 #define PACKET_NUM_LEN 2
 
 #define C_UDP_HEADER (COMM_LEN + PACKET_NUM_LEN + COOKIE_SIZE)
-#define C_UDP_LEN (MAX_UDP - C_UDP_HEADER)
+#define C_UDP_LEN (MAX_UDP - C_UDP_HEADER - hydro_secretbox_HEADERBYTES)
 
 typedef struct _double_peer_list double_peer_list;
 typedef struct _shared_data shared_data;
 
 #include "network/peers.h"
-#include "hydrogen.h"
 
 typedef struct _peer_list
 {

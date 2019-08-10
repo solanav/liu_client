@@ -39,7 +39,7 @@ char **list_files(char *dir_name, int *len)
 
 	if (!dr)
 	{
-		DEBUG_PRINT((P_ERROR "Could not open directory: %s\n", strerror(errno)));
+		DEBUG_PRINT(P_ERROR "Could not open directory: %s\n", strerror(errno));
 		return NULL;
 	}
 
@@ -47,16 +47,16 @@ char **list_files(char *dir_name, int *len)
 	char **file_list = calloc(MAX_FILES, sizeof(char *));
 	if (!file_list)
 	{
-		DEBUG_PRINT((P_ERROR "Could not get memory for file list\n"));
+		DEBUG_PRINT(P_ERROR "Could not get memory for file list\n");
 		return NULL;
 	}
 	for (int i = 0; i < MAX_FILES; i++)
 	{
-		DEBUG_PRINT((P_INFO "Getting memory for file name num %d\n", i));
+		DEBUG_PRINT(P_INFO "Getting memory for file name num %d\n", i);
 		file_list[i] = calloc(MAX_FILE_NAME + 1, sizeof(char));
 		if (!file_list[i])
 		{
-			DEBUG_PRINT((P_ERROR "Could not get memory for file name\n"));
+			DEBUG_PRINT(P_ERROR "Could not get memory for file name\n");
 			return NULL;
 		}
 	}
@@ -67,21 +67,21 @@ char **list_files(char *dir_name, int *len)
 	{
 		if (strcmp(de->d_name, ".") && strcmp(de->d_name, "..") && strcmp(de->d_name, ""))
 		{
-			DEBUG_PRINT((P_INFO "Copying [%s] to %p [%ld] in pos %d\n", de->d_name, file_list[i], strlen(de->d_name), i));
+			DEBUG_PRINT(P_INFO "Copying [%s] to %p [%ld] in pos %d\n", de->d_name, file_list[i], strlen(de->d_name), i);
 			strncpy(file_list[i], de->d_name, MAX_FILE_NAME);
 
 			if (i == (MAX_FILES * j) - 1)
 			{
-				DEBUG_PRINT((P_WARN "Limit reached, executing realloc\n"));
+				DEBUG_PRINT(P_WARN "Limit reached, executing realloc\n");
 				j++;
 				file_list = realloc(file_list, (MAX_FILES * j) * sizeof(char *));
 				for (int k = i + 1; k < MAX_FILES * j; k++)
 				{
-					DEBUG_PRINT((P_INFO "Getting memory for file name num %d\n", k));
+					DEBUG_PRINT(P_INFO "Getting memory for file name num %d\n", k);
 					file_list[k] = calloc(MAX_FILE_NAME + 1, sizeof(char));
 					if (!file_list[k])
 					{
-						DEBUG_PRINT((P_ERROR "Could not get memory for file name inside realloc\n"));
+						DEBUG_PRINT(P_ERROR "Could not get memory for file name inside realloc\n");
 						return NULL;
 					}
 				}
@@ -96,7 +96,7 @@ char **list_files(char *dir_name, int *len)
 
 	closedir(dr);
 
-	DEBUG_PRINT((P_OK "All files saved in file_list correctly\n"));
+	DEBUG_PRINT(P_OK "All files saved in file_list correctly\n");
 	return file_list;
 }
 
@@ -109,13 +109,13 @@ int already_running()
 	fp = popen("ps -C " NAME " | wc -l", "r");
 	if (!fp)
 	{
-		DEBUG_PRINT(("Error\n"););
+		DEBUG_PRINT("Error\n");
 	}
 
 	// Get the info of the process and print it
 	while (fgets(output, sizeof(output) - 1, fp) != NULL)
 		;
-	DEBUG_PRINT((P_INFO "%s\n", output));
+	DEBUG_PRINT(P_INFO "%s\n", output);
 
 	// If the output is over 2 lines, then it is running
 	if (atoi(output) > 2)
@@ -188,7 +188,7 @@ int add_terminal_message(char *msg)
 
 	if (file == NULL)
 	{
-		DEBUG_PRINT((P_ERROR " Can't open '~/.bashrc'\n"));
+		DEBUG_PRINT(P_ERROR " Can't open '~/.bashrc'\n");
 		return ERROR;
 	}
 
@@ -236,7 +236,7 @@ int add_terminal_message_with_colour(char *msg, char *colour)
 
 	if (file == NULL)
 	{
-		DEBUG_PRINT((P_ERROR " Can't open '~/bashrc' :(\n"));
+		DEBUG_PRINT(P_ERROR " Can't open '~/bashrc' :(\n");
 		return ERROR;
 	}
 
@@ -261,7 +261,7 @@ int get_random_number()
 	// Control de errores
 	if (fd_shm == -1)
 	{
-		DEBUG_PRINT((P_ERROR " [GET_RANDOM_NUMBER] Error opening the shared memory\n"));
+		DEBUG_PRINT(P_ERROR " [GET_RANDOM_NUMBER] Error opening the shared memory\n");
 		return EXIT_FAILURE;
 	}
 
@@ -269,7 +269,7 @@ int get_random_number()
 	value = (int *)mmap(NULL, sizeof(*value), PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
 	if (value == MAP_FAILED)
 	{
-		DEBUG_PRINT((P_ERROR " [GET_RANDOM_NUMBER] Error mapping the shared memory segment\n"));
+		DEBUG_PRINT(P_ERROR " [GET_RANDOM_NUMBER] Error mapping the shared memory segment\n");
 		return EXIT_FAILURE;
 	}
 
@@ -332,7 +332,7 @@ int create_checknumber()
 	int fd_shm = shm_open(SHM_CHECKNUMBER, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 	if (fd_shm == -1)
 	{
-		DEBUG_PRINT((P_ERROR " [CHECKNUMBER] Error creating the shared memory\n"));
+		DEBUG_PRINT(P_ERROR " [CHECKNUMBER] Error creating the shared memory\n");
 
 		return ERROR;
 	}
@@ -342,7 +342,7 @@ int create_checknumber()
 
 	if (error == -1)
 	{
-		DEBUG_PRINT((P_ERROR " [CHECKNUMBER] Error resizing the shared memory segment\n"));
+		DEBUG_PRINT(P_ERROR " [CHECKNUMBER] Error resizing the shared memory segment\n");
 
 		shm_unlink(SHM_CHECKNUMBER);
 		return ERROR;
@@ -353,7 +353,7 @@ int create_checknumber()
 							PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
 	if (checknumber == MAP_FAILED)
 	{
-		DEBUG_PRINT((P_ERROR " [CHECKNUMBER] Error mapping the shared memory segment\n"));
+		DEBUG_PRINT(P_ERROR " [CHECKNUMBER] Error mapping the shared memory segment\n");
 
 		shm_unlink(SHM_CHECKNUMBER);
 		return ERROR;

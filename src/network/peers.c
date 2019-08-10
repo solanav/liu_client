@@ -85,7 +85,7 @@ int sort_peers(double_peer_list *peers)
 	return OK;
 } */
 
-int get_peer(const char other_ip[INET_ADDRSTRLEN], size_t *index, sem_t *sem, shared_data *sd)
+int get_peer(const char other_ip[INET_ADDRSTRLEN], sem_t *sem, shared_data *sd)
 {
 	for (int i = 0; i < MAX_PEERS; i++)
 	{
@@ -93,11 +93,7 @@ int get_peer(const char other_ip[INET_ADDRSTRLEN], size_t *index, sem_t *sem, sh
 		if (strcmp(other_ip, sd->peers.ip[i]) == 0)
 		{
 			sem_post(sem);
-
-			if (index)
-				*index = i;
-
-			return OK;
+			return i;
 		}
 		else
 		{
@@ -117,14 +113,14 @@ int add_peer(const struct sockaddr_in *other, const byte *data, sem_t *sem, shar
 	char other_ip[INET_ADDRSTRLEN];
 	if (get_ip(other, other_ip) == ERROR)
 	{
-		DEBUG_PRINT((P_ERROR "Could not get the ip of the peer\n"));
+		DEBUG_PRINT(P_ERROR "Could not get the ip of the peer\n");
 		return ERROR;
 	}
 
 	// Check if peer already on list
-	if (get_peer(other_ip, NULL, sem, sd) == OK)
+	if (get_peer(other_ip, sem, sd) != ERROR)
 	{
-		DEBUG_PRINT((P_ERROR "Peer found on the list already\n"));
+		DEBUG_PRINT(P_ERROR "Peer found on the list already\n");
 		return ERROR;
 	}
 
@@ -143,7 +139,7 @@ int add_peer(const struct sockaddr_in *other, const byte *data, sem_t *sem, shar
 
 	if (free == -1)
 	{
-		DEBUG_PRINT((P_ERROR "Peer list is full\n"));
+		DEBUG_PRINT(P_ERROR "Peer list is full\n");
 		return ERROR;
 	}
 
@@ -151,7 +147,7 @@ int add_peer(const struct sockaddr_in *other, const byte *data, sem_t *sem, shar
 	sem_wait(sem);
 	strncpy(sd->peers.ip[free], other_ip, INET_ADDRSTRLEN);
 	sd->peers.port[free] = (((uint32_t) data[C_UDP_HEADER]) << 8) + data[C_UDP_HEADER + 1];
-	DEBUG_PRINT((P_INFO "Added peer with data: [%s:%d]\n", sd->peers.ip[free], sd->peers.port[free]));
+	DEBUG_PRINT(P_INFO "Added peer with data: [%s:%d]\n", sd->peers.ip[free], sd->peers.port[free]);
 	sem_post(sem);
 
 	return OK;
@@ -162,7 +158,7 @@ int add_req(const char ip[INET_ADDRSTRLEN], const byte header[C_UDP_HEADER], con
 	// Check if request is already there
 	if (get_req(cookie, sem, sd) != -1)
 	{
-		DEBUG_PRINT((P_ERROR "Request already there\n"));
+		DEBUG_PRINT(P_ERROR "Request already there\n");
 		return ERROR;
 	}
 
@@ -180,7 +176,7 @@ int add_req(const char ip[INET_ADDRSTRLEN], const byte header[C_UDP_HEADER], con
 
 	if (index == -1)
 	{
-		DEBUG_PRINT((P_ERROR "No memory for new requests\n"));
+		DEBUG_PRINT(P_ERROR "No memory for new requests\n");
 		return ERROR;
 	}
 
@@ -268,7 +264,7 @@ int get_req(const byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
 
 	if (found == 0)
 	{
-		DEBUG_PRINT((P_ERROR "Failed to find the request\n"));
+		DEBUG_PRINT(P_ERROR "Failed to find the request\n");
 		return -1;
 	}
 

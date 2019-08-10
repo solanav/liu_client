@@ -23,7 +23,7 @@ int init_networking()
 {
 	if (create_shared_variables() == ERROR)
 	{
-		DEBUG_PRINT((P_ERROR "Failed to create the shared variables\n"));
+		DEBUG_PRINT(P_ERROR "Failed to create the shared variables\n");
 		return ERROR;
 	}
 
@@ -36,19 +36,43 @@ int init_networking()
 
 	if (pid < 0)
 	{
-		DEBUG_PRINT((P_ERROR "Fork failed\n"));
+		DEBUG_PRINT(P_ERROR "Fork failed\n");
 		return ERROR;
 	}
 	else if (pid == 0)
 	{
 		start_server(PORT, sem, sd);
-		DEBUG_PRINT((P_OK "Exited server, closing process...\n"));
+		DEBUG_PRINT(P_OK "Exited server, closing process...\n");
 		exit(EXIT_SUCCESS);
 	}
 	else
 	{
 		// Look for peers until our list is full
 		peer_discovery(sem, sd);
+
+		int found = 0;
+		char ip[INET_ADDRSTRLEN];
+		in_port_t port;
+		for (int i = 0; i < MAX_PEERS && found == 0; i++)
+		{
+			sem_wait(sem);
+			if (sd->peers.secure[i] == 1)
+			{
+				memcpy(ip, sd->peers.ip[i], INET_ADDRSTRLEN);
+				port = sd->peers.port[i];
+				found = 1;
+			}
+			sem_post(sem);
+		}
+
+		if (found == 0)
+		{
+			DEBUG_PRINT(P_ERROR "Failed to find a secure peer to test debug message\n");
+		}
+		else
+		{
+			send_debug(ip, port, (byte *)"\xDE\xAD\xBE\xEF", 4, sem, sd);
+		}
 
 		sleep(20);
 		stop_server(PORT, sem, sd);
@@ -75,7 +99,7 @@ int create_shared_variables()
 	sem_t *sem = sem_open(SERVER_SEM, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1);
 	if (sem == SEM_FAILED)
 	{
-		DEBUG_PRINT((P_ERROR "[init_networking] Failed to create the semaphore for the server\n"));
+		DEBUG_PRINT(P_ERROR "[init_networking] Failed to create the semaphore for the server\n");
 		return ERROR;
 	}
 
@@ -83,20 +107,20 @@ int create_shared_variables()
 	int shared_data_fd = shm_open(SERVER_PEERS, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
 	if (shared_data_fd == -1)
 	{
-		DEBUG_PRINT((P_ERROR "[init_networking] Failed to create the shared memory for the server\n"));
+		DEBUG_PRINT(P_ERROR "[init_networking] Failed to create the shared memory for the server\n");
 		ret = ERROR;
 		goto SEM_CLEAN;
 	}
 	if (ftruncate(shared_data_fd, sizeof(shared_data)) == -1)
 	{
-		DEBUG_PRINT((P_ERROR "[init_networking] Failed to truncate shared fd for shared_data\n"));
+		DEBUG_PRINT(P_ERROR "[init_networking] Failed to truncate shared fd for shared_data\n");
 		ret = ERROR;
 		goto SHM_CLEAN;
 	}
 	shared_data *sd = (shared_data *)mmap(NULL, sizeof(shared_data), PROT_WRITE | PROT_READ, MAP_SHARED, shared_data_fd, 0);
 	if (sd == MAP_FAILED)
 	{
-		DEBUG_PRINT((P_ERROR "[init_networking] Failed to map shared fd for sd\n"));
+		DEBUG_PRINT(P_ERROR "[init_networking] Failed to map shared fd for sd\n");
 		ret = ERROR;
 		goto SHM_CLEAN;
 	}
@@ -113,7 +137,7 @@ int create_shared_variables()
 	mqd_t datagram_queue = mq_open(SERVER_QUEUE, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR, &attr);
 	if (datagram_queue == -1)
 	{
-		DEBUG_PRINT((P_ERROR "Datagram queue failed to open %s\n", strerror(errno)));
+		DEBUG_PRINT(P_ERROR "Datagram queue failed to open %s\n", strerror(errno));
 		ret = ERROR;
 		goto MAP_CLEAN;
 	}
@@ -143,14 +167,14 @@ void clean_networking()
 	shm_unlink(SERVER_PEERS);
 	mq_unlink(SERVER_QUEUE);
 
-	DEBUG_PRINT((P_OK "Cleaning completed\n"));
+	DEBUG_PRINT(P_OK "Cleaning completed\n");
 }
 
 int get_ip(const struct sockaddr_in *socket, char ip[INET_ADDRSTRLEN])
 {
 	if (inet_ntop(AF_INET, &(socket->sin_addr), ip, INET_ADDRSTRLEN) == NULL)
 	{
-		DEBUG_PRINT((P_ERROR "Address could not be converted to string\n"));
+		DEBUG_PRINT(P_ERROR "Address could not be converted to string\n");
 		return ERROR;
 	}
 
@@ -163,7 +187,7 @@ int access_sd(sem_t **sem, shared_data **sd)
 	*sem = sem_open(SERVER_SEM, 0);
 	if (*sem == SEM_FAILED)
 	{
-		DEBUG_PRINT((P_ERROR "[access_sd] Could not open semaphore to close server\n"));
+		DEBUG_PRINT(P_ERROR "[access_sd] Could not open semaphore to close server\n");
 		return ERROR;
 	}
 
@@ -171,14 +195,14 @@ int access_sd(sem_t **sem, shared_data **sd)
 	int shared_data_fd = shm_open(SERVER_PEERS, O_RDWR, S_IRUSR | S_IWUSR);
 	if (shared_data_fd == -1)
 	{
-		DEBUG_PRINT((P_ERROR "[access_sd] Failed to open the shared memory for the server [%s]\n", strerror(errno)));
+		DEBUG_PRINT(P_ERROR "[access_sd] Failed to open the shared memory for the server [%s]\n", strerror(errno));
 		sem_close(*sem);
 		return ERROR;
 	}
 	*sd = (shared_data *)mmap(NULL, sizeof(shared_data), PROT_WRITE | PROT_READ, MAP_SHARED, shared_data_fd, 0);
 	if (*sd == MAP_FAILED)
 	{
-		DEBUG_PRINT((P_ERROR "[access_sd] Failed to truncate shared fd for peers\n"));
+		DEBUG_PRINT(P_ERROR "[access_sd] Failed to truncate shared fd for peers\n");
 		sem_close(*sem);
 		close(shared_data_fd);
 		return ERROR;
@@ -198,7 +222,7 @@ int peer_discovery(sem_t *sem, shared_data *sd)
 		{
 			char ip[INET_ADDRSTRLEN];
 			sprintf(ip, "10.8.0.%d", i);
-			if (get_peer(ip, NULL, sem, sd) == ERROR) // If we have it already don't
+			if (get_peer(ip, sem, sd) == ERROR) // If we have it already don't
 			{
 				send_discover(ip, PORT, PORT);
 				lap_counter = 0;

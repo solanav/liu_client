@@ -112,7 +112,7 @@ void test_peers()
         assert(add_peer(&test, (byte *)"\x23\x89", sem, sd) == OK);
         size_t index;
         get_ip(&test, ip);
-        assert(get_peer(ip, &index, sem, sd) == OK);
+        assert(get_peer(ip, sem, sd) != ERROR);
         assert(index == i);
     }
 

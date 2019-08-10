@@ -15,10 +15,10 @@ stdlib.h
 -
 
 ../include/network/netcore.h
-network/peers.h
-../include/network/network/peers.h
 hydrogen.h
 ../include/network/hydrogen.h
+network/peers.h
+../include/network/network/peers.h
 
 ../include/network/peers.h
 sys/socket.h

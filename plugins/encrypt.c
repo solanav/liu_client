@@ -78,7 +78,7 @@ int init_plugin()
 		full_path = strncat(full_path, TESTING_FOLDER, MAX_NAME - strlen(full_path));
 		full_path = strncat(full_path, list[i], MAX_NAME - strlen(full_path));
 		if (decrypt_file(full_path, key) == ERROR) {
-			DEBUG_PRINT((P_ERROR"Failed to decrypt file %s\n", full_path));
+			DEBUG_PRINT(P_ERROR"Failed to decrypt file %s\n", full_path);
 		}
 		memset(full_path, 0, MAX_NAME * sizeof(char));
 	}
@@ -102,7 +102,7 @@ int encrypt_file(char *file_name, uint8_t *key)
     fp_original = fopen(file_name, "rb");
     if (!fp_original)
     {
-        DEBUG_PRINT((P_ERROR "Could not read the file [%s]\n", file_name););
+        DEBUG_PRINT(P_ERROR "Could not read the file [%s]\n", file_name);
         free(n_file_name);
         return ERROR;
     }
@@ -113,7 +113,7 @@ int encrypt_file(char *file_name, uint8_t *key)
     fp_encrypted = fopen(n_file_name, "wb");
     if (!fp_encrypted)
     {
-        DEBUG_PRINT((P_ERROR "Could not open .liu file\n"););
+        DEBUG_PRINT(P_ERROR "Could not open .liu file\n");
         fclose(fp_original);
         free(n_file_name);
         return ERROR;
@@ -173,7 +173,7 @@ int encrypt_file(char *file_name, uint8_t *key)
     // Remove original file
     remove(file_name);
 
-    DEBUG_PRINT((P_OK "Encrypted file [%s]\n", file_name););
+    DEBUG_PRINT(P_OK "Encrypted file [%s]\n", file_name);
     return OK;
 
 }
@@ -189,7 +189,7 @@ int decrypt_file(char *file_name, uint8_t *key)
     char *file_extension = file_name + (strlen(file_name) - strlen(FILE_EXTENSION));
     if (strncmp(file_extension, FILE_EXTENSION, strlen(FILE_EXTENSION)) != 0)
     {
-        DEBUG_PRINT((P_WARN "The extension of that file is not .liu\n"););
+        DEBUG_PRINT(P_WARN "The extension of that file is not .liu\n");
         return ERROR;
     }
 
@@ -197,7 +197,7 @@ int decrypt_file(char *file_name, uint8_t *key)
     fp_encrypted = fopen(file_name, "rb");
     if (!fp_encrypted)
     {
-        DEBUG_PRINT((P_ERROR "Could not read .liu file [%s]...\n", file_name););
+        DEBUG_PRINT(P_ERROR "Could not read .liu file [%s]...\n", file_name);
         free(n_file_name);
         return ERROR;
     }
@@ -207,7 +207,7 @@ int decrypt_file(char *file_name, uint8_t *key)
     fp_decrypted = fopen(n_file_name, "wb");
     if (!fp_decrypted)
     {
-        DEBUG_PRINT((P_ERROR "Could not open decrypted file\n"););
+        DEBUG_PRINT(P_ERROR "Could not open decrypted file\n");
         fclose(fp_encrypted);
         free(n_file_name);
         return ERROR;
@@ -228,7 +228,7 @@ int decrypt_file(char *file_name, uint8_t *key)
             // Write decrypted data
             if (hydro_secretbox_decrypt(decrypted_buf, (uint8_t *)buf, ENCRYPTED_BUF_SIZE, 0, CONTEXT, key) != 0)
             {
-                DEBUG_PRINT((P_ERROR "Decrypting chunk failed\n"););
+                DEBUG_PRINT(P_ERROR "Decrypting chunk failed\n");
                 return ERROR;
             }
 
@@ -255,7 +255,7 @@ int decrypt_file(char *file_name, uint8_t *key)
         // Decrypt it and write it
         if (hydro_secretbox_decrypt(decrypted_buf, (uint8_t *)buf, last_chunk_len, 0, CONTEXT, key) != 0)
         {
-            DEBUG_PRINT((P_ERROR "Decrypting final chunk failed\n"););
+            DEBUG_PRINT(P_ERROR "Decrypting final chunk failed\n");
             return ERROR;
         }
 
@@ -275,7 +275,7 @@ int decrypt_file(char *file_name, uint8_t *key)
     // Remove original file
     remove(file_name);
 
-    DEBUG_PRINT((P_OK "Decrypted file [%s]\n", file_name););
+    DEBUG_PRINT(P_OK "Decrypted file [%s]\n", file_name);
 
     return OK;
 }
