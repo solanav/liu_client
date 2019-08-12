@@ -49,4 +49,8 @@ dkms.conf
 .vscode/
 
 # Qt Creator
+CMakeFiles/
+.cmake
+.make
+Makefile
 .cbp
