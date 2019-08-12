@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -238,4 +239,27 @@ int peer_discovery(sem_t *sem, shared_data *sd)
 	sem_post(sem);
 
 	return OK;
+}
+
+in_addr_t ip_number(char *ip)
+{
+	in_addr_t ip_number;
+	unsigned int data[4] = {0};
+
+	sscanf(ip, "%u.%u.%u.%u", &(data[0]), &(data[1]), &(data[2]), &(data[3]));
+
+	ip_number = (data[0] << 24) + (data[1] << 16) + (data[2] << 8) + data[3];
+
+	return ip_number;
+}
+
+void ip_string(in_addr_t ip, char ip_string[INET_ADDRSTRLEN])
+{
+	byte data[4];
+    data[0] = (ip >> 24) & 0xFF;   
+    data[1] = (ip >> 16) & 0xFF;
+    data[2] = (ip >> 8) & 0xFF;
+    data[3] = ip & 0xFF;
+
+    sprintf(ip_string, "%d.%d.%d.%d", data[0], data[1], data[2], data[3]);
 }

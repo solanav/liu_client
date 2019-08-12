@@ -95,5 +95,7 @@ int create_shared_variables();
 void clean_networking();
 int access_sd(sem_t **sem, shared_data **sd);
 int get_ip(const struct sockaddr_in *socket, char ip[INET_ADDRSTRLEN]);
+in_addr_t ip_number(char *ip);
+void ip_string(in_addr_t ip, char ip_string[INET_ADDRSTRLEN]);
 
 #endif

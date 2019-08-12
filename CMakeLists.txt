@@ -22,6 +22,7 @@ add_library(net_lib OBJECT
     ${NET_DIR}/active.c
     ${NET_DIR}/reactive.c
     ${NET_DIR}/peers.c
+    ${NET_DIR}/kbucket.c
     ${NET_DIR}/netcore.c
 )
 target_include_directories(net_lib 
