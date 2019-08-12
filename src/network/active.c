@@ -34,29 +34,41 @@ int e_forge_packet(byte datagram[MAX_UDP], byte cookie[COOKIE_SIZE], const byte 
  *
  * Returns - The number of bytes sent or -1 in case of error with errno set appropriately
 */
-size_t upload_data(const char *ip, const in_port_t port, byte *data, size_t len);
+size_t upload_data(const in_addr_t ip, const in_port_t port, byte *data, size_t len);
 
 /**
  * Data uploader xtra
  * 
  * It uploads big data
  */
-size_t upload_data_x(const char *ip, const in_port_t port, byte *data, size_t len, byte *header, byte *cont_header);
+size_t upload_data_x(const in_addr_t ip, const in_port_t port, byte *data, size_t len, byte *header, byte *cont_header);
 
-int send_ping(const char *ip, const in_port_t port, sem_t *sem, shared_data *sd)
+int send_ping(const in_addr_t ip, const in_port_t port, const in_port_t self_port, sem_t *sem, shared_data *sd)
 {
 	// Create cookie with zeros to get a new one and add it to requests
 	byte cookie[COOKIE_SIZE] = {0};
-	byte packet[MAX_UDP];
-	forge_packet(packet, cookie, (byte *)PING, 0, NULL, 0);
+    byte data[6];
 
-	if (add_req(ip, (byte *)PING, cookie, sem, sd) == ERROR)
+    // First 4 bytes are the IP
+    data[0] = ip >> 24;
+    data[1] = (ip >> 16) & 0xFF;
+    data[2] = (ip >> 8) & 0xFF;
+    data[3] = ip & 0xFF;
+
+    // Next 2 bytes are the PORT
+    data[4] = self_port >> 8;
+    data[5] = self_port & 0xFF;
+
+	byte packet[MAX_UDP];
+    forge_packet(packet, cookie, (byte *)PING, 0, data, 6);
+
+    if (add_req(ip, (byte *)PING, cookie, sem, sd) == ERROR)
 		return ERROR;
 
-	return upload_data(ip, port, packet, MAX_UDP);
+    return upload_data(ip, port, packet, MAX_UDP);
 }
 
-int send_pong(const char *ip, const in_port_t port, byte cookie[COOKIE_SIZE])
+int send_pong(const in_addr_t ip, const in_port_t port, byte cookie[COOKIE_SIZE])
 {
 	byte packet[MAX_UDP];
 	
@@ -65,7 +77,7 @@ int send_pong(const char *ip, const in_port_t port, byte cookie[COOKIE_SIZE])
 	return upload_data(ip, port, packet, MAX_UDP);
 }
 
-int send_empty(const char *ip, const in_port_t port)
+int send_empty(const in_addr_t ip, const in_port_t port)
 {
 	byte packet[MAX_UDP] = {0};
 	forge_packet(packet, NULL, (byte *)EMPTY, 0, NULL, 0);
@@ -73,31 +85,7 @@ int send_empty(const char *ip, const in_port_t port)
 	return upload_data(ip, port, packet, MAX_UDP);
 }
 
-int send_discover(const char *ip, const in_port_t port, const in_port_t self_port)
-{
-	byte data[2];
-	data[0] = (self_port & 0xff00) >> 8;
-	data[1] = (self_port & 0x00ff);
-
-	byte packet[MAX_UDP];
-	forge_packet(packet, NULL, (byte *)DISCOVER, 0, data, PORT_LEN);
-
-	return upload_data(ip, port, packet, MAX_UDP);
-}
-
-int send_selfdata(const char *ip, const in_port_t port, in_port_t self_port)
-{
-	byte data[2];
-	data[0] = (self_port >> 8) & 0x00ff;
-	data[1] = self_port & 0x00ff;
-
-	byte packet[MAX_UDP];
-	forge_packet(packet, NULL, (byte *)INIT, 0, data, PORT_LEN);
-
-	return upload_data(ip, port, packet, MAX_UDP);
-}
-
-int send_peerdata(const char *ip, const in_port_t port, sem_t *sem, shared_data *sd)
+int send_peerdata(const in_addr_t ip, const in_port_t port, sem_t *sem, shared_data *sd)
 {
 	sem_wait(sem);
 	peer_list copy = sd->peers;
@@ -114,17 +102,17 @@ int send_peerdata(const char *ip, const in_port_t port, sem_t *sem, shared_data 
 	return OK;
 }
 
-int send_peerrequest(const char *ip, const in_port_t port, sem_t *sem, shared_data *sd)
+int send_peerrequest(const in_addr_t ip, const in_port_t port, sem_t *sem, shared_data *sd)
 {
 	byte cookie[COOKIE_SIZE];
 
-	if (add_req(ip, (byte *)GETPEERS, cookie, sem, sd) == ERROR)
+    if (add_req(ip, (byte *)GETPEERS, cookie, sem, sd) == ERROR)
 		return ERROR;
 
 	return upload_data(ip, port, (byte *)GETPEERS, COMM_LEN);
 }
 
-int send_dtls1(const char *ip, const in_port_t port, sem_t *sem, shared_data *sd)
+int send_dtls1(const in_addr_t ip, const in_port_t port, sem_t *sem, shared_data *sd)
 {
 	// Create packet for dtls handshake and update state
 	uint8_t packet1[hydro_kx_XX_PACKET1BYTES];
@@ -137,14 +125,14 @@ int send_dtls1(const char *ip, const in_port_t port, sem_t *sem, shared_data *sd
 	byte packet[MAX_UDP];
 	forge_packet(packet, cookie, (byte *)DTLS1, 0, packet1, hydro_kx_XX_PACKET1BYTES);
 
-	// Add a request (removed in step 3)
-	if (add_req(ip, (byte *)DTLS1, cookie, sem, sd) == ERROR)
+    // Add a request (removed in step 3)
+    if (add_req(ip, (byte *)DTLS1, cookie, sem, sd) == ERROR)
 		return ERROR;
 
 	return upload_data(ip, port, packet, MAX_UDP);
 }
 
-int send_dtls2(const char *ip, const in_port_t port, uint8_t packet1[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
+int send_dtls2(const in_addr_t ip, const in_port_t port, uint8_t packet1[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
 {
 	uint8_t packet2[hydro_kx_XX_PACKET2BYTES];
 	sem_wait(sem);
@@ -159,16 +147,18 @@ int send_dtls2(const char *ip, const in_port_t port, uint8_t packet1[hydro_kx_XX
 	byte packet[MAX_UDP];
 	forge_packet(packet, cookie, (byte *)DTLS2, 0, packet2, hydro_kx_XX_PACKET2BYTES);
 
-	// Add a request (removed in step 4)
-	if (add_req(ip, (byte *)DTLS2, cookie, sem, sd) == ERROR)
+    // Add a request (removed in step 4)
+    if (add_req(ip, (byte *)DTLS2, cookie, sem, sd) == ERROR)
 		return ERROR;
 
 	return upload_data(ip, port, packet, MAX_UDP);
 }
 
-int send_dtls3(const char *ip, const in_port_t port, uint8_t packet2[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
+int send_dtls3(const in_addr_t ip, const in_port_t port, uint8_t packet2[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
 {
-	int peer_index = get_peer(ip, sem, sd);
+    char tmp_ip[INET_ADDRSTRLEN];
+    ip_string(ip, tmp_ip);
+    int peer_index = get_peer(tmp_ip, sem, sd);
 	if (peer_index == ERROR)
 	{
 		DEBUG_PRINT(P_ERROR "Failed to find peer in peer_list in dtls step 3\n");
@@ -192,7 +182,7 @@ int send_dtls3(const char *ip, const in_port_t port, uint8_t packet2[hydro_kx_XX
 	return upload_data(ip, port, packet, MAX_UDP);
 }
 
-int send_debug(const char *ip, const in_port_t port, const byte *data, size_t len, sem_t *sem, shared_data *sd)
+int send_debug(const in_addr_t ip, const in_port_t port, const byte *data, size_t len, sem_t *sem, shared_data *sd)
 {
 	if (len > C_UDP_LEN)
 	{
@@ -200,7 +190,9 @@ int send_debug(const char *ip, const in_port_t port, const byte *data, size_t le
 		return ERROR;
 	}
 
-	int peer_index = get_peer(ip, sem, sd);
+    char tmp_ip[INET_ADDRSTRLEN];
+    ip_string(ip, tmp_ip);
+    int peer_index = get_peer(tmp_ip, sem, sd);
 	if (peer_index == -1)
 	{
 		sem_post(sem);
@@ -220,7 +212,7 @@ int send_debug(const char *ip, const in_port_t port, const byte *data, size_t le
 	return upload_data(ip, port, packet, MAX_UDP);
 }
 
-size_t upload_data(const char *ip, const in_port_t port, byte *data, size_t len)
+size_t upload_data(const in_addr_t ip, const in_port_t port, byte *data, size_t len)
 {
 	if (len > MAX_UDP)
 	{
@@ -241,7 +233,7 @@ size_t upload_data(const char *ip, const in_port_t port, byte *data, size_t len)
 
 	// Fill info for the other
 	other_addr.sin_family = AF_INET;
-	other_addr.sin_addr.s_addr = inet_addr(ip);
+    other_addr.sin_addr.s_addr = ip;
 	other_addr.sin_port = htons(port);
 
 	int res = sendto(socket_desc, data, len, 0, (struct sockaddr *)&other_addr, sizeof(other_addr));
@@ -251,7 +243,7 @@ size_t upload_data(const char *ip, const in_port_t port, byte *data, size_t len)
 	return res;
 }
 
-size_t upload_data_x(const char *ip, const in_port_t port, byte *data, size_t len, byte *header, byte *cont_header)
+size_t upload_data_x(const in_addr_t ip, const in_port_t port, byte *data, size_t len, byte *header, byte *cont_header)
 {
 	size_t packet_num;
 	size_t sent = 0;

@@ -20,7 +20,7 @@
 
 // Private functions
 int handle_unknown(const byte data[MAX_UDP], const struct sockaddr_in *other, sem_t *sem, shared_data *sd);
-int handle_known(const byte data[MAX_UDP], char *peer_ip, in_port_t port, int peer_index, sem_t *sem, shared_data *sd);
+int handle_reply(const byte data[MAX_UDP], in_addr_t peer_ip, in_port_t port, int peer_index, sem_t *sem, shared_data *sd);
 
 // We can pass the pointer because threads share address space
 struct handler_data
@@ -172,7 +172,7 @@ int stop_server(in_port_t port, sem_t *sem, shared_data *sd)
 	sem_post(sem);
 
 	// Message to update the server so it stops asap
-	send_empty(LOCAL_IP, port);
+    send_empty(LOCAL_IP_NUM, port);
 
 	// Wait for the server to exit the main loop
 	int val = 0;
@@ -226,22 +226,19 @@ void *handle_comm(void *hdata)
 			goto MQ_CLEAN;
 		}
 
-		DEBUG_PRINT(P_INFO "Datagram received, analyzing...\n");
-
-		// Requests coming from unknown peers
-		int send_info = handle_unknown(data, other, sem, sd);
+        DEBUG_PRINT(P_INFO "Datagram received, analyzing...\n");
 
 		// Get a copy of the peer list
 		sem_wait(sem);
 		peer_list peers = sd->peers;
-		sem_post(sem);
+        sem_post(sem);
 
-		// Get ip from packet
-		char peer_ip[INET_ADDRSTRLEN];
-		get_ip(other, peer_ip);
+        // Get ip from packet TODO: remove
+        char peer_ip[INET_ADDRSTRLEN];
+        ip_string(other->sin_addr.s_addr, peer_ip);
 
 		// Get the peer index
-		int peer_index = get_peer(peer_ip, sem, sd);
+        int peer_index = get_peer(peer_ip, sem, sd);
 		if (peer_index == ERROR)
 			continue;
 
@@ -250,22 +247,8 @@ void *handle_comm(void *hdata)
 		in_port_t peer_port = peers.port[peer_index];
 		sem_post(sem);
 
-		// Unknown peer consecuences
-		if (send_info == 1)
-		{
-			DEBUG_PRINT(P_INFO "Sending self data to [%s:%d]\n", peer_ip, peer_port);
-			send_selfdata(peer_ip, peer_port, PORT);
-		}
-		else if (send_info == 2)
-		{
-			DEBUG_PRINT(P_INFO "Starting DTLS handshake with [%s:%d]\n", peer_ip, peer_port);
-			send_dtls1(peer_ip, peer_port, sem, sd);
-		}
-		else
-		{
-			// Requests coming from known peers
-			handle_known(data, peer_ip, peer_port, peer_index, sem, sd);
-		}
+        // Requests coming from known peers
+        handle_reply(data, other->sin_addr.s_addr, peer_port, peer_index, sem, sd);
 	}
 
 MQ_CLEAN:
@@ -285,26 +268,7 @@ SHARED_CLEAN:
 	pthread_exit(NULL);
 }
 
-int handle_unknown(const byte data[MAX_UDP], const struct sockaddr_in *other, sem_t *sem, shared_data *sd)
-{
-	// Check if the peer is trying to register
-	if (memcmp(data, DISCOVER, COMM_LEN) == 0) // Add peer and send an INIT
-	{
-		DEBUG_PRINT(P_INFO "Received a discovery message, adding peer\n");
-		if (add_peer(other, (byte *)data, sem, sd) != ERROR)
-			return 1;
-	}
-	else if (memcmp(data, INIT, COMM_LEN) == 0) // Add peer and try to stablish DTLS
-	{
-		DEBUG_PRINT(P_INFO "New peer found, going to register it on the list\n");
-		if (add_peer(other, (byte *)data, sem, sd) != ERROR)
-			return 2;
-	}
-
-	return OK;
-}
-
-int handle_known(const byte data[MAX_UDP], char *peer_ip, in_port_t peer_port, int peer_index, sem_t *sem, shared_data *sd)
+int handle_reply(const byte data[MAX_UDP], in_addr_t peer_ip, in_port_t peer_port, int peer_index, sem_t *sem, shared_data *sd)
 {
 	// Get timestamp of received datagram
 	struct timespec current;
@@ -315,6 +279,11 @@ int handle_known(const byte data[MAX_UDP], char *peer_ip, in_port_t peer_port, i
 	sem_wait(sem);
 	int encrypted = sd->peers.secure[peer_index];
 	sem_post(sem);
+
+#ifdef DEBUG
+    char string_ip[INET_ADDRSTRLEN];
+    ip_string(peer_ip, string_ip);
+#endif
 
 	uint8_t decrypted_data[MAX_UDP - hydro_secretbox_HEADERBYTES];
 	if (encrypted == 1)
@@ -338,10 +307,11 @@ int handle_known(const byte data[MAX_UDP], char *peer_ip, in_port_t peer_port, i
 		memcpy(decrypted_data, data, MAX_UDP - hydro_secretbox_HEADERBYTES);
 	}
 
+    // Switch for message comm
 	if (memcmp(decrypted_data, PING, COMM_LEN) == 0) // Peer wants info about our latency and online status
-	{
-		DEBUG_PRINT(P_INFO "Received a ping from [%s:%d]\n", peer_ip, peer_port);
-		DEBUG_PRINT(P_INFO "Sending a pong to [%s:%d]\n", peer_ip, peer_port);
+    {
+        DEBUG_PRINT(P_INFO "Received a ping from [%s:%d]\n", string_ip, peer_port);
+        DEBUG_PRINT(P_INFO "Sending a pong to [%s:%d]\n", string_ip, peer_port);
 
 		byte cookie[COOKIE_SIZE];
 		memcpy(cookie, decrypted_data + COMM_LEN + PACKET_NUM_LEN, COOKIE_SIZE);
@@ -351,7 +321,7 @@ int handle_known(const byte data[MAX_UDP], char *peer_ip, in_port_t peer_port, i
 	}
 	else if (memcmp(decrypted_data, PONG, COMM_LEN) == 0) // We sent a ping, now we get the info we wanted
 	{
-		DEBUG_PRINT(P_INFO "Received a pong from [%s:%d]\n", peer_ip, peer_port);
+        DEBUG_PRINT(P_INFO "Received a pong from [%s:%d]\n", string_ip, peer_port);
 
 		byte cookie[COOKIE_SIZE];
 		memcpy(cookie, decrypted_data + COMM_LEN + PACKET_NUM_LEN, COOKIE_SIZE);
@@ -386,13 +356,13 @@ int handle_known(const byte data[MAX_UDP], char *peer_ip, in_port_t peer_port, i
 	}
 	else if (memcmp(decrypted_data, GETPEERS, COMM_LEN) == 0) // Peer wants to get our peer_list
 	{
-		DEBUG_PRINT(P_INFO "Received a peer request from [%s:%d]\n", peer_ip, peer_port);
+        DEBUG_PRINT(P_INFO "Received a peer request from [%s:%d]\n", string_ip, peer_port);
 
 		send_peerdata(peer_ip, peer_port, sem, sd);
 	}
 	else if (memcmp(decrypted_data, SENDPEERS, COMM_LEN) == 0) // Peer sent us their peer_list (step 1)
 	{
-		DEBUG_PRINT(P_INFO "Received a peer_list from [%s:%d]\n", peer_ip, peer_port);
+        DEBUG_PRINT(P_INFO "Received a peer_list from [%s:%d]\n", string_ip, peer_port);
 
 		sem_wait(sem);
 		memcpy(sd->req.data.other_peers_buf, decrypted_data + C_UDP_HEADER, C_UDP_LEN);
@@ -400,7 +370,7 @@ int handle_known(const byte data[MAX_UDP], char *peer_ip, in_port_t peer_port, i
 	}
 	else if (memcmp(decrypted_data, SENDPEERSC, COMM_LEN) == 0) // Peer sent us their peer_list (step 2)
 	{
-		DEBUG_PRINT(P_INFO "Received a peer_list from [%s:%d]\n", peer_ip, peer_port);
+        DEBUG_PRINT(P_INFO "Received a peer_list from [%s:%d]\n", string_ip, peer_port);
 
 		sem_wait(sem);
 		memcpy(sd->req.data.other_peers_buf + C_UDP_LEN, decrypted_data + C_UDP_HEADER, sizeof(peer_list) - C_UDP_LEN);
@@ -412,7 +382,7 @@ int handle_known(const byte data[MAX_UDP], char *peer_ip, in_port_t peer_port, i
 	}
 	else if (memcmp(decrypted_data, DTLS1, COMM_LEN) == 0) // Peer sent DTLS1, respond with DTLS2
 	{
-		DEBUG_PRINT(P_INFO "Received DTLS step 1 from [%s:%d]\n", peer_ip, peer_port);
+        DEBUG_PRINT(P_INFO "Received DTLS step 1 from [%s:%d]\n", string_ip, peer_port);
 
 		// Extract cookie and packet data
 		uint8_t packet1[hydro_kx_XX_PACKET1BYTES];
@@ -428,7 +398,7 @@ int handle_known(const byte data[MAX_UDP], char *peer_ip, in_port_t peer_port, i
 	}
 	else if (memcmp(decrypted_data, DTLS2, COMM_LEN) == 0) // Peer sent DTLS2, respond with DTLS3
 	{
-		DEBUG_PRINT(P_INFO "Received DTLS step 2 from [%s:%d]\n", peer_ip, peer_port);
+        DEBUG_PRINT(P_INFO "Received DTLS step 2 from [%s:%d]\n", string_ip, peer_port);
 
 		// Extract cookie and packet data
 		uint8_t packet2[hydro_kx_XX_PACKET2BYTES];
@@ -454,11 +424,11 @@ int handle_known(const byte data[MAX_UDP], char *peer_ip, in_port_t peer_port, i
 
 		rm_req(req_index, sem, sd);
 
-		DEBUG_PRINT(P_OK "Secure connection has been established with [%s:%d]\n", peer_ip, peer_port);
+        DEBUG_PRINT(P_OK "Secure connection has been established with [%s:%d]\n", string_ip, peer_port);
 	}
 	else if (memcmp(decrypted_data, DTLS3, COMM_LEN) == 0) // Peer sent DTLS3, process and save key
 	{
-		DEBUG_PRINT(P_INFO "Received DTLS step 3 from [%s:%d]\n", peer_ip, peer_port);
+        DEBUG_PRINT(P_INFO "Received DTLS step 3 from [%s:%d]\n", string_ip, peer_port);
 
 		// Extract cookie and packet data
 		uint8_t packet3[hydro_kx_XX_PACKET3BYTES];
@@ -487,11 +457,11 @@ int handle_known(const byte data[MAX_UDP], char *peer_ip, in_port_t peer_port, i
 
 		rm_req(req_index, sem, sd);
 
-		DEBUG_PRINT(P_OK "Secure connection has been established with [%s:%d]\n", peer_ip, peer_port);
+        DEBUG_PRINT(P_OK "Secure connection has been established with [%s:%d]\n", string_ip, peer_port);
 	}
 	else if (memcmp(decrypted_data, DEBUG_MSG, COMM_LEN) == 0) // Used to debug
 	{
-		DEBUG_PRINT(P_OK "Debug message from [%s:%d]\n", peer_ip, peer_port);
+        DEBUG_PRINT(P_OK "Debug message from [%s:%d]\n", string_ip, peer_port);
 
 		DEBUG_PRINT(P_INFO "[%02x][%02x][%02x][%02x]\n",
 			   decrypted_data[8], decrypted_data[9], decrypted_data[10], decrypted_data[11]);

@@ -37,7 +37,7 @@ void clean_networking();
 int get_ip(const struct sockaddr_in *socket, char ip[INET_ADDRSTRLEN]);
 int add_peer(const struct sockaddr_in *other, const byte *data, sem_t *sem, shared_data *sd);
 int get_peer(const char other_ip[INET_ADDRSTRLEN], sem_t *sem, shared_data *sd);
-int add_req(const char ip[INET_ADDRSTRLEN], const byte header[C_UDP_HEADER], const byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd);
+int add_req(const in_addr_t ip, const byte header[C_UDP_HEADER], const byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd);
 int get_req(const byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd);
 int rm_req(int index, sem_t *sem, shared_data *sd);
 int create_shared_variables();

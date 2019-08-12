@@ -25,8 +25,8 @@ add_library(net_lib OBJECT
     ${NET_DIR}/kbucket.c
     ${NET_DIR}/netcore.c
 )
-target_include_directories(net_lib 
-    PUBLIC ${INC_DIR} ${INC_NET_DIR} 
+target_include_directories(net_lib
+    PUBLIC ${INC_DIR} ${INC_NET_DIR}
 )
 
 add_library(core_lib OBJECT
@@ -34,19 +34,19 @@ add_library(core_lib OBJECT
     ${SRC_DIR}/plugin_utils.c
     ${SRC_DIR}/system_utils.c
 )
-target_include_directories(core_lib 
-    PUBLIC ${INC_DIR} ${INC_NET_DIR} 
+target_include_directories(core_lib
+    PUBLIC ${INC_DIR} ${INC_NET_DIR}
 )
 
 # Add the other cmake files
 add_subdirectory(src)
 add_subdirectory(plugins)
-add_subdirectory(tests)
+#add_subdirectory(tests)
 
 # Add the tests
-enable_testing()
-add_test(NAME network_active COMMAND test_network_active)
-add_test(NAME system_utils COMMAND test_system_utils)
-add_test(NAME network_utils COMMAND test_network_utils)
-add_test(NAME pingpong COMMAND test_pingpong)
-add_test(NAME peerexchange COMMAND test_peerexchange)
+#enable_testing()
+#add_test(NAME network_active COMMAND test_network_active)
+#add_test(NAME system_utils COMMAND test_system_utils)
+#add_test(NAME network_utils COMMAND test_network_utils)
+#add_test(NAME pingpong COMMAND test_pingpong)
+#add_test(NAME peerexchange COMMAND test_peerexchange)

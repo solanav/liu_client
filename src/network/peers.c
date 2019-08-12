@@ -111,11 +111,7 @@ int add_peer(const struct sockaddr_in *other, const byte *data, sem_t *sem, shar
 
 	// Get the ip of the peer
 	char other_ip[INET_ADDRSTRLEN];
-	if (get_ip(other, other_ip) == ERROR)
-	{
-		DEBUG_PRINT(P_ERROR "Could not get the ip of the peer\n");
-		return ERROR;
-	}
+    ip_string(other->sin_addr.s_addr, other_ip);
 
 	// Check if peer already on list
 	if (get_peer(other_ip, sem, sd) != ERROR)
@@ -153,7 +149,7 @@ int add_peer(const struct sockaddr_in *other, const byte *data, sem_t *sem, shar
 	return OK;
 }
 
-int add_req(const char ip[INET_ADDRSTRLEN], const byte header[C_UDP_HEADER], const byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
+int add_req(const in_addr_t ip, const byte header[C_UDP_HEADER], const byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
 {
 	// Check if request is already there
 	if (get_req(cookie, sem, sd) != -1)
@@ -183,8 +179,8 @@ int add_req(const char ip[INET_ADDRSTRLEN], const byte header[C_UDP_HEADER], con
 	sem_wait(sem);
 	
 	// Copy data to req[index]
-	clock_gettime(CLOCK_MONOTONIC, &(sd->req.timestamp[index]));
-	strncpy(sd->req.ip[index], ip, INET_ADDRSTRLEN);
+    clock_gettime(CLOCK_MONOTONIC, &(sd->req.timestamp[index]));
+    sd->req.ip[index] = ip;
 	sd->req.comm[index][0] = header[0];
 	sd->req.comm[index][1] = header[1];
 	memcpy(sd->req.cookie[index], cookie, COOKIE_SIZE);
@@ -221,8 +217,8 @@ int rm_req(int index, sem_t *sem, shared_data *sd)
 	sd->req.next[prev_index] = next_index;
 	sd->req.prev[next_index] = prev_index;
 
-	memset(sd->req.comm[index], 0, COMM_LEN * sizeof(char));
-	memset(sd->req.ip[index], 0, INET_ADDRSTRLEN * sizeof(char));
+    memset(sd->req.comm[index], 0, COMM_LEN * sizeof(char));
+    sd->req.ip[index] = 0;
 	sd->req.prev[index] = -1;
 	sd->req.next[index] = -1;
 	sd->req.free[index] = 0;

@@ -48,34 +48,10 @@ int init_networking()
 	}
 	else
 	{
-		// Look for peers until our list is full
-		peer_discovery(sem, sd);
+        // Look for peers until our list is full
+        peer_discovery(sem, sd);
 
-		int found = 0;
-		char ip[INET_ADDRSTRLEN];
-		in_port_t port;
-		for (int i = 0; i < MAX_PEERS && found == 0; i++)
-		{
-			sem_wait(sem);
-			if (sd->peers.secure[i] == 1)
-			{
-				memcpy(ip, sd->peers.ip[i], INET_ADDRSTRLEN);
-				port = sd->peers.port[i];
-				found = 1;
-			}
-			sem_post(sem);
-		}
-
-		if (found == 0)
-		{
-			DEBUG_PRINT(P_ERROR "Failed to find a secure peer to test debug message\n");
-		}
-		else
-		{
-			send_debug(ip, port, (byte *)"\xDE\xAD\xBE\xEF", 4, sem, sd);
-		}
-
-		sleep(20);
+        sleep(2);
 		stop_server(PORT, sem, sd);
 	}
 
@@ -173,13 +149,13 @@ void clean_networking()
 
 int get_ip(const struct sockaddr_in *socket, char ip[INET_ADDRSTRLEN])
 {
-	if (inet_ntop(AF_INET, &(socket->sin_addr), ip, INET_ADDRSTRLEN) == NULL)
-	{
-		DEBUG_PRINT(P_ERROR "Address could not be converted to string\n");
-		return ERROR;
-	}
+    if (inet_ntop(AF_INET, &(socket->sin_addr), ip, INET_ADDRSTRLEN) == NULL)
+    {
+        DEBUG_PRINT(P_ERROR "Address could not be converted to string\n");
+        return ERROR;
+    }
 
-	return OK;
+    return OK;
 }
 
 int access_sd(sem_t **sem, shared_data **sd)
@@ -214,31 +190,26 @@ int access_sd(sem_t **sem, shared_data **sd)
 
 int peer_discovery(sem_t *sem, shared_data *sd)
 {
-	int lap_counter = 0;
-	sem_wait(sem);
-	while (sd->peers.free[MIN_PEERS] == 0 && lap_counter < 100)
-	{
-		sem_post(sem);
-		for (int i = 0; i < 256; i++)
-		{
-			char ip[INET_ADDRSTRLEN];
-			sprintf(ip, "10.8.0.%d", i);
-			if (get_peer(ip, sem, sd) == ERROR) // If we have it already don't
-			{
-				send_discover(ip, PORT, PORT);
-				lap_counter = 0;
-			}
+    int lap_counter = 0;
+    sem_wait(sem);
+    while (sd->peers.free[MIN_PEERS] == 0 && lap_counter < 100)
+    {
+        in_addr_t start_ip = ip_number("10.8.0.0");
+        sem_post(sem);
+        for (int i = 0; i < 256; i++)
+        {
+            send_ping(start_ip + i, PORT, PORT, sem, sd);
 
-			usleep(10000);
-		}
+            usleep(10000);
+        }
 
-		lap_counter++;
+        lap_counter++;
 
-		sem_wait(sem);
-	}
-	sem_post(sem);
+        sem_wait(sem);
+    }
+    sem_post(sem);
 
-	return OK;
+    return OK;
 }
 
 in_addr_t ip_number(char *ip)

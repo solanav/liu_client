@@ -4,6 +4,7 @@
 #include "hydrogen.h"
 
 #define LOCAL_IP "127.0.0.1"
+#define LOCAL_IP_NUM 2130706433
 #define PORT 9121
 
 #define MAX_UDP 512 // Max size of a packet
@@ -57,7 +58,7 @@ union _request_data
 
 struct _request
 {
-	char ip[MAX_DATAGRAMS][INET_ADDRSTRLEN];
+    in_addr_t ip[MAX_DATAGRAMS];
 	byte comm[MAX_DATAGRAMS][COMM_LEN];
 	struct timespec timestamp[MAX_DATAGRAMS];
 	int prev[MAX_DATAGRAMS];

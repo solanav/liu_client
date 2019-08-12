@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="LIU_CLIENT"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="gcc"/>
+		<Option virtualFolders="CMake Files\;CMake Files\src\;CMake Files\plugins\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/home/solanav/Projects/liu/liu_client"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/home/solanav/Projects/liu/liu_client"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/home/solanav/Projects/liu/liu_client"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="net_lib">
+				<Option output="/home/solanav/Projects/liu/liu_client/CMakeFiles/net_lib.dir/net_lib.objlib" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/solanav/Projects/liu/liu_client"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add option="-DDEBUG"/>
+					<Add directory="/home/solanav/Projects/liu/liu_client/include"/>
+					<Add directory="/home/solanav/Projects/liu/liu_client/include/network"/>
+					<Add directory="/usr/include/c++/7"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/7"/>
+					<Add directory="/usr/include/c++/7/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/7/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/7/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 net_lib"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="net_lib/fast">
+				<Option output="/home/solanav/Projects/liu/liu_client/CMakeFiles/net_lib.dir/net_lib.objlib" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/solanav/Projects/liu/liu_client"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add option="-DDEBUG"/>
+					<Add directory="/home/solanav/Projects/liu/liu_client/include"/>
+					<Add directory="/home/solanav/Projects/liu/liu_client/include/network"/>
+					<Add directory="/usr/include/c++/7"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/7"/>
+					<Add directory="/usr/include/c++/7/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/7/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/7/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 net_lib/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="core_lib">
+				<Option output="/home/solanav/Projects/liu/liu_client/CMakeFiles/core_lib.dir/core_lib.objlib" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/solanav/Projects/liu/liu_client"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add option="-DDEBUG"/>
+					<Add directory="/home/solanav/Projects/liu/liu_client/include"/>
+					<Add directory="/home/solanav/Projects/liu/liu_client/include/network"/>
+					<Add directory="/usr/include/c++/7"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/7"/>
+					<Add directory="/usr/include/c++/7/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/7/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/7/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 core_lib"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="core_lib/fast">
+				<Option output="/home/solanav/Projects/liu/liu_client/CMakeFiles/core_lib.dir/core_lib.objlib" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/solanav/Projects/liu/liu_client"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add option="-DDEBUG"/>
+					<Add directory="/home/solanav/Projects/liu/liu_client/include"/>
+					<Add directory="/home/solanav/Projects/liu/liu_client/include/network"/>
+					<Add directory="/usr/include/c++/7"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/7"/>
+					<Add directory="/usr/include/c++/7/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/7/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/7/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 core_lib/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="liu_client">
+				<Option output="/home/solanav/Projects/liu/liu_client/src/liu_client" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/solanav/Projects/liu/liu_client/src"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add option="-DDEBUG"/>
+					<Add directory="/home/solanav/Projects/liu/liu_client/include"/>
+					<Add directory="/home/solanav/Projects/liu/liu_client/include/network"/>
+					<Add directory="/usr/include/c++/7"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/7"/>
+					<Add directory="/usr/include/c++/7/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/7/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/7/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/src/Makefile&quot;  VERBOSE=1 liu_client"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/src/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/src/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/src/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="liu_client/fast">
+				<Option output="/home/solanav/Projects/liu/liu_client/src/liu_client" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/solanav/Projects/liu/liu_client/src"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add option="-DDEBUG"/>
+					<Add directory="/home/solanav/Projects/liu/liu_client/include"/>
+					<Add directory="/home/solanav/Projects/liu/liu_client/include/network"/>
+					<Add directory="/usr/include/c++/7"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/7"/>
+					<Add directory="/usr/include/c++/7/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/7/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/7/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/src/Makefile&quot;  VERBOSE=1 liu_client/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/src/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/src/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/src/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="encrypt">
+				<Option output="/home/solanav/Projects/liu/liu_client/plugins/libencrypt.so" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/solanav/Projects/liu/liu_client/plugins"/>
+				<Option object_output="./"/>
+				<Option type="3"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add option="-DDEBUG"/>
+					<Add directory="/home/solanav/Projects/liu/liu_client/include"/>
+					<Add directory="/home/solanav/Projects/liu/liu_client/include/network"/>
+					<Add directory="/usr/include/c++/7"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/7"/>
+					<Add directory="/usr/include/c++/7/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/7/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/7/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/plugins/Makefile&quot;  VERBOSE=1 encrypt"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/plugins/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/plugins/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/plugins/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="encrypt/fast">
+				<Option output="/home/solanav/Projects/liu/liu_client/plugins/libencrypt.so" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/solanav/Projects/liu/liu_client/plugins"/>
+				<Option object_output="./"/>
+				<Option type="3"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add option="-DDEBUG"/>
+					<Add directory="/home/solanav/Projects/liu/liu_client/include"/>
+					<Add directory="/home/solanav/Projects/liu/liu_client/include/network"/>
+					<Add directory="/usr/include/c++/7"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/7"/>
+					<Add directory="/usr/include/c++/7/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/7/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/7/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/plugins/Makefile&quot;  VERBOSE=1 encrypt/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/plugins/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/plugins/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/solanav/Projects/liu/liu_client/plugins/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/home/solanav/Projects/liu/liu_client/CMakeFiles/core_lib.dir/src/keylogger.c.o">
+			<Option target="liu_client"/>
+		</Unit>
+		<Unit filename="/home/solanav/Projects/liu/liu_client/CMakeFiles/core_lib.dir/src/plugin_utils.c.o">
+			<Option target="liu_client"/>
+		</Unit>
+		<Unit filename="/home/solanav/Projects/liu/liu_client/CMakeFiles/core_lib.dir/src/system_utils.c.o">
+			<Option target="liu_client"/>
+		</Unit>
+		<Unit filename="/home/solanav/Projects/liu/liu_client/CMakeFiles/net_lib.dir/src/network/active.c.o">
+			<Option target="liu_client"/>
+		</Unit>
+		<Unit filename="/home/solanav/Projects/liu/liu_client/CMakeFiles/net_lib.dir/src/network/kbucket.c.o">
+			<Option target="liu_client"/>
+		</Unit>
+		<Unit filename="/home/solanav/Projects/liu/liu_client/CMakeFiles/net_lib.dir/src/network/netcore.c.o">
+			<Option target="liu_client"/>
+		</Unit>
+		<Unit filename="/home/solanav/Projects/liu/liu_client/CMakeFiles/net_lib.dir/src/network/peers.c.o">
+			<Option target="liu_client"/>
+		</Unit>
+		<Unit filename="/home/solanav/Projects/liu/liu_client/CMakeFiles/net_lib.dir/src/network/reactive.c.o">
+			<Option target="liu_client"/>
+		</Unit>
+		<Unit filename="/home/solanav/Projects/liu/liu_client/plugins/encrypt.c">
+			<Option target="encrypt"/>
+		</Unit>
+		<Unit filename="/home/solanav/Projects/liu/liu_client/src/core.c">
+			<Option target="liu_client"/>
+		</Unit>
+		<Unit filename="/home/solanav/Projects/liu/liu_client/src/keylogger.c">
+			<Option target="core_lib"/>
+		</Unit>
+		<Unit filename="/home/solanav/Projects/liu/liu_client/src/network/active.c">
+			<Option target="net_lib"/>
+		</Unit>
+		<Unit filename="/home/solanav/Projects/liu/liu_client/src/network/kbucket.c">
+			<Option target="net_lib"/>
+		</Unit>
+		<Unit filename="/home/solanav/Projects/liu/liu_client/src/network/netcore.c">
+			<Option target="net_lib"/>
+		</Unit>
+		<Unit filename="/home/solanav/Projects/liu/liu_client/src/network/peers.c">
+			<Option target="net_lib"/>
+		</Unit>
+		<Unit filename="/home/solanav/Projects/liu/liu_client/src/network/reactive.c">
+			<Option target="net_lib"/>
+		</Unit>
+		<Unit filename="/home/solanav/Projects/liu/liu_client/src/plugin_utils.c">
+			<Option target="core_lib"/>
+		</Unit>
+		<Unit filename="/home/solanav/Projects/liu/liu_client/src/system_utils.c">
+			<Option target="core_lib"/>
+			<Option target="encrypt"/>
+		</Unit>
+		<Unit filename="/home/solanav/Projects/liu/liu_client/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+		<Unit filename="/home/solanav/Projects/liu/liu_client/src/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\src\"/>
+		</Unit>
+		<Unit filename="/home/solanav/Projects/liu/liu_client/plugins/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\plugins\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>

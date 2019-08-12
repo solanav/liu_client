@@ -10,6 +10,8 @@
 #include "netcore.h"
 #include "types.h"
 
+int copy_kpeer(kpeer *dst, const kpeer *src);
+
 addr_space *init_kb()
 {
     addr_space *as = calloc(1, sizeof(addr_space));
@@ -38,6 +40,12 @@ addr_space *init_kb()
 
 void clean_kb(addr_space *as)
 {
+    if (as == NULL)
+    {
+        DEBUG_PRINT(P_ERROR "Address space is NULL\n");
+        return;
+    }
+
     for (unsigned int i = 0; i < as->num; i++)
         free(as->kb_list[i]);
 
@@ -68,9 +76,6 @@ int add_id(byte total[PEER_ID_LEN], const byte id1[PEER_ID_LEN], const byte id2[
     int carry = 0;
     for (int i = PEER_ID_LEN - 1; i >= 0; i--)
     {
-
-        //printf("[%02x] + [%02x] = ", total[i], idc[i]);
-
         int ot = total[i];
         total[i] = idc[i] + total[i];
 
@@ -84,8 +89,6 @@ int add_id(byte total[PEER_ID_LEN], const byte id1[PEER_ID_LEN], const byte id2[
             total[i] += carry;
             carry = 0;
         }
-
-        //printf("[%02x] (%d)\n", total[i], carry);
     }
 
     return OK;
@@ -131,7 +134,7 @@ int inc_id(byte id[PEER_ID_LEN])
     return ERROR;
 }
 
-int id_between(byte start[PEER_ID_LEN], byte end[PEER_ID_LEN], byte id[PEER_ID_LEN])
+int id_between(const byte start[PEER_ID_LEN], const byte end[PEER_ID_LEN], const byte id[PEER_ID_LEN])
 {
     // Check start is smaller
     for (int i = 0; i < PEER_ID_LEN; i++)
@@ -156,6 +159,12 @@ int id_between(byte start[PEER_ID_LEN], byte end[PEER_ID_LEN], byte id[PEER_ID_L
 
 int add_kb(addr_space *as)
 {
+    if (as == NULL)
+    {
+        DEBUG_PRINT(P_ERROR "Address space is NULL\n");
+        return ERROR;
+    }
+
     as->kb_list = realloc(as->kb_list, (as->num + 1) * sizeof(kbucket *));
     if (as->kb_list == NULL)
     {
@@ -186,6 +195,7 @@ int add_kb(addr_space *as)
     inc_id(space);
     memcpy(as->kb_list[as->num]->start, space, PEER_ID_LEN);
 
+    // Keep count of kbuckets
     as->num++;
 
     // Reorder peers after adding new kbucket
@@ -194,8 +204,14 @@ int add_kb(addr_space *as)
     return OK;
 }
 
-int get_kb(addr_space *as, byte id[PEER_ID_LEN])
+int get_kb(addr_space *as, const byte id[PEER_ID_LEN])
 {
+    if (as == NULL)
+    {
+        DEBUG_PRINT(P_ERROR "Address space is NULL\n");
+        return ERROR;
+    }
+
     // Iterate through all kbuckets
     for (unsigned int i = 0; i < as->num; i++)
     {
@@ -206,22 +222,53 @@ int get_kb(addr_space *as, byte id[PEER_ID_LEN])
     return ERROR;
 }
 
-void print_kb(kbucket *kb, char c)
+void print_id(const byte id[PEER_ID_LEN])
 {
+    printf("[ ");
+    for (int i = 0; i < PEER_ID_LEN; i += 4)
+        printf("%02x%02x%02x%02x ", id[i], id[i + 1], id[i + 2], id[i + 3]);
+    printf("]");
+}
+
+void print_kp(const kpeer *peer)
+{
+    if (peer == NULL)
+    {
+        DEBUG_PRINT(P_ERROR "Peer you are printing is null\n");
+        return;
+    }
+
+    char ip[INET_ADDRSTRLEN];
+    ip_string(peer->ip, ip);
+
+    printf("[%16s:%-5d]", ip, peer->port);
+    print_id(peer->id);
+}
+
+void print_kb(const kbucket *kb)
+{
+    if (kb == NULL)
+    {
+        DEBUG_PRINT(P_ERROR "Kbucket space is NULL\n");
+        return;
+    }
 
     for (int i = 0; i < MAX_KPEERS; i++)
     {
-        char ip[INET_ADDRSTRLEN];
-        ip_string(kb->ip[i], ip);
-
-        printf("%c[%d] [%16s:%-5d] ", c, kb->free[i], ip, kb->port[i]);
-        print_id(kb->id[i]);
+        printf("\t[%d] ", kb->free[i]);
+        print_kp(&(kb->peer[i]));
         printf("\n");
     }
 }
 
-void print_as(addr_space *as)
+void print_as(const addr_space *as)
 {
+    if (as == NULL)
+    {
+        DEBUG_PRINT(P_ERROR "Address space is NULL\n");
+        return;
+    }
+
     for (unsigned int i = 0; i < as->num; i++)
     {
         printf("(%d) KBUCKET \n", i);
@@ -231,37 +278,35 @@ void print_as(addr_space *as)
         print_id(as->kb_list[i]->end);
         printf("\n");
 
-        print_kb(as->kb_list[i], '\t');
+        print_kb(as->kb_list[i]);
     }
-}
-
-void print_id(byte id[PEER_ID_LEN])
-{
-    printf("[ ");
-    for (int i = 0; i < PEER_ID_LEN; i += 4)
-        printf("%02x%02x%02x%02x ", id[i], id[i + 1], id[i + 2], id[i + 3]);
-    printf("]");
 }
 
 int reorder_kpeer(addr_space *as)
 {
+    if (as == NULL)
+    {
+        DEBUG_PRINT(P_ERROR "Address space is NULL\n");
+        return ERROR;
+    }
+
     for (unsigned int i = 0; i < as->num; i++)
     {
         for (unsigned int j = 0; j < MAX_KPEERS; j++)
         {
             if (as->kb_list[i]->free[j] == 1)
             {
-                byte id[PEER_ID_LEN];
-                unsigned int port = as->kb_list[i]->port[j];
-                in_addr_t ip = as->kb_list[i]->ip[j];
-                memcpy(id, as->kb_list[i]->id[j], PEER_ID_LEN);
+                kpeer peer;
+                peer.ip = as->KPEER(i, j).ip;
+                peer.port = as->KPEER(i, j).port;
+                memcpy(peer.id, as->KPEER(i, j).id, PEER_ID_LEN);
 
                 as->kb_list[i]->free[j] = 0;
-                as->kb_list[i]->port[j] = 0;
-                as->kb_list[i]->ip[j] = 0;
-                memset(as->kb_list[i]->id[j], 0, PEER_ID_LEN);
+                as->kb_list[i]->peer[j].port = 0;
+                as->kb_list[i]->peer[j].ip = 0;
+                memset(as->kb_list[i]->peer[j].id, 0, PEER_ID_LEN);
 
-                add_kpeer(as, ip, port, id);
+                add_kpeer(as, &peer);
             }
         }
     }
@@ -269,54 +314,116 @@ int reorder_kpeer(addr_space *as)
     return OK;
 }
 
-int add_kpeer(addr_space *as, in_addr_t ip, in_port_t port, byte id[PEER_ID_LEN])
+int add_kpeer(addr_space *as, const kpeer *peer)
 {
-    int kb_index = get_kb(as, id);
-    if (kb_index == ERROR)
+    if (as == NULL)
     {
-        DEBUG_PRINT(P_ERROR "Failed to get a kbucket\n");
+        DEBUG_PRINT(P_ERROR "Address space is NULL\n");
         return ERROR;
     }
 
-    int peer_index = -1;
-    for (int i = 0; i < MAX_KPEERS && peer_index == -1; i++)
+    int kb_i = -1;
+    int peer_i = -1;
+    do
     {
-        if (as->kb_list[kb_index]->free[i] == 0)
-            peer_index = i;
-    }
-
-    if (peer_index == -1)
-    {
-        DEBUG_PRINT(P_INFO "Failed to find space in kbucket %d\n", kb_index);
-        
-        add_kb(as);
-
-        kb_index = get_kb(as, id);
-        if (kb_index == ERROR)
+        // Get bucket in which this peer should go
+        kb_i = get_kb(as, peer->id);
+        if (kb_i == ERROR)
         {
             DEBUG_PRINT(P_ERROR "Failed to get a kbucket\n");
             return ERROR;
         }
 
-        peer_index = -1;
-        for (int i = 0; i < MAX_KPEERS && peer_index == -1; i++)
+        // Look for empty space in bucket
+        for (int i = 0; i < MAX_KPEERS && peer_i == -1; i++)
         {
-            if (as->kb_list[kb_index]->free[i] == 0)
-                peer_index = i;
+            if (as->kb_list[kb_i]->free[i] == 0)
+                peer_i = i;
         }
 
-        if (peer_index == -1)
+        // If no space
+        if (peer_i == -1)
         {
-            DEBUG_PRINT(P_INFO "Failed to find space in kbucket %d\n", kb_index);
-            return ERROR;
+            DEBUG_PRINT(P_INFO "Failed to find space in kbucket %d\n", kb_i);
+
+            // Only create new kbucket if we fit in the last
+            if ((unsigned int) kb_i == as->num - 1)
+            {
+                if (add_kb(as) == ERROR)
+                {
+                    DEBUG_PRINT(P_ERROR "Failed to create new bucket\n");
+                    return ERROR;
+                }
+            }
+            else
+            {
+                DEBUG_PRINT(P_INFO "Peer does not fit in any kbucket\n");
+                return ERROR;
+            }
+        }
+    } while (peer_i == -1);
+
+    // Copy data to kbucket's free space
+    as->KPEER(kb_i, peer_i).ip = peer->ip;
+    as->KPEER(kb_i, peer_i).port = peer->port;
+    memcpy(as->KPEER(kb_i, peer_i).id, peer->id, PEER_ID_LEN);
+    as->kb_list[kb_i]->free[peer_i] = 1;
+
+    return OK;
+}
+
+int get_kpeer(addr_space *as, in_addr_t ip, kpeer *peer)
+{
+    if (as == NULL)
+    {
+        DEBUG_PRINT(P_ERROR "Address space is NULL\n");
+        return ERROR;
+    }
+
+    for (unsigned int i = 0; i < as->num; i++)
+    {
+        for (int j = 0; j < MAX_KPEERS; j++)
+        {
+            if (as->KPEER(i, j).ip == ip)
+            {
+                peer->ip = as->KPEER(i, j).ip;
+                peer->port = as->KPEER(i, j).port;
+                memcpy(peer->id, as->KPEER(i, j).id, PEER_ID_LEN);
+
+                return OK;
+            }
         }
     }
 
-    // Copy data to kbucket's free space
-    as->kb_list[kb_index]->ip[peer_index] = ip;
-    memcpy(as->kb_list[kb_index]->id[peer_index], id, PEER_ID_LEN);
-    as->kb_list[kb_index]->port[peer_index] = port;
-    as->kb_list[kb_index]->free[peer_index] = 1;
+    return ERROR;
+}
+
+int create_kpeer(kpeer *dst, const in_addr_t ip, const in_port_t port, const byte id[PEER_ID_LEN])
+{
+    if (dst == NULL)
+    {
+        DEBUG_PRINT(P_ERROR "Destiny is NULL\n");
+        return ERROR;
+    }
+
+    dst->ip = ip;
+    dst->port = port;
+    memcpy(dst->id, id, PEER_ID_LEN);
+
+    return OK;
+}
+
+int copy_kpeer(kpeer *dst, const kpeer *src)
+{
+    if (dst == NULL)
+    {
+        DEBUG_PRINT(P_ERROR "Destiny is NULL\n");
+        return ERROR;
+    }
+
+    dst->ip = src->ip;
+    dst->port = src->port;
+    memcpy(dst->id, src->id, PEER_ID_LEN);
 
     return OK;
 }
