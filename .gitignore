@@ -50,7 +50,8 @@ dkms.conf
 
 # Qt Creator
 CMakeFiles/
-.cmake
-.make
+*.cmake
+*.make
 Makefile
-.cbp
+*.cbp
+*.user
