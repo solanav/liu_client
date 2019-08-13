@@ -21,8 +21,8 @@ set(TST_DIR ${PROJECT_SOURCE_DIR}/tests)
 add_library(net_lib OBJECT
     ${NET_DIR}/active.c
     ${NET_DIR}/reactive.c
-    ${NET_DIR}/peers.c
-    ${NET_DIR}/kbucket.c
+    ${NET_DIR}/request.c
+    ${NET_DIR}/kpeer.c
     ${NET_DIR}/netcore.c
 )
 target_include_directories(net_lib

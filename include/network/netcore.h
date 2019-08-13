@@ -5,7 +5,6 @@
 
 #define LOCAL_IP "127.0.0.1"
 #define LOCAL_IP_NUM 2130706433
-#define PORT 9121
 
 #define MAX_UDP 512 // Max size of a packet
 #define MAX_THREADS 128 // Max number of threads
@@ -15,15 +14,14 @@
 #define INIT       "\x00\x01"
 #define PING       "\x00\x02"
 #define PONG       "\x00\x03"
-#define GETPEERS   "\x00\x04"
-#define SENDPEERS  "\x00\x05"
-#define SENDPEERSC "\x00\x06"
-#define DISCOVER   "\x00\x07"
-#define DTLS1	   "\x00\x08"
-#define DTLS2	   "\x00\x09"
-#define DTLS3	   "\x00\x0A"
-#define DTLS4	   "\x00\x0B"
-#define DEBUG_MSG  "\x00\x0C"
+#define FINDNODE   "\x00\x04"
+#define SENDNODE   "\x00\x05"
+#define DISCOVER   "\x00\x06"
+#define DTLS1	   "\x00\x07"
+#define DTLS2	   "\x00\x08"
+#define DTLS3	   "\x00\x09"
+#define DTLS4	   "\x00\x0A"
+#define DEBUG_MSG  "\x00\x0B"
 
 #define COOKIE_SIZE 4
 
@@ -39,60 +37,47 @@
 typedef struct _double_peer_list double_peer_list;
 typedef struct _shared_data shared_data;
 
-#include "network/peers.h"
-
-typedef struct _peer_list
-{
-	char ip[MAX_PEERS][INET_ADDRSTRLEN]; 	// Ip of the peer
-	in_port_t port[MAX_PEERS];				// Port of the peer
-	unsigned int free[MAX_PEERS];			// 1 if the space is free
-	struct timespec latency[MAX_PEERS];		// Latency with the peer
-	hydro_kx_session_keypair kp[MAX_PEERS]; // Keypair for DTLS
-	unsigned int secure[MAX_PEERS];			// 1 if DTLS has been established
-} peer_list;
-
-union _request_data
-{
-	byte other_peers_buf[sizeof(peer_list)];   // Buffer for receiving a peer_list
-};
+#include "network/request.h"
+#include "network/kpeer.h"
 
 struct _request
 {
     in_addr_t ip[MAX_DATAGRAMS];
-	byte comm[MAX_DATAGRAMS][COMM_LEN];
-	struct timespec timestamp[MAX_DATAGRAMS];
-	int prev[MAX_DATAGRAMS];
-	int next[MAX_DATAGRAMS];
-	unsigned short free[MAX_DATAGRAMS];
-	union _request_data data;
-	byte cookie[MAX_DATAGRAMS][COOKIE_SIZE];
+    byte comm[MAX_DATAGRAMS][COMM_LEN];
+    struct timespec timestamp[MAX_DATAGRAMS];
+    int prev[MAX_DATAGRAMS];
+    int next[MAX_DATAGRAMS];
+    unsigned short free[MAX_DATAGRAMS];
+    byte cookie[MAX_DATAGRAMS][COOKIE_SIZE];
 };
 
 struct _dtls_data
 {
-	hydro_kx_keypair kp;
-	hydro_kx_state state;
+    hydro_kx_keypair kp; // Our own keypair
+    hydro_kx_state state; // State for dtls handshake
 };
 
 struct _server_info
 {
-	unsigned int num_threads;
-	pthread_t threads[MAX_THREADS];
-    int stop;
+    in_addr_t ip; // Our own ip
+    in_port_t port; // Our own port
+    byte id[PEER_ID_LEN]; // Our own kademlia ID
+    unsigned int num_threads; // Current number of threads running
+    pthread_t threads[MAX_THREADS]; // Storage to interact with threads
+    int stop; // Signal to stop running the server
 };
 
 typedef struct _shared_data
 {
-	peer_list peers;
-	struct _server_info server_info;
-	struct _dtls_data dtls; 
-	struct _request req;
-	int req_first;
-	int req_last;
+    addr_space as;
+    struct _server_info server_info;
+    struct _dtls_data dtls;
+    struct _request req;
+    int req_first;
+    int req_last;
 } shared_data;
 
 int init_networking();
-int create_shared_variables();
 void clean_networking();
 int access_sd(sem_t **sem, shared_data **sd);
 int get_ip(const struct sockaddr_in *socket, char ip[INET_ADDRSTRLEN]);

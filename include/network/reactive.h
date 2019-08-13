@@ -16,7 +16,7 @@
 
 #include "network/netcore.h"
 
-int start_server(in_port_t port, sem_t *sem, shared_data *sd);
+int start_server(sem_t *sem, shared_data *sd);
 void *handle_comm(void *socket);
 
 #endif
