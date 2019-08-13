@@ -19,3 +19,11 @@ $ make
 ```
 $ src/liu_client
 ```
+
+# Packet structure
+
+1. HEADER > 2 bytes
+2. NUM    > 2 bytes
+3. COOKIE > 4 bytes
+4. DATA   > 468 bytes
+5. EMPTY  > 36 bytes
