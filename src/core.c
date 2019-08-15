@@ -2,6 +2,7 @@
 #include "network/netcore.h"
 
 #include <sys/random.h>
+#include <string.h>
 
 int main()
 {
@@ -15,7 +16,7 @@ int main()
     if (init_networking() == ERROR)
     {
         DEBUG_PRINT(P_ERROR "Networking module failed\n");
-        return ERROR;
+        return  ERROR;
     }
 
 	return OK;

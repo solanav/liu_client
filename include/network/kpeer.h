@@ -22,19 +22,19 @@ typedef struct _kpeer {
     byte id[PEER_ID_LEN]; // Kademlia ID to identify peer
     struct timespec latency; // Latency with the peer
     hydro_kx_session_keypair kp; // Keypair for DTLS
-    unsigned int secure; // 1 if DTLS has been established
+    unsigned short secure; // 1 if DTLS has been established
 } kpeer;
 
 typedef struct _kbucket {
     kpeer peer[MAX_KPEERS]; // Peers in the bucket
-    unsigned int free[MAX_KPEERS]; // 1 if there is no peer
+    unsigned short free[MAX_KPEERS]; // 1 if there is no peer
     byte start[PEER_ID_LEN]; // First ID that can fit in this bucket (included)
     byte end[PEER_ID_LEN]; // Last ID that can fit in this bucket (included)
 } kbucket;
 
 typedef struct _addr_space {
     kbucket kb_list[MAX_KBUCKETS]; // List of all buckets
-    unsigned int free[MAX_KPEERS]; // 1 if there is no bucket
+    unsigned short free[MAX_KPEERS]; // 1 if there is no bucket
     unsigned int b_num; // Number of buckets
     unsigned int p_num; // Number of peers
 } addr_space;
@@ -57,5 +57,8 @@ int create_kpeer(kpeer *dst, const in_addr_t ip, const in_port_t port, const byt
 int add_kpeer(addr_space *as, const kpeer *peer, unsigned int self);
 int get_kpeer(const addr_space *as, const in_addr_t ip, k_index *ki);
 int reorder_kpeer(addr_space *as);
+
+int import_bin(addr_space *as);
+int export_bin(addr_space *as);
 
 #endif

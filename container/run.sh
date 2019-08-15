@@ -2,9 +2,10 @@
 
 IMAGE_NAME=liu_client
 DIR="${0%/*}"
+BUILD=/home/solanav/Projects/liu_env/build-client-Desktop-Default
 
 # Move the latest liu_client to folder
-cp $DIR/../src/liu_client $DIR/files/liu_client
+cp $BUILD/src/liu_client $DIR/files/liu_client
 
 # Build the docker image
 docker build . -t $IMAGE_NAME

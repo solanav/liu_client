@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -255,11 +257,18 @@ int reorder_kpeer(addr_space *as)
     {
         for (unsigned int j = 0; j < MAX_KPEERS; j++)
         {
-            if (as->kb_list[i].free[j] == 1)
+            if (as->kb_list[i].free[j] != 0)
             {
                 // Create copy of peer
                 kpeer peer;
                 copy_kpeer(&peer, &(as->_KPEER(i, j)));
+
+                // Save the free status
+                int tmp;
+                if (as->kb_list[i].free[j] == 2)
+                    tmp = 1;
+                else
+                    tmp = 0;
 
                 // Clean old space of peer
                 as->kb_list[i].free[j] = 0;
@@ -268,7 +277,7 @@ int reorder_kpeer(addr_space *as)
                 memset(as->kb_list[i].peer[j].id, 0, PEER_ID_LEN);
 
                 // Re-add the peer
-                add_kpeer(as, &peer, 0);
+                add_kpeer(as, &peer, tmp);
             }
         }
     }
@@ -341,8 +350,6 @@ int add_kpeer(addr_space *as, const kpeer *peer, unsigned int self)
 
     as->p_num++;
 
-    print_as(as);
-
     return OK;
 }
 
@@ -389,6 +396,22 @@ int create_kpeer(kpeer *dst, const in_addr_t ip, const in_port_t port, const byt
     return OK;
 }
 
+int rm_kpeer(addr_space *as, byte id[PEER_ID_LEN])
+{
+    // Find the peer
+    k_index ki;
+    if (get_kpeer(as, id, &ki) == ERROR)
+        return ERROR;
+
+    // Set all to zero
+    memset(as->_KPEER(ki.b, ki.p), 0, sizeof(kpeer));
+
+    // Update structure
+    as->p_num--;
+
+    return OK;
+}
+
 int copy_kpeer(kpeer *dst, const kpeer *src)
 {
     if (dst == NULL)
@@ -406,15 +429,16 @@ int copy_kpeer(kpeer *dst, const kpeer *src)
 
 int export_bin(addr_space *as)
 {
-    FILE *bin = fopen("kpeer_data.bin", "w");
+    int bin = open("bootstrap.bin", O_WRONLY, O_CREAT);
 
     for (int i = 0; i < MAX_KBUCKETS; i++)
     {
         for (int j = 0; j < MAX_KPEERS; j++)
         {
-            fwrite(&(as->kb_list[i].peer[j].ip), sizeof(in_addr_t), 1, bin);
-            fwrite(&(as->kb_list[i].peer[j].port), sizeof(in_port_t), 1, bin);
-            fwrite(as->kb_list[i].peer[j].id, sizeof(PEER_ID_LEN), 1, bin);
+            write(bin, &(as->_KPEER(i, j).ip), sizeof(in_addr_t));
+            write(bin, &(as->_KPEER(i, j).port), sizeof(in_port_t));
+            write(bin, as->_KPEER(i,j).id, PEER_ID_LEN);
+            write(bin, &(as->kb_list[i].free[j]), sizeof(unsigned short));
         }
     }
 
@@ -423,15 +447,35 @@ int export_bin(addr_space *as)
 
 int import_bin(addr_space *as)
 {
-    FILE *bin = fopen("kpeer_data.bin", "r");
+    int bin = open("bootstrap.bin", O_RDONLY);
 
     for (int i = 0; i < MAX_KBUCKETS; i++)
     {
         for (int j = 0; j < MAX_KPEERS; j++)
         {
-            fread(&(as->kb_list[i].peer[j].ip), sizeof(in_addr_t), 1, bin);
-            fread(&(as->kb_list[i].peer[j].port), sizeof(in_port_t), 1, bin);
-            fread(as->kb_list[i].peer[j].id, sizeof(PEER_ID_LEN), 1, bin);
+            in_addr_t tmp_ip;
+            in_port_t tmp_port;
+            unsigned short free;
+            byte tmp_id[PEER_ID_LEN];
+
+            read(bin, &tmp_ip, sizeof(in_addr_t));
+            char tmp_ip_string[INET_ADDRSTRLEN];
+            ip_string(tmp_ip, tmp_ip_string);
+            printf("IP>%s\n", tmp_ip_string);
+            read(bin, &tmp_port, sizeof(in_port_t));
+            printf("PT>%d\n", tmp_port);
+            read(bin, tmp_id, PEER_ID_LEN);
+            printf("ID>");
+            print_id(tmp_id);
+            read(bin, &free, sizeof(unsigned short));
+            printf("\nFR>%u\n", free);
+
+            if (free != 0)
+            {
+                kpeer tmp;
+                create_kpeer(&tmp, tmp_ip, tmp_port, tmp_id);
+                add_kpeer(as, &tmp, 0);
+            }
         }
     }
 
