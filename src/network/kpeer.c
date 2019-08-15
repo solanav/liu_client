@@ -404,7 +404,7 @@ int rm_kpeer(addr_space *as, byte id[PEER_ID_LEN])
         return ERROR;
 
     // Set all to zero
-    memset(as->_KPEER(ki.b, ki.p), 0, sizeof(kpeer));
+    memset(&(as->_KPEER(ki.b, ki.p)), 0, sizeof(kpeer));
 
     // Update structure
     as->p_num--;

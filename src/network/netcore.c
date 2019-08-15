@@ -57,9 +57,10 @@ int init_networking()
         sem_post(sem);
 
         send_ping(LOCAL_IP_NUM, self_port, self_port, sem, sd);
-        send_ping(LOCAL_IP_NUM, self_port, self_port, sem, sd);
-        send_ping(LOCAL_IP_NUM, self_port, self_port, sem, sd);
-        send_ping(LOCAL_IP_NUM, self_port, self_port, sem, sd);
+
+        sleep(5);
+
+        send_findnode(LOCAL_IP_NUM, self_port, sem, sd);
 
         sleep(10);
         stop_server(self_port, sem, sd);
