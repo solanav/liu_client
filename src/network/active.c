@@ -43,11 +43,11 @@ size_t upload_data(const in_addr_t ip, const in_port_t port, byte *data, size_t 
  */
 size_t upload_data_x(const in_addr_t ip, const in_port_t port, byte *data, size_t len, byte *header, byte *cont_header);
 
-int send_ping(const in_addr_t ip, const in_port_t port, const in_port_t self_port, sem_t *sem, shared_data *sd)
+int send_ping(const in_addr_t ip, const in_port_t port, const in_port_t self_port, unsigned short req_bit, sem_t *sem, shared_data *sd)
 {
     // Create cookie with zeros to get a new one and add it to requests
     byte cookie[COOKIE_SIZE] = {0};
-    byte data[26];
+    byte data[27];
 
     // First 4 bytes are the IP
     data[0] = ip >> 24;
@@ -64,11 +64,15 @@ int send_ping(const in_addr_t ip, const in_port_t port, const in_port_t self_por
     memcpy(data + 6, sd->server_info.id, PEER_ID_LEN);
     sem_post(sem);
 
+    // Next byte is to check if you need a request
+    data[26] = req_bit;
+
     byte packet[MAX_UDP];
     forge_packet(packet, cookie, (byte *)PING, 0, data, sizeof(data));
 
-    if (add_req(ip, (byte *)PING, cookie, sem, sd) == ERROR)
-        return ERROR;
+    if (req_bit == 1)
+        if (add_req(ip, (byte *)PING, cookie, sem, sd) == ERROR)
+            return ERROR;
 
     return upload_data(ip, port, packet, MAX_UDP);
 }
@@ -304,7 +308,6 @@ int forge_packet(byte datagram[MAX_UDP], byte cookie[COOKIE_SIZE], const byte ty
     {
         if (strcmp((char *)cookie, "\x00\x00\x00\x00") == 0)
         {
-            DEBUG_PRINT(P_WARN "Cookie was empty, so we create a new one\n");
             getrandom(cookie, COOKIE_SIZE, 0);
         }
 

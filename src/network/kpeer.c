@@ -232,6 +232,8 @@ void print_as(const addr_space *as)
         return;
     }
 
+    printf("PEER NUMBER: %d\n", as->p_num);
+
     for (unsigned int i = 0; i < as->b_num; i++)
     {
         printf("(%d) KBUCKET \n", i);
@@ -350,6 +352,8 @@ int add_kpeer(addr_space *as, const kpeer *peer, unsigned int self)
 
     as->p_num++;
 
+    print_as(as);
+
     return OK;
 }
 
@@ -396,11 +400,11 @@ int create_kpeer(kpeer *dst, const in_addr_t ip, const in_port_t port, const byt
     return OK;
 }
 
-int rm_kpeer(addr_space *as, byte id[PEER_ID_LEN])
+int rm_kpeer(addr_space *as, const in_addr_t ip)
 {
     // Find the peer
     k_index ki;
-    if (get_kpeer(as, id, &ki) == ERROR)
+    if (get_kpeer(as, ip, &ki) == ERROR)
         return ERROR;
 
     // Set all to zero

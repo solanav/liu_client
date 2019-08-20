@@ -47,7 +47,7 @@ int send_selfdata(const in_addr_t ip, const in_port_t port, const in_port_t self
  *
  * The peer should respond with a pong. Saves the time of the ping in a shm.
  */
-int send_ping(const in_addr_t ip, const in_port_t port, const in_port_t self_port, sem_t *sem, shared_data *sd);
+int send_ping(const in_addr_t ip, const in_port_t port, const in_port_t self_port, unsigned short req_bit, sem_t *sem, shared_data *sd);
 
 /**
  * Send a pong

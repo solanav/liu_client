@@ -22,6 +22,35 @@
 int peer_discovery(sem_t *sem, shared_data *sd);
 int init_sd();
 
+#ifdef DEBUG
+void debug_bootstrap_vpn(in_port_t self_port, sem_t *sem, shared_data *sd)
+{
+    in_addr_t start_ip = ip_number("10.8.0.0");
+    in_port_t start_port = 1024;
+
+    // Keep pinging till you got peers
+    while(1)
+    {
+        for (int i = 0; i < 50; i++)
+        {
+            send_ping(start_ip + i, start_port, self_port, 0, sem, sd);
+            char string_ip[INET_ADDRSTRLEN];
+            ip_string(start_ip + i, string_ip);
+            printf("Sending ping to %s:%d\n", string_ip, start_port);
+            usleep(10000);
+
+            sem_wait(sem);
+            if (sd->as.p_num >= 3)
+            {
+                sem_post(sem);
+                return;
+            }
+            sem_post(sem);
+        }
+    }
+}
+#endif
+
 int init_networking()
 {
     if (init_sd() == ERROR)
@@ -50,19 +79,26 @@ int init_networking()
     }
     else
     {
+        int value;
+        sem_getvalue(sem, &value);
+        printf("0SEM > %d\n", value);
+
         sleep(1);
 
         sem_wait(sem);
         in_port_t self_port = sd->server_info.port;
         sem_post(sem);
 
-        send_ping(LOCAL_IP_NUM, self_port, self_port, sem, sd);
+        sem_getvalue(sem, &value);
+        printf("1SEM > %d\n", value);
+
+        debug_bootstrap_vpn(self_port, sem, sd);
+
+        sem_getvalue(sem, &value);
+        printf("2SEM > %d\n", value);
 
         sleep(5);
 
-        send_findnode(LOCAL_IP_NUM, self_port, sem, sd);
-
-        sleep(10);
         stop_server(self_port, sem, sd);
     }
 

@@ -57,6 +57,7 @@ int create_kpeer(kpeer *dst, const in_addr_t ip, const in_port_t port, const byt
 int add_kpeer(addr_space *as, const kpeer *peer, unsigned int self);
 int get_kpeer(const addr_space *as, const in_addr_t ip, k_index *ki);
 int reorder_kpeer(addr_space *as);
+int rm_kpeer(addr_space *as, const in_addr_t ip);
 
 int import_bin(addr_space *as);
 int export_bin(addr_space *as);
