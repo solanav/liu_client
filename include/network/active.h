@@ -80,9 +80,9 @@ int send_node(const in_addr_t ip, const in_port_t port, byte cookie[COOKIE_SIZE]
  * client: receives dtls2, send_dtls3(), [key OK]
  * server: receives dtls3, [key OK]
  */
-int send_dtls1(const in_addr_t ip, const in_port_t port, sem_t *sem, shared_data *sd);
-int send_dtls2(const in_addr_t ip, const in_port_t port, uint8_t packet1[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd);
-int send_dtls3(const in_addr_t ip, const in_port_t port, uint8_t packet2[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd);
+int send_dtls1(k_index ki, sem_t *sem, shared_data *sd);
+int send_dtls2(k_index ki, uint8_t packet1[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd);
+int send_dtls3(k_index ki, uint8_t packet2[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd);
 
 /**
  * Sends a debug message

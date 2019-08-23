@@ -33,6 +33,9 @@
 #define C_UDP_LEN (MAX_UDP - C_UDP_HEADER - hydro_secretbox_HEADERBYTES)
 
 #define SSL_CTX "jfu9m3wy"
+#define DTLS_NO 0
+#define DTLS_ING 1
+#define DTLS_OK 2
 
 typedef struct _double_peer_list double_peer_list;
 typedef struct _shared_data shared_data;
@@ -54,7 +57,7 @@ struct _request
 struct _dtls_data
 {
     hydro_kx_keypair kp; // Our own keypair
-    hydro_kx_state state; // State for dtls handshake
+    hydro_kx_state state[MAX_KPEERS * MAX_KBUCKETS]; // State for dtls handshake (one for each peer)
 };
 
 struct _server_info

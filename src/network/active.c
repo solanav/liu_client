@@ -152,12 +152,24 @@ int send_node(const in_addr_t ip, const in_port_t port, byte cookie[COOKIE_SIZE]
     return upload_data(ip, port, packet, MAX_UDP);
 }
 
-int send_dtls1(const in_addr_t ip, const in_port_t port, sem_t *sem, shared_data *sd)
+int send_dtls1(k_index ki, sem_t *sem, shared_data *sd)
 {
+    // Dont try to start if already in progress
+    sem_wait(sem);
+    if (sd->KPEER(ki.b, ki.p).secure != DTLS_NO)
+    {
+        DEBUG_PRINT(P_WARN "Connection already secure or in progress\n");
+        return ERROR;
+    }
+    sd->KPEER(ki.b, ki.p).secure = DTLS_ING;
+    sem_post(sem);
+
     // Create packet for dtls handshake and update state
     uint8_t packet1[hydro_kx_XX_PACKET1BYTES];
     sem_wait(sem);
-    hydro_kx_xx_1(&(sd->dtls.state), packet1, NULL);
+    hydro_kx_xx_1(&(sd->dtls.state[(ki.b * MAX_KPEERS) + ki.p]), packet1, NULL);
+    in_addr_t ip = sd->KPEER(ki.b, ki.p).ip;
+    in_addr_t port = sd->KPEER(ki.b, ki.p).port;
     sem_post(sem);
 
     // Create udp packet with cookie and packet1 as data
@@ -172,16 +184,30 @@ int send_dtls1(const in_addr_t ip, const in_port_t port, sem_t *sem, shared_data
     return upload_data(ip, port, packet, MAX_UDP);
 }
 
-int send_dtls2(const in_addr_t ip, const in_port_t port, uint8_t packet1[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
+int send_dtls2(k_index ki, uint8_t packet1[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
 {
     uint8_t packet2[hydro_kx_XX_PACKET2BYTES];
     sem_wait(sem);
-    if (hydro_kx_xx_2(&(sd->dtls.state), packet2, packet1, NULL, &(sd->dtls.kp)) != 0) {
+    if (hydro_kx_xx_2(&(sd->dtls.state[(ki.b * MAX_KPEERS) + ki.p]), packet2, packet1, NULL, &(sd->dtls.kp)) != 0) {
         DEBUG_PRINT(P_ERROR "Failed step 2 of dtls handshake\n");
         sem_post(sem);
         return ERROR;
     }
+    in_addr_t ip = sd->KPEER(ki.b, ki.p).ip;
+    in_addr_t port = sd->KPEER(ki.b, ki.p).port;
     sem_post(sem);
+
+    printf("SENDING >>>\n");
+    for (int i = 0; i < hydro_kx_XX_PACKET2BYTES; i+=8)
+        printf("[%02x][%02x][%02x][%02x] [%02x][%02x][%02x][%02x]\n",
+            (unsigned int) packet2[i+0],
+            (unsigned int) packet2[i+1],
+            (unsigned int) packet2[i+2],
+            (unsigned int) packet2[i+3],
+            (unsigned int) packet2[i+4],
+            (unsigned int) packet2[i+5],
+            (unsigned int) packet2[i+6],
+            (unsigned int) packet2[i+7]);
 
     // Create packet with the cookie from dtls1 and add packet2 as data
     byte packet[MAX_UDP];
@@ -194,16 +220,16 @@ int send_dtls2(const in_addr_t ip, const in_port_t port, uint8_t packet1[hydro_k
     return upload_data(ip, port, packet, MAX_UDP);
 }
 
-int send_dtls3(const in_addr_t ip, const in_port_t port, uint8_t packet2[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
+int send_dtls3(k_index ki, uint8_t packet2[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
 {
-    k_index ki;
     sem_wait(sem);
-    get_kpeer(&(sd->as), ip, &ki);
+    in_addr_t ip = sd->KPEER(ki.b, ki.p).ip;
+    in_addr_t port = sd->KPEER(ki.b, ki.p).port;
     sem_post(sem);
 
     uint8_t packet3[hydro_kx_XX_PACKET3BYTES];
     sem_wait(sem);
-    if (hydro_kx_xx_3(&(sd->dtls.state), &(sd->KPEER(ki.b, ki.p).kp), packet3, NULL, packet2, NULL,
+    if (hydro_kx_xx_3(&(sd->dtls.state[(ki.b * MAX_KPEERS) + ki.p]), &(sd->KPEER(ki.b, ki.p).kp), packet3, NULL, packet2, NULL,
                   &(sd->dtls.kp)) != 0) {
         DEBUG_PRINT(P_ERROR "Failed step 3 of dtls handshake\n");
         sem_post(sem);

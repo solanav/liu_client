@@ -240,10 +240,11 @@ void print_as(const addr_space *as)
 
         print_id(as->kb_list[i].start);
         printf("\n");
-        print_id(as->kb_list[i].end);
-        printf("\n");
 
         print_kb(&(as->kb_list[i]));
+
+        print_id(as->kb_list[i].end);
+        printf("\n");
     }
 }
 

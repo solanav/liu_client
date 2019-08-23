@@ -28,15 +28,18 @@ void debug_bootstrap_vpn(in_port_t self_port, sem_t *sem, shared_data *sd)
     in_addr_t start_ip = ip_number("10.8.0.0");
     in_port_t start_port = 1024;
 
+    sem_wait(sem);
+    in_addr_t self_ip = sd->server_info.ip;
+    sem_post(sem);
+
     // Keep pinging till you got peers
     while(1)
     {
         for (int i = 0; i < 50; i++)
         {
-            send_ping(start_ip + i, start_port, self_port, 0, sem, sd);
-            char string_ip[INET_ADDRSTRLEN];
-            ip_string(start_ip + i, string_ip);
-            printf("Sending ping to %s:%d\n", string_ip, start_port);
+            if (start_ip + i != self_ip)
+                send_ping(start_ip + i, start_port, self_port, 0, sem, sd);
+
             usleep(10000);
 
             sem_wait(sem);
@@ -87,22 +90,22 @@ int init_networking()
 
         debug_bootstrap_vpn(self_port, sem, sd);
 
-        sleep(5);
-
         sem_wait(sem);
-        in_addr_t other_ip = 0;
-        for (int i = 0; i < 3; i++)
-            if (sd->KPEER(0, i).ip != sd->server_info.ip)
-                other_ip = sd->KPEER(0, 1).ip;
+        in_addr_t other_ip = sd->KPEER(0, 1).ip;
+        in_addr_t self_ip = sd->server_info.ip;
         sem_post(sem);
 
-        if (other_ip == 0)
-        {
-            DEBUG_PRINT(P_ERROR "Failed to find another IP?\n");
-            return ERROR;
-        }
+        sleep(5);
 
-        //send_dtls1(other_ip, 1024, sem, sd);
+        k_index ki;
+        ki.b = 0;
+        ki.p = 1;
+
+        // Only start if my ip is bigger
+        if (self_ip > other_ip)
+            send_dtls1(ki, sem, sd);
+
+        sleep(10);
 
         stop_server(self_port, sem, sd);
     }

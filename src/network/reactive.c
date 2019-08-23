@@ -150,7 +150,6 @@ int start_server(sem_t *sem, shared_data *sd)
         sem_wait(sem);
         val = sd->server_info.num_threads;
         sem_post(sem);
-        printf("VALUE IN SERVER > %d\n", val);
         sleep(1);
     } while (val != 0);
 
@@ -170,11 +169,10 @@ int stop_server(in_port_t port, sem_t *sem, shared_data *sd)
 
     int value;
     sem_getvalue(sem, &value);
-    printf("3SEM > %d\n", value);
 
     // Activate signal to stop server
     sem_wait(sem);
-    printf("Sending empty message...\n");
+    DEBUG_PRINT(P_INFO "Sending empty message...\n");
     sd->server_info.stop = 1;
     sem_post(sem);
 
@@ -182,7 +180,7 @@ int stop_server(in_port_t port, sem_t *sem, shared_data *sd)
     // Message to update the server so it stops asap
     send_empty(LOCAL_IP_NUM, port);
 
-    printf("Waiting for server to exit...\n");
+    DEBUG_PRINT(P_INFO "Waiting for server to exit...\n");
 
     // Wait for the server to exit the main loop
     int val = 0;
@@ -191,7 +189,6 @@ int stop_server(in_port_t port, sem_t *sem, shared_data *sd)
         sem_wait(sem);
         val = sd->server_info.stop;
         sem_post(sem);
-        printf("VALUE IN STOP > %d\n", val);
         sleep(1);
     } while (val != 2);
 
@@ -274,8 +271,6 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
     memset(&current, 0, sizeof(struct timespec));
     clock_gettime(CLOCK_MONOTONIC, &current);
 
-    printf("PRECOPYT\n");
-
     // Get copy of peer
     k_index ki;
     kpeer peer;
@@ -293,11 +288,11 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
 #endif
 
     uint8_t decrypted_data[MAX_UDP - hydro_secretbox_HEADERBYTES];
-    if (peer_found == ERROR)
+    if (peer_found == ERROR || peer.secure != DTLS_OK)
     {
         memcpy(decrypted_data, data, MAX_UDP - hydro_secretbox_HEADERBYTES);
     }
-    else if (peer.secure == 1)
+    else if (peer.secure == DTLS_OK)
     {
         uint8_t key[hydro_secretbox_KEYBYTES];
 
@@ -347,10 +342,6 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
         sem_wait(sem);
         sd->server_info.ip = self_ip;
         sem_post(sem);
-
-        char my_ip[INET_ADDRSTRLEN];
-        ip_string(self_ip, my_ip);
-        printf("MY IP IS NOW %s\n", my_ip);
 
         // Get self data
         sem_wait(sem);
@@ -419,9 +410,15 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
         memcpy(cookie, decrypted_data + COMM_LEN + PACKET_NUM_LEN, COOKIE_SIZE);
         memcpy(packet1, decrypted_data + C_UDP_HEADER, hydro_kx_XX_PACKET1BYTES);
 
-        if (send_dtls2(peer.ip, peer.port, packet1, cookie, sem, sd) == ERROR)
+        if (send_dtls2(ki, packet1, cookie, sem, sd) == ERROR)
         {
             DEBUG_PRINT(P_ERROR "Send_dtls2 failed\n");
+
+            // Reset connection status to insecure
+            sem_wait(sem);
+            sd->KPEER(ki.b, ki.p).secure = DTLS_NO;
+            sem_post(sem);
+
             return ERROR;
         }
     }
@@ -435,15 +432,33 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
         memcpy(cookie, decrypted_data + COMM_LEN + PACKET_NUM_LEN, COOKIE_SIZE);
         memcpy(packet2, decrypted_data + C_UDP_HEADER, hydro_kx_XX_PACKET2BYTES);
 
-        if (send_dtls3(peer.ip, peer.port, packet2, cookie, sem, sd) == ERROR)
+        printf("RECEIVED <<<\n");
+        for (int i = 0; i < hydro_kx_XX_PACKET2BYTES; i+=8)
+            printf("[%02x][%02x][%02x][%02x] [%02x][%02x][%02x][%02x]\n",
+                (unsigned int) packet2[i+0],
+                (unsigned int) packet2[i+1],
+                (unsigned int) packet2[i+2],
+                (unsigned int) packet2[i+3],
+                (unsigned int) packet2[i+4],
+                (unsigned int) packet2[i+5],
+                (unsigned int) packet2[i+6],
+                (unsigned int) packet2[i+7]);
+
+        if (send_dtls3(ki, packet2, cookie, sem, sd) == ERROR)
         {
             DEBUG_PRINT(P_ERROR "Send_dtls3 failed\n");
+
+            // Reset connection status to insecure
+            sem_wait(sem);
+            sd->KPEER(ki.b, ki.p).secure = DTLS_NO;
+            sem_post(sem);
+
             return ERROR;
         }
 
         // Indicate this connection is now secure
         sem_wait(sem);
-        sd->KPEER(ki.b, ki.p).secure = 1;
+        sd->KPEER(ki.b, ki.p).secure = DTLS_OK;
         sem_post(sem);
 
         // Delete request
@@ -465,24 +480,27 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
         memcpy(cookie, decrypted_data + COMM_LEN + PACKET_NUM_LEN, COOKIE_SIZE);
         memcpy(packet3, decrypted_data + C_UDP_HEADER, hydro_kx_XX_PACKET2BYTES);
 
-        if (hydro_kx_xx_4(&(sd->dtls.state), &(sd->KPEER(ki.b, ki.p).kp), NULL, packet3, NULL) != 0)
+        if (hydro_kx_xx_4(&(sd->dtls.state[(ki.b * MAX_KPEERS) + ki.p]), &(sd->KPEER(ki.b, ki.p).kp), NULL, packet3, NULL) != 0)
         {
             DEBUG_PRINT(P_ERROR "Failed to execute step 4 of DTLS\n");
+
+            // Reset connection status to insecure
+            sem_wait(sem);
+            sd->KPEER(ki.b, ki.p).secure = DTLS_NO;
+            sem_post(sem);
+
             return ERROR;
         }
 
         // Indicate this connection is now secure
         sem_wait(sem);
-        sd->KPEER(ki.b, ki.p).secure = 1;
+        sd->KPEER(ki.b, ki.p).secure = DTLS_OK;
         sem_post(sem);
 
         // Delete request
         int req_index = get_req(cookie, sem, sd);
         if (req_index == ERROR)
-        {
             DEBUG_PRINT(P_ERROR "Failed to get request of DTLS");
-            return ERROR;
-        }
 
         rm_req(req_index, sem, sd);
 
