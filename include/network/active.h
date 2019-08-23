@@ -90,6 +90,6 @@ int send_dtls3(k_index ki, uint8_t packet2[hydro_kx_XX_PACKET1BYTES], byte cooki
  * The client that receives this message will print it as output.
  * The message has to be under C_UDP_LEN bytes long.
  */
-int send_debug(const in_addr_t ip, const in_port_t port, const byte *data, size_t len, sem_t *sem, shared_data *sd);
+int send_debug(k_index ki, const byte *data, size_t len, sem_t *sem, shared_data *sd);
 
 #endif

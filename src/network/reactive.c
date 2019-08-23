@@ -237,7 +237,8 @@ void *handle_comm(void *hdata)
         DEBUG_PRINT(P_INFO "Datagram received, analyzing...\n");
 
         // Reply to request
-        handle_reply(data, ntohl(other->sin_addr.s_addr), sem, sd);
+        int h_res = handle_reply(data, ntohl(other->sin_addr.s_addr), sem, sd);
+        DEBUG_PRINT(P_INFO "Handler result: %s\n", h_res == OK ? "OK" : "ERROR");
     }
 
 MQ_CLEAN:
@@ -295,6 +296,8 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
     else if (peer.secure == DTLS_OK)
     {
         uint8_t key[hydro_secretbox_KEYBYTES];
+
+        printf("DECRYPTING SOME SHIT\n\n");
 
         sem_wait(sem);
         memcpy(key, peer.kp.rx, hydro_secretbox_KEYBYTES);
@@ -403,6 +406,17 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
     else if (memcmp(decrypted_data, DTLS1, COMM_LEN) == 0 && peer_found == OK) // Peer sent DTLS1, respond with DTLS2
     {
         DEBUG_PRINT(P_INFO "Received DTLS step 1 from [%s:%d]\n", string_ip, peer.port);
+
+        // Dont try to start if already in progress
+        sem_wait(sem);
+        if (sd->KPEER(ki.b, ki.p).secure != DTLS_NO)
+        {
+            DEBUG_PRINT(P_WARN "Connection already secure or in progress\n");
+            sem_post(sem);
+            return ERROR;
+        }
+        sd->KPEER(ki.b, ki.p).secure = DTLS_ING;
+        sem_post(sem);
 
         // Extract cookie and packet data
         uint8_t packet1[hydro_kx_XX_PACKET1BYTES];

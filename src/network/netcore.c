@@ -90,22 +90,24 @@ int init_networking()
 
         debug_bootstrap_vpn(self_port, sem, sd);
 
-        sem_wait(sem);
-        in_addr_t other_ip = sd->KPEER(0, 1).ip;
-        in_addr_t self_ip = sd->server_info.ip;
-        sem_post(sem);
-
-        sleep(5);
-
         k_index ki;
         ki.b = 0;
         ki.p = 1;
 
-        // Only start if my ip is bigger
-        if (self_ip > other_ip)
-            send_dtls1(ki, sem, sd);
+        int seed;
+        getrandom(&seed, 1, 0);
+        srand(seed);
+        int random_time = rand() % 10;
+        printf("Waiting %d [%d]\n", random_time, seed);
+        sleep(random_time);
 
-        sleep(10);
+        send_dtls1(ki, sem, sd);
+
+        sleep(5);
+
+        send_debug(ki, (byte *) "\xDE\xAD\xBE\xEF", 4, sem, sd);
+
+        sleep(5);
 
         stop_server(self_port, sem, sd);
     }

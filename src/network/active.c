@@ -158,9 +158,11 @@ int send_dtls1(k_index ki, sem_t *sem, shared_data *sd)
     sem_wait(sem);
     if (sd->KPEER(ki.b, ki.p).secure != DTLS_NO)
     {
-        DEBUG_PRINT(P_WARN "Connection already secure or in progress\n");
+        DEBUG_PRINT(P_ERROR "Connection already secure or in progress\n");
+        sem_post(sem);
         return ERROR;
     }
+    DEBUG_PRINT(P_INFO "CONNECTION STATUS %d\n", sd->KPEER(ki.b, ki.p).secure);
     sd->KPEER(ki.b, ki.p).secure = DTLS_ING;
     sem_post(sem);
 
@@ -244,7 +246,7 @@ int send_dtls3(k_index ki, uint8_t packet2[hydro_kx_XX_PACKET1BYTES], byte cooki
     return upload_data(ip, port, packet, MAX_UDP);
 }
 
-int send_debug(const in_addr_t ip, const in_port_t port, const byte *data, size_t len, sem_t *sem, shared_data *sd)
+int send_debug(k_index ki, const byte *data, size_t len, sem_t *sem, shared_data *sd)
 {
     if (len > C_UDP_LEN)
     {
@@ -252,14 +254,11 @@ int send_debug(const in_addr_t ip, const in_port_t port, const byte *data, size_
         return ERROR;
     }
 
-    k_index ki;
-    sem_wait(sem);
-    get_kpeer(&(sd->as), ip, &ki);
-    sem_post(sem);
-
     // Get the tx key
     uint8_t key[hydro_secretbox_KEYBYTES];
     sem_wait(sem);
+    in_addr_t ip = sd->KPEER(ki.b, ki.p).ip;
+    in_addr_t port = sd->KPEER(ki.b, ki.p).port;
     memcpy(key, sd->KPEER(ki.b, ki.p).kp.tx, hydro_secretbox_KEYBYTES);
     sem_post(sem);
 
