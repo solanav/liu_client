@@ -67,48 +67,6 @@ int init_networking()
     if (access_sd(&sem, &sd) == ERROR)
         return ERROR;
 
-    byte random_id[PEER_ID_LEN];
-    kpeer peer;
-    in_addr_t ip = ip_number("192.168.1.0");
-    in_port_t port = 1024;
-
-    getrandom(random_id, PEER_ID_LEN, 0);
-    create_kpeer(&peer, ip, port, random_id);
-    add_kpeer(&(sd->as), &peer, 1);
-
-    for (int i = 1; i < 25; i++)
-    {
-        getrandom(random_id, PEER_ID_LEN, 0);
-        create_kpeer(&peer, ip + i, port + i, random_id);
-        add_kpeer(&(sd->as), &peer, 0);
-    }
-
-    getrandom(random_id, PEER_ID_LEN, 0);
-    byte list[C_UDP_LEN] = {0};
-    addr_space as_cpy;
-    memcpy(&as_cpy, &(sd->as), sizeof(addr_space));
-    distance_peer_list(list, random_id, &as_cpy);
-
-    for (int i = 0; i < C_UDP_LEN; i+=26)
-        printf("[%02d] [%02x][%02x][%02x][%02x] [%02x][%02x] [%02x%02x%02x%02x %02x%02x%02x%02x %02x%02x%02x%02x %02x%02x%02x%02x %02x%02x%02x%02x]\n",
-            i / 26 + 1,
-            list[i], list[i+1], list[i+2], list[i+3],
-            list[i+4], list[i+5],
-            list[i+6], list[i+7], list[i+8], list[i+9],
-            list[i+10], list[i+11], list[i+12], list[i+13],
-            list[i+14], list[i+15], list[i+16], list[i+17],
-            list[i+18], list[i+19], list[i+20], list[i+21],
-            list[i+22], list[i+23], list[i+24], list[i+25]);
-
-    printf("ID > ");
-    print_id(random_id);
-    printf("\n");
-
-    sem_close(sem);
-    munmap(sd, sizeof(shared_data));
-    clean_networking();
-    return OK;
-
     pid_t pid = fork();
 
     if (pid < 0)
