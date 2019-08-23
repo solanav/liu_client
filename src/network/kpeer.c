@@ -346,9 +346,15 @@ int add_kpeer(addr_space *as, const kpeer *peer, unsigned int self)
     // Copy data to kbucket's free space
     copy_kpeer(&(as->_KPEER(kb_i, peer_i)), peer);
     if (self == 1)
+    {
+        DEBUG_PRINT(P_INFO "Added self peer\n");
         as->kb_list[kb_i].free[peer_i] = 2;
+    }
     else
+    {
+        DEBUG_PRINT(P_INFO "Added other peer\n");
         as->kb_list[kb_i].free[peer_i] = 1;
+    }
 
     as->p_num++;
 

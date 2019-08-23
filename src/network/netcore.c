@@ -40,7 +40,7 @@ void debug_bootstrap_vpn(in_port_t self_port, sem_t *sem, shared_data *sd)
             usleep(10000);
 
             sem_wait(sem);
-            if (sd->as.p_num >= 3)
+            if (sd->as.p_num >= 2)
             {
                 sem_post(sem);
                 return;
@@ -79,25 +79,30 @@ int init_networking()
     }
     else
     {
-        int value;
-        sem_getvalue(sem, &value);
-        printf("0SEM > %d\n", value);
-
         sleep(1);
 
         sem_wait(sem);
         in_port_t self_port = sd->server_info.port;
         sem_post(sem);
 
-        sem_getvalue(sem, &value);
-        printf("1SEM > %d\n", value);
-
         debug_bootstrap_vpn(self_port, sem, sd);
 
-        sem_getvalue(sem, &value);
-        printf("2SEM > %d\n", value);
-
         sleep(5);
+
+        sem_wait(sem);
+        in_addr_t other_ip = 0;
+        for (int i = 0; i < 3; i++)
+            if (sd->KPEER(0, i).ip != sd->server_info.ip)
+                other_ip = sd->KPEER(0, 1).ip;
+        sem_post(sem);
+
+        if (other_ip == 0)
+        {
+            DEBUG_PRINT(P_ERROR "Failed to find another IP?\n");
+            return ERROR;
+        }
+
+        //send_dtls1(other_ip, 1024, sem, sd);
 
         stop_server(self_port, sem, sd);
     }

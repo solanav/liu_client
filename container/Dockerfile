@@ -4,6 +4,8 @@ FROM mubuntu
 # Set the working directory to /app
 WORKDIR /app
 
+#RUN apt-get install valgrind -y
+
 # Copy the current directory contents into the container at /app
 COPY files/* /app/
 

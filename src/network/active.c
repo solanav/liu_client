@@ -152,7 +152,6 @@ int send_node(const in_addr_t ip, const in_port_t port, byte cookie[COOKIE_SIZE]
     return upload_data(ip, port, packet, MAX_UDP);
 }
 
-/*
 int send_dtls1(const in_addr_t ip, const in_port_t port, sem_t *sem, shared_data *sd)
 {
     // Create packet for dtls handshake and update state
@@ -197,18 +196,14 @@ int send_dtls2(const in_addr_t ip, const in_port_t port, uint8_t packet1[hydro_k
 
 int send_dtls3(const in_addr_t ip, const in_port_t port, uint8_t packet2[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
 {
-    char tmp_ip[INET_ADDRSTRLEN];
-    ip_string(ip, tmp_ip);
-    int peer_index = get_peer(tmp_ip, sem, sd);
-    if (peer_index == ERROR)
-    {
-        DEBUG_PRINT(P_ERROR "Failed to find peer in peer_list in dtls step 3\n");
-        return ERROR;
-    }
+    k_index ki;
+    sem_wait(sem);
+    get_kpeer(&(sd->as), ip, &ki);
+    sem_post(sem);
 
     uint8_t packet3[hydro_kx_XX_PACKET3BYTES];
     sem_wait(sem);
-    if (hydro_kx_xx_3(&(sd->dtls.state), &(sd->peers.kp[peer_index]), packet3, NULL, packet2, NULL,
+    if (hydro_kx_xx_3(&(sd->dtls.state), &(sd->KPEER(ki.b, ki.p).kp), packet3, NULL, packet2, NULL,
                   &(sd->dtls.kp)) != 0) {
         DEBUG_PRINT(P_ERROR "Failed step 3 of dtls handshake\n");
         sem_post(sem);
@@ -231,19 +226,15 @@ int send_debug(const in_addr_t ip, const in_port_t port, const byte *data, size_
         return ERROR;
     }
 
-    char tmp_ip[INET_ADDRSTRLEN];
-    ip_string(ip, tmp_ip);
-    int peer_index = get_peer(tmp_ip, sem, sd);
-    if (peer_index == -1)
-    {
-        sem_post(sem);
-        return ERROR;
-    }
+    k_index ki;
+    sem_wait(sem);
+    get_kpeer(&(sd->as), ip, &ki);
+    sem_post(sem);
 
     // Get the tx key
     uint8_t key[hydro_secretbox_KEYBYTES];
     sem_wait(sem);
-    memcpy(key, sd->peers.kp[peer_index].tx, hydro_secretbox_KEYBYTES);
+    memcpy(key, sd->KPEER(ki.b, ki.p).kp.tx, hydro_secretbox_KEYBYTES);
     sem_post(sem);
 
     // Create packet with the data provided
@@ -251,7 +242,7 @@ int send_debug(const in_addr_t ip, const in_port_t port, const byte *data, size_
     e_forge_packet(packet, NULL, (byte *)DEBUG_MSG, 0, data, len, key);
 
     return upload_data(ip, port, packet, MAX_UDP);
-}*/
+}
 
 int send_empty(const in_addr_t ip, const in_port_t port)
 {
