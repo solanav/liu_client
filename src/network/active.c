@@ -116,31 +116,13 @@ int send_findnode(const in_addr_t ip, const in_port_t port, sem_t *sem, shared_d
     return upload_data(ip, port, packet, MAX_UDP);
 }
 
-int send_node(const in_addr_t ip, const in_port_t port, byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
+int send_node(const in_addr_t ip, const in_port_t port, byte id[PEER_ID_LEN], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
 {
     byte data[C_UDP_LEN] = {0};
 
     sem_wait(sem);
-    addr_space as_copy = sd->as;
-    unsigned short free_copy[MAX_KPEERS];
-    memcpy(free_copy, sd->as.free, MAX_KPEERS * sizeof(unsigned short));
+    distance_peer_list(data, id, &(sd->as));
     sem_post(sem);
-
-    for (int i = 0; i < MAX_KBUCKETS; i++)
-    {
-        unsigned int offset = i * sizeof(in_addr_t) + sizeof(in_port_t) + PEER_ID_LEN + sizeof(unsigned short);
-        for (int j = 0; j < MAX_KPEERS; j++)
-        {
-            memcpy(data + offset, &(as_copy.kb_list[i].peer[j].ip),
-                   sizeof(in_addr_t));
-            memcpy(data + offset + sizeof(in_addr_t), &(as_copy.kb_list[i].peer[j].port),
-                   sizeof(in_port_t));
-            memcpy(data + offset + sizeof(in_addr_t) + sizeof(in_port_t), as_copy.kb_list[i].peer[j].id,
-                   PEER_ID_LEN);
-            memcpy(data + offset + (offset - sizeof(unsigned short)), &(free_copy[j]),
-                   sizeof(unsigned short));
-        }
-    }
 
     for (int i = 0; i < C_UDP_LEN; i+=8)
         printf("[%02x][%02x][%02x][%02x] [%02x][%02x][%02x][%02x]\n", data[i], data[i+1], data[i+2], data[i+3],

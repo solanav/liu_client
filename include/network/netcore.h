@@ -32,7 +32,7 @@
 #define C_UDP_HEADER (COMM_LEN + PACKET_NUM_LEN + COOKIE_SIZE)
 #define C_UDP_LEN (MAX_UDP - C_UDP_HEADER - hydro_secretbox_HEADERBYTES)
 
-#define SSL_CTX "jfu9m3wy"
+#define SSL_CTX "jfu9m3wy" // random context (needs to be 8 bytes)
 #define DTLS_NO 0
 #define DTLS_ING 1
 #define DTLS_OK 2

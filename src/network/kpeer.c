@@ -110,22 +110,12 @@ int inc_id(byte id[PEER_ID_LEN])
 int id_between(const byte start[PEER_ID_LEN], const byte end[PEER_ID_LEN], const byte id[PEER_ID_LEN])
 {
     // Check start is smaller
-    for (int i = 0; i < PEER_ID_LEN; i++)
-    {
-        if (start[i] > id[i])
-            return ERROR;
-        else if (start[i] < id[i])
-            break;
-    }
+    if (memcmp(id, start, PEER_ID_LEN) < 0)
+        return ERROR;
 
     // Check end is bigger
-    for (int i = 0; i < PEER_ID_LEN; i++)
-    {
-        if (end[i] < id[i])
-            return ERROR;
-        else if (end[i] > id[i])
-            break;
-    }
+    if (memcmp(id, end, PEER_ID_LEN) > 0)
+        return ERROR;
 
     return OK;
 }
@@ -273,11 +263,7 @@ int reorder_kpeer(addr_space *as)
                 else
                     tmp = 0;
 
-                // Clean old space of peer
-                as->kb_list[i].free[j] = 0;
-                as->kb_list[i].peer[j].port = 0;
-                as->kb_list[i].peer[j].ip = 0;
-                memset(as->kb_list[i].peer[j].id, 0, PEER_ID_LEN);
+                rm_kpeer(as, peer.ip);
 
                 // Re-add the peer
                 add_kpeer(as, &peer, tmp);
@@ -327,13 +313,34 @@ int add_kpeer(addr_space *as, const kpeer *peer, unsigned int self)
         {
             DEBUG_PRINT(P_INFO "Failed to find space in kbucket %d\n", kb_i);
 
-            // Only create new kbucket if we fit in the last
-            if ((unsigned int) kb_i == as->b_num - 1)
+            // Find self peer
+            int self_bucket = -1;
+            for (int i = 0; i < MAX_KBUCKETS; i++)
+            {
+                for (int j = 0; j < MAX_KBUCKETS; j++)
+                {
+                    if (as->kb_list[i].free[j] == 2)
+                        self_bucket = i;
+                }
+            }
+
+            if (self_bucket == -1)
+            {
+                DEBUG_PRINT(P_ERROR "Failed to find self in the buckets, could not add new bucket\n");
+                return ERROR;
+            }
+
+            // Only create new kbucket if it corresponds to the same we are in
+            if (kb_i == self_bucket)
             {
                 if (add_kb(as) == ERROR)
                 {
                     DEBUG_PRINT(P_ERROR "Failed to create new bucket\n");
                     return ERROR;
+                }
+                else
+                {
+                    DEBUG_PRINT(P_OK "Created new k-bucket, copying peer to new one\n");
                 }
             }
             else
@@ -414,8 +421,9 @@ int rm_kpeer(addr_space *as, const in_addr_t ip)
     if (get_kpeer(as, ip, &ki) == ERROR)
         return ERROR;
 
-    // Set all to zero
+    // Set peer to zero and free to true (0)
     memset(&(as->_KPEER(ki.b, ki.p)), 0, sizeof(kpeer));
+    as->kb_list[ki.b].free[ki.p] = 0;
 
     // Update structure
     as->p_num--;
@@ -488,6 +496,71 @@ int import_bin(addr_space *as)
                 add_kpeer(as, &tmp, 0);
             }
         }
+    }
+
+    return OK;
+}
+
+void distance(byte result[PEER_ID_LEN], byte id1[PEER_ID_LEN], byte id2[PEER_ID_LEN])
+{
+    for (int i = 0; i < PEER_ID_LEN; i++)
+    {
+        result[i] = id1[i] ^ id2[i];
+    }
+}
+
+int distance_peer_list(byte list[C_UDP_LEN], const byte id[INET_ADDRSTRLEN], addr_space *as)
+{
+    size_t triple_size = sizeof(in_addr_t) + sizeof(in_port_t) + PEER_ID_LEN;
+
+    for (int offset = 0; as->p_num > 0; offset++)
+    {
+        int first = 0;
+        byte xor_metric[PEER_ID_LEN] = {-1};
+        kpeer closest;
+
+        // Find closest peer
+        for (int i = 0; i < MAX_KBUCKETS; i++)
+        {
+            for (int j = 0; j < MAX_KPEERS; j++)
+            {
+                // If empty, skip
+                if (as->kb_list[i].free[j] == 0)
+                    continue;
+
+                byte current_xor[PEER_ID_LEN];
+                distance(current_xor, as->_KPEER(i, j).id, id);
+
+                // If first peer, copy to closest
+                if (first == 0)
+                {
+                    first = 1;
+                    memcpy(xor_metric, current_xor, PEER_ID_LEN);
+                    memcpy(&closest, &(as->_KPEER(i, j)), sizeof(kpeer));
+                }
+                else if (memcmp(current_xor, xor_metric, PEER_ID_LEN) < 0)
+                {
+                    memcpy(xor_metric, current_xor, PEER_ID_LEN);
+                    memcpy(&closest, &(as->_KPEER(i, j)), sizeof(kpeer));
+                }
+            }
+        }
+
+        // Copy ip
+        (list + (offset * triple_size))[0] = closest.ip >> 24;
+        (list + (offset * triple_size))[1] = (closest.ip >> 16) & 0xFF;
+        (list + (offset * triple_size))[2] = (closest.ip >> 8) & 0xFF;
+        (list + (offset * triple_size))[3] = closest.ip & 0xFF;
+
+        // Copy port
+        (list + (offset * triple_size))[4] = closest.port >> 8;
+        (list + (offset * triple_size))[5] = closest.port & 0xFF;
+
+        // Copy id
+        memcpy(list + (offset * triple_size) + 6, closest.id, PEER_ID_LEN);
+
+        // Remove the peer
+        rm_kpeer(as, closest.ip);
     }
 
     return OK;

@@ -39,6 +39,8 @@ typedef struct _addr_space {
     unsigned int p_num; // Number of peers
 } addr_space;
 
+#include "netcore.h"
+
 void init_as(addr_space *as);
 
 /**
@@ -58,6 +60,13 @@ void print_as(const addr_space *as);
  * space.
  */
 int add_kb(addr_space *as);
+
+/**
+ * Getk-bucket
+ *
+ * Get the index of the bucket where an ID should go
+ */
+int get_kb(addr_space *as, const byte id[PEER_ID_LEN]);
 
 /**
  * ID arithmetic
@@ -80,6 +89,14 @@ int add_kpeer(addr_space *as, const kpeer *peer, unsigned int self);
 int get_kpeer(const addr_space *as, const in_addr_t ip, k_index *ki);
 int reorder_kpeer(addr_space *as);
 int rm_kpeer(addr_space *as, const in_addr_t ip);
+
+/**
+ * Get list of peers by distance
+ *
+ * Using xor, returns a list in binary of the closest peers to a given address, ordered
+ * by distance to the given id.
+ */
+int distance_peer_list(byte list[C_UDP_LEN], const byte id[INET_ADDRSTRLEN], addr_space *as);
 
 /**
  * Export and import address space

@@ -394,8 +394,12 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
         cookie[2] = data[COMM_LEN + PACKET_NUM_LEN + 2];
         cookie[3] = data[COMM_LEN + PACKET_NUM_LEN + 3];
 
+        // Extract the ID from packet
+        byte id[PEER_ID_LEN];
+        memcpy(id, data + C_UDP_HEADER, PEER_ID_LEN);
+
         // Respond with closest nodes you know
-        send_node(peer.ip, peer.port, cookie, sem, sd);
+        send_node(peer.ip, peer.port, id, cookie, sem, sd);
     }
     else if (memcmp(decrypted_data, SENDNODE, COMM_LEN) == 0 && peer_found == OK) // Peer sent us their peer_list (step 1)
     {
