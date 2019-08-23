@@ -80,10 +80,40 @@ typedef struct _shared_data
     int req_last;
 } shared_data;
 
+/**
+ * Init the server and client
+ *
+ * Creates a fork to run the server and executes commands from the client such as sending data.
+ */
 int init_networking();
+
+/**
+ * Clean shared data
+ *
+ * Unlinks and removes all created assets used for networking.
+ */
 void clean_networking();
+
+/**
+ * Get access to sd
+ *
+ * Wrapper to facilitate the use of shared memory
+ */
 int access_sd(sem_t **sem, shared_data **sd);
+
+/**
+ * Get ip from socket
+ *
+ * Wrapper to extract the ip from a socket, instead of doing it manually.
+ */
 int get_ip(const struct sockaddr_in *socket, char ip[INET_ADDRSTRLEN]);
+
+
+/**
+ * IP translation
+ *
+ * Translates ipv4 from text to decimal and viceversa.
+ */
 in_addr_t ip_number(char *ip);
 void ip_string(in_addr_t ip, char ip_string[INET_ADDRSTRLEN]);
 

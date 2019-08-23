@@ -41,24 +41,51 @@ typedef struct _addr_space {
 
 void init_as(addr_space *as);
 
+/**
+ * Printing functions
+ *
+ * They just display information about the different structures for debug porpouses
+ */
 void print_id(const byte id[PEER_ID_LEN]);
 void print_kp(const kpeer *peer);
 void print_kb(const kbucket *kb);
 void print_as(const addr_space *as);
 
+/**
+ * Add k-bucket
+ *
+ * Creates a new k-bucket and handles the reordering of all peers inside the address
+ * space.
+ */
 int add_kb(addr_space *as);
 
+/**
+ * ID arithmetic
+ *
+ * These are used mainly to create a new k-bucket. The space has to be distributed
+ * and the starting and ending id of the bucket has to be modified.
+ */
 int half_id(byte id[PEER_ID_LEN]);
 int inc_id(byte id[PEER_ID_LEN]);
 int diff_id(byte diff[PEER_ID_LEN], const byte id1[PEER_ID_LEN], const byte id2[PEER_ID_LEN]);
 int add_id(byte total[PEER_ID_LEN], const byte id1[PEER_ID_LEN], const byte id2[PEER_ID_LEN]);
 
+/**
+ * Asks a peer for other peers
+ *
+ * The peer should respond with a peer_list. We will use this to fill our list.
+ */
 int create_kpeer(kpeer *dst, const in_addr_t ip, const in_port_t port, const byte id[PEER_ID_LEN]);
 int add_kpeer(addr_space *as, const kpeer *peer, unsigned int self);
 int get_kpeer(const addr_space *as, const in_addr_t ip, k_index *ki);
 int reorder_kpeer(addr_space *as);
 int rm_kpeer(addr_space *as, const in_addr_t ip);
 
+/**
+ * Export and import address space
+ *
+ * Used for the local cache bootstrapping.
+ */
 int import_bin(addr_space *as);
 int export_bin(addr_space *as);
 
