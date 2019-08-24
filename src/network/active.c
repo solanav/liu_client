@@ -16,8 +16,11 @@
 
 #include "network/active.h"
 #include "types.h"
+#include "hydrogen.h"
 
 // Private functions
+
+int e_forge_packet(byte datagram[MAX_UDP], byte cookie[COOKIE_SIZE], const byte type[COMM_LEN], int packet_num, const byte *data, size_t data_size, uint8_t key[hydro_secretbox_KEYBYTES]);
 
 /**
  * Data uploader
@@ -31,192 +34,361 @@
  *
  * Returns - The number of bytes sent or -1 in case of error with errno set appropriately
 */
-size_t upload_data(char *ip, in_port_t port, byte *data, size_t len);
+size_t upload_data(const in_addr_t ip, const in_port_t port, byte *data, size_t len);
 
 /**
  * Data uploader xtra
- * 
+ *
  * It uploads big data
  */
-size_t upload_data_x(char *ip, in_port_t port, byte *data, size_t len, byte *header, byte *cont_header);
+size_t upload_data_x(const in_addr_t ip, const in_port_t port, byte *data, size_t len, byte *header, byte *cont_header);
 
-int send_ping(char *ip, in_port_t port)
+int send_ping(const in_addr_t ip, const in_port_t port, const in_port_t self_port, unsigned short req_bit, sem_t *sem, shared_data *sd)
 {
-	byte cookie[COOKIE_SIZE] = {0};
-	byte packet[MAX_UDP];
-	forge_packet(packet, cookie, (byte *)PING, 0, NULL, 0);
+    // Create cookie with zeros to get a new one and add it to requests
+    byte cookie[COOKIE_SIZE] = {0};
+    byte data[27];
 
-	if (add_req(ip, (byte *)PING, cookie) == ERROR)
-		return ERROR;
+    // First 4 bytes are the IP
+    data[0] = ip >> 24;
+    data[1] = (ip >> 16) & 0xFF;
+    data[2] = (ip >> 8) & 0xFF;
+    data[3] = ip & 0xFF;
 
-	return upload_data(ip, port, packet, MAX_UDP);
+    // Next 2 bytes are the PORT
+    data[4] = self_port >> 8;
+    data[5] = self_port & 0xFF;
+
+    // Next 20 bytes are the ID
+    sem_wait(sem);
+    memcpy(data + 6, sd->server_info.id, PEER_ID_LEN);
+    sem_post(sem);
+
+    // Next byte is to check if you need a request
+    data[26] = req_bit;
+
+    byte packet[MAX_UDP];
+    forge_packet(packet, cookie, (byte *)PING, 0, data, sizeof(data));
+
+    if (req_bit == 1)
+        if (add_req(ip, (byte *)PING, cookie, sem, sd) == ERROR)
+            return ERROR;
+
+    return upload_data(ip, port, packet, MAX_UDP);
 }
 
-int send_pong(char *ip, in_port_t port, byte cookie[COOKIE_SIZE])
+int send_pong(const in_addr_t ip, const in_port_t port, const in_port_t self_port, byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
 {
-	byte packet[MAX_UDP];
-	forge_packet(packet, cookie, (byte *)PONG, 0, NULL, 0);
+    // Create cookie with zeros to get a new one and add it to requests
+    byte data[26];
 
-	return upload_data(ip, port, packet, MAX_UDP);
+    // First 4 bytes are the IP
+    data[0] = ip >> 24;
+    data[1] = (ip >> 16) & 0xFF;
+    data[2] = (ip >> 8) & 0xFF;
+    data[3] = ip & 0xFF;
+
+    // Next 2 bytes are the PORT
+    data[4] = self_port >> 8;
+    data[5] = self_port & 0xFF;
+
+    // Next 20 bytes are the ID
+    sem_wait(sem);
+    memcpy(data + 6, sd->server_info.id, PEER_ID_LEN);
+    sem_post(sem);
+
+    byte packet[MAX_UDP];
+    forge_packet(packet, cookie, (byte *)PONG, 0, data, sizeof(data));
+
+    return upload_data(ip, port, packet, MAX_UDP);
 }
 
-int send_empty(char *ip, in_port_t port)
+int send_findnode(const k_index ki, byte id[PEER_ID_LEN], sem_t *sem, shared_data *sd)
 {
-	byte packet[MAX_UDP] = {0};
-	forge_packet(packet, NULL, (byte *)EMPTY, 0, NULL, 0);
+    // Get the tx key
+    uint8_t key[hydro_secretbox_KEYBYTES];
+    sem_wait(sem);
+    in_addr_t ip = sd->KPEER(ki.b, ki.p).ip;
+    in_addr_t port = sd->KPEER(ki.b, ki.p).port;
+    memcpy(key, sd->KPEER(ki.b, ki.p).kp.tx, hydro_secretbox_KEYBYTES);
+    sem_post(sem);
 
-	return upload_data(ip, port, packet, MAX_UDP);
+    byte cookie[COOKIE_SIZE] = {0};
+    byte packet[MAX_UDP];
+    e_forge_packet(packet, cookie, (byte *)FINDNODE, 0, id, PEER_ID_LEN, key);
+
+    if (add_req(ip, (byte *)FINDNODE, cookie, sem, sd) == ERROR)
+        return ERROR;
+
+    return upload_data(ip, port, packet, MAX_UDP);
 }
 
-int send_selfdata(char *ip, in_port_t port, in_port_t self_port)
+int send_node(const k_index ki, byte id[PEER_ID_LEN], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
 {
-	byte data[2];
-	data[0] = (self_port >> 8) & 0x00ff;
-	data[1] = self_port & 0x00ff;
+    byte data[C_UDP_LEN] = {0};
+    uint8_t key[hydro_secretbox_KEYBYTES];
 
-	byte packet[MAX_UDP];
-	forge_packet(packet, NULL, (byte *)INIT, 0, data, PORT_LEN);
+    sem_wait(sem);
+    addr_space as_copy;
+    memcpy(&as_copy, &(sd->as), sizeof(addr_space));
+    distance_peer_list(data, id, &(as_copy));
+    in_addr_t ip = sd->KPEER(ki.b, ki.p).ip;
+    in_addr_t port = sd->KPEER(ki.b, ki.p).port;
+    memcpy(key, sd->KPEER(ki.b, ki.p).kp.tx, hydro_secretbox_KEYBYTES);
+    sem_post(sem);
 
-	return upload_data(ip, port, packet, MAX_UDP);
+//    printf("SENDING>>>\n");
+//    for (int i = 0; i < C_UDP_LEN; i+=26)
+//        printf("[%02d] [%02x][%02x][%02x][%02x] [%02x][%02x] [%02x%02x%02x%02x %02x%02x%02x%02x %02x%02x%02x%02x %02x%02x%02x%02x %02x%02x%02x%02x]\n",
+//            i / 26 + 1,
+//            data[i], data[i+1], data[i+2], data[i+3],
+//            data[i+4], data[i+5],
+//            data[i+6], data[i+7], data[i+8], data[i+9],
+//            data[i+10], data[i+11], data[i+12], data[i+13],
+//            data[i+14], data[i+15], data[i+16], data[i+17],
+//            data[i+18], data[i+19], data[i+20], data[i+21],
+//            data[i+22], data[i+23], data[i+24], data[i+25]);
+
+    byte packet[MAX_UDP];
+    e_forge_packet(packet, cookie, (byte *)SENDNODE, 0, data, C_UDP_LEN, key);
+
+    return upload_data(ip, port, packet, MAX_UDP);
 }
 
-int send_peerdata(char *ip, in_port_t port)
+int send_dtls1(k_index ki, sem_t *sem, shared_data *sd)
 {
-	sem_t *sem = NULL;
-	shared_data *sd = NULL;
-	if (access_sd(&sem, &sd) == ERROR)
-		return ERROR;
+    // Dont try to start if already in progress
+    sem_wait(sem);
+    if (sd->KPEER(ki.b, ki.p).secure != DTLS_NO)
+    {
+        DEBUG_PRINT(P_ERROR "Connection already secure or in progress\n");
+        sem_post(sem);
+        return ERROR;
+    }
+    DEBUG_PRINT(P_INFO "CONNECTION STATUS %d\n", sd->KPEER(ki.b, ki.p).secure);
+    sd->KPEER(ki.b, ki.p).secure = DTLS_ING;
+    sem_post(sem);
 
-	sem_wait(sem);
-	peer_list copy = sd->peers;
-	sem_post(sem);
+    // Create packet for dtls handshake and update state
+    uint8_t packet1[hydro_kx_XX_PACKET1BYTES];
+    sem_wait(sem);
+    hydro_kx_xx_1(&(sd->dtls.state[(ki.b * MAX_KPEERS) + ki.p]), packet1, NULL);
+    in_addr_t ip = sd->KPEER(ki.b, ki.p).ip;
+    in_addr_t port = sd->KPEER(ki.b, ki.p).port;
+    sem_post(sem);
 
-	size_t trans = upload_data_x(ip, port,
-								 (byte *)&copy,
-								 sizeof(peer_list),
-								 (byte *)SENDPEERS,
-								 (byte *)SENDPEERSC);
+    // Create udp packet with cookie and packet1 as data
+    byte cookie[COOKIE_SIZE] = {0}; // Create new cookie for dtls
+    byte packet[MAX_UDP];
+    forge_packet(packet, cookie, (byte *)DTLS1, 0, packet1, hydro_kx_XX_PACKET1BYTES);
 
-	DEBUG_PRINT((P_OK "Uploaded %ld bytes\n", trans));
+    // Add a request (removed in step 3)
+    if (add_req(ip, (byte *)DTLS1, cookie, sem, sd) == ERROR)
+        return ERROR;
 
-	sem_close(sem);
-	munmap(sd, sizeof(shared_data));
-
-	return OK;
+    return upload_data(ip, port, packet, MAX_UDP);
 }
 
-int send_peerrequest(char *ip, in_port_t port)
+int send_dtls2(k_index ki, uint8_t packet1[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
 {
-	byte cookie[COOKIE_SIZE];
+    uint8_t packet2[hydro_kx_XX_PACKET2BYTES];
+    sem_wait(sem);
+    if (hydro_kx_xx_2(&(sd->dtls.state[(ki.b * MAX_KPEERS) + ki.p]), packet2, packet1, NULL, &(sd->dtls.kp)) != 0) {
+        DEBUG_PRINT(P_ERROR "Failed step 2 of dtls handshake\n");
+        sem_post(sem);
+        return ERROR;
+    }
+    in_addr_t ip = sd->KPEER(ki.b, ki.p).ip;
+    in_addr_t port = sd->KPEER(ki.b, ki.p).port;
+    sem_post(sem);
 
-	if (add_req(ip, (byte *)GETPEERS, cookie) == ERROR)
-		return ERROR;
+    // Create packet with the cookie from dtls1 and add packet2 as data
+    byte packet[MAX_UDP];
+    forge_packet(packet, cookie, (byte *)DTLS2, 0, packet2, hydro_kx_XX_PACKET2BYTES);
 
-	return upload_data(ip, port, (byte *)GETPEERS, COMM_LEN);
+    // Add a request (removed in step 4)
+    if (add_req(ip, (byte *)DTLS2, cookie, sem, sd) == ERROR)
+        return ERROR;
+
+    return upload_data(ip, port, packet, MAX_UDP);
 }
 
-size_t upload_data(char *ip, in_port_t port, byte data[], size_t len)
+int send_dtls3(k_index ki, uint8_t packet2[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
 {
-	if (len > MAX_UDP)
-	{
-		DEBUG_PRINT((P_ERROR "Use upload_data_x for packets larger than MAX_UDP bytes\n"));
-		return ERROR;
-	}
+    sem_wait(sem);
+    in_addr_t ip = sd->KPEER(ki.b, ki.p).ip;
+    in_addr_t port = sd->KPEER(ki.b, ki.p).port;
+    sem_post(sem);
 
-	// Create the socket
-	int socket_desc = socket(AF_INET, SOCK_DGRAM, 0);
-	if (socket_desc < 0)
-	{
-		DEBUG_PRINT((P_ERROR "The socket could not be opened: %s\n", strerror(errno)));
-		return ERROR;
-	}
+    uint8_t packet3[hydro_kx_XX_PACKET3BYTES];
+    sem_wait(sem);
+    if (hydro_kx_xx_3(&(sd->dtls.state[(ki.b * MAX_KPEERS) + ki.p]), &(sd->KPEER(ki.b, ki.p).kp), packet3, NULL, packet2, NULL,
+                  &(sd->dtls.kp)) != 0) {
+        DEBUG_PRINT(P_ERROR "Failed step 3 of dtls handshake\n");
+        sem_post(sem);
+        return ERROR;
+    }
+    sem_post(sem);
 
-	struct sockaddr_in other_addr;
-	memset(&other_addr, 0, sizeof(other_addr));
+    // Create packet with the cookie from dtls1 and add packet3 as data
+    byte packet[MAX_UDP];
+    forge_packet(packet, cookie, (byte *)DTLS3, 0, packet3, hydro_kx_XX_PACKET3BYTES);
 
-	// Fill info for the other
-	other_addr.sin_family = AF_INET;
-	other_addr.sin_addr.s_addr = inet_addr(ip);
-	other_addr.sin_port = htons(port);
-
-	return sendto(socket_desc, data, len, 0, (struct sockaddr *)&other_addr, sizeof(other_addr));
+    return upload_data(ip, port, packet, MAX_UDP);
 }
 
-size_t upload_data_x(char *ip, in_port_t port, byte *data, size_t len, byte *header, byte *cont_header)
+int send_debug(k_index ki, const byte *data, size_t len, sem_t *sem, shared_data *sd)
 {
-	size_t packet_num;
-	size_t sent = 0;
-	byte datagram[MAX_UDP] = {0};
+    if (len > C_UDP_LEN)
+    {
+        DEBUG_PRINT(P_ERROR "Message too long to send as debug\n");
+        return ERROR;
+    }
 
-	for (packet_num = 0; sent < len; packet_num++)
-	{
-		if (sent == 0 && len > C_UDP_LEN)
-		{
-			forge_packet(datagram, NULL, header, packet_num, data + sent, C_UDP_LEN);
-			sent += C_UDP_LEN;
-		}
-		else
-		{
-			forge_packet(datagram, NULL, cont_header, packet_num, data + sent, len - sent);
-			sent += len - sent;
-		}
+    // Get the tx key
+    uint8_t key[hydro_secretbox_KEYBYTES];
+    sem_wait(sem);
+    in_addr_t ip = sd->KPEER(ki.b, ki.p).ip;
+    in_addr_t port = sd->KPEER(ki.b, ki.p).port;
+    memcpy(key, sd->KPEER(ki.b, ki.p).kp.tx, hydro_secretbox_KEYBYTES);
+    sem_post(sem);
 
-		upload_data(ip, port, datagram, MAX_UDP);
+    // Create packet with the data provided
+    byte packet[MAX_UDP];
+    e_forge_packet(packet, NULL, (byte *)DEBUG_MSG, 0, data, len, key);
 
-		// Clean
-		memset(datagram, 0, MAX_UDP * sizeof(byte));
-	}
+    return upload_data(ip, port, packet, MAX_UDP);
+}
 
-	return sent;
+int send_empty(const in_addr_t ip, const in_port_t port)
+{
+    byte packet[MAX_UDP] = {0};
+
+    return upload_data(ip, port, packet, MAX_UDP);
+}
+
+size_t upload_data(const in_addr_t ip, const in_port_t port, byte *data, size_t len)
+{
+    if (len > MAX_UDP)
+    {
+        DEBUG_PRINT(P_ERROR "Use upload_data_x for packets larger than MAX_UDP bytes\n");
+        return ERROR;
+    }
+
+    // Create the socket
+    int socket_desc = socket(AF_INET, SOCK_DGRAM, 0);
+    if (socket_desc < 0)
+    {
+        DEBUG_PRINT(P_ERROR "The socket could not be opened: %s\n", strerror(errno));
+        return ERROR;
+    }
+
+    struct sockaddr_in other_addr;
+    memset(&other_addr, 0, sizeof(other_addr));
+
+    // Fill info for the other
+    other_addr.sin_family = AF_INET;
+    other_addr.sin_addr.s_addr = htonl(ip);
+    other_addr.sin_port = htons(port);
+
+    int res = sendto(socket_desc, data, len, 0, (struct sockaddr *)&other_addr, sizeof(other_addr));
+
+    close(socket_desc);
+
+    return res;
 }
 
 int forge_packet(byte datagram[MAX_UDP], byte cookie[COOKIE_SIZE], const byte type[COMM_LEN], int packet_num, const byte *data, size_t data_size)
 {
-	if (!type)
-		return ERROR;
+    if (!type)
+        return ERROR;
 
-	// Copy type
-	memcpy(datagram, type, COMM_LEN);
+    // Copy type
+    memcpy(datagram, type, COMM_LEN);
 
-	// Copy packet num
-	datagram[COMM_LEN] = (packet_num >> 8) & 0x00ff;
-	datagram[COMM_LEN + 1] = packet_num & 0x00ff;
+    // Copy packet num
+    datagram[COMM_LEN] = (packet_num >> 8) & 0x00ff;
+    datagram[COMM_LEN + 1] = packet_num & 0x00ff;
 
-	// Create cookie
-	if (cookie)
-	{
-		if (strcmp((char *) cookie, "\x00\x00\x00\x00") == 0)
-		{
-			DEBUG_PRINT((P_WARN "Cookie was empty, so we create a new one\n"));
-			getrandom(cookie, COOKIE_SIZE, 0);
-		}
+    // Create cookie
+    if (cookie)
+    {
+        if (strcmp((char *)cookie, "\x00\x00\x00\x00") == 0)
+        {
+            getrandom(cookie, COOKIE_SIZE, 0);
+        }
 
-		memcpy(datagram + COMM_LEN + PACKET_NUM_LEN, cookie, COOKIE_SIZE);
-	}
-	else
-	{
-		getrandom(datagram + COMM_LEN + PACKET_NUM_LEN, COOKIE_SIZE, 0);
-	}
+        memcpy(datagram + COMM_LEN + PACKET_NUM_LEN, cookie, COOKIE_SIZE);
+    }
+    else
+    {
+        getrandom(datagram + COMM_LEN + PACKET_NUM_LEN, COOKIE_SIZE, 0);
+    }
 
-	// Copy data if any
-	if (data && data_size <= (size_t)C_UDP_LEN)
-	{
-		memcpy(datagram + C_UDP_HEADER, data, data_size);
+    // Copy data if any
+    if (data && data_size <= (size_t)(C_UDP_LEN))
+    {
+        memcpy(datagram + C_UDP_HEADER, data, data_size);
 
-		// Fill the rest with zeros
-		// TODO: It's probably better to fill with noise or leave it with memory trash
-		memset(datagram + C_UDP_HEADER + data_size, 0, C_UDP_LEN - data_size);
-	}
-	else if (!data)
-	{
-		DEBUG_PRINT((P_WARN "No data\n"));
-		return ERROR;
-	}
-	else
-	{
-		DEBUG_PRINT((P_WARN "Data too big\n"));
-		return ERROR;
-	}
+        // Fill the rest with random bytes
+        getrandom(datagram + C_UDP_HEADER + data_size, C_UDP_LEN - data_size, 0);
+    }
+    else if (data_size > (size_t)C_UDP_LEN)
+    {
+        DEBUG_PRINT(P_WARN "Data too big [%ld]\n", data_size);
+        return ERROR;
+    }
 
-	return OK;
+    return OK;
+}
+
+int e_forge_packet(byte datagram[MAX_UDP], byte cookie[COOKIE_SIZE], const byte type[COMM_LEN], int packet_num, const byte *data, size_t data_size, uint8_t key[hydro_secretbox_KEYBYTES])
+{
+    if (!type)
+        return ERROR;
+
+    byte all_data[MAX_UDP - hydro_secretbox_HEADERBYTES];
+
+    // Copy type
+    memcpy(all_data, type, COMM_LEN);
+
+    // Copy packet num
+    all_data[COMM_LEN] = (packet_num >> 8) & 0x00ff;
+    all_data[COMM_LEN + 1] = packet_num & 0x00ff;
+
+    // Create cookie
+    if (cookie)
+    {
+        if (strcmp((char *)cookie, "\x00\x00\x00\x00") == 0)
+        {
+            DEBUG_PRINT(P_WARN "Cookie was empty, so we create a new one\n");
+            getrandom(cookie, COOKIE_SIZE, 0);
+        }
+
+        memcpy(all_data + COMM_LEN + PACKET_NUM_LEN, cookie, COOKIE_SIZE);
+    }
+    else
+    {
+        getrandom(all_data + COMM_LEN + PACKET_NUM_LEN, COOKIE_SIZE, 0);
+    }
+
+    // Copy data if any
+    if (data && data_size <= (size_t)(C_UDP_LEN))
+    {
+        memcpy(all_data + C_UDP_HEADER, data, data_size);
+
+        // Fill the rest with random bytes
+        getrandom(all_data + C_UDP_HEADER + data_size, C_UDP_LEN - data_size, 0);
+
+        uint8_t encrypted_data[MAX_UDP];
+        hydro_secretbox_encrypt(encrypted_data, all_data, MAX_UDP - hydro_secretbox_HEADERBYTES, 0, SSL_CTX, key);
+        memcpy(datagram, encrypted_data, MAX_UDP);
+    }
+    else if (data_size > (size_t)C_UDP_LEN)
+    {
+        DEBUG_PRINT(P_WARN "Data too big [%ld]\n", data_size);
+        return ERROR;
+    }
+
+    return OK;
 }

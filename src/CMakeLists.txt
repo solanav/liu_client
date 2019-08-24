@@ -5,7 +5,7 @@ add_executable(liu_client
 )
 
 target_include_directories(liu_client 
-    PRIVATE ${INC_DIR}
+    PRIVATE ${INC_DIR} ${INC_NET_DIR} 
 )
 
 target_link_libraries(liu_client 

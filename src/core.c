@@ -13,13 +13,11 @@
 #include "../include/system_utils.h"
 #include "network/netcore.h"
 
-int main()
+#include <sys/random.h>
+#include <string.h>
+
+int anti_debug()
 {
-
-
-	//________________________________________________________________________________
-	//__________________________ANTI DEBUG SYSTEM STUFF_______________________________
-	//________________________________________________________________________________
 	//I am not capable of delete something from my check system so other people neither
 	int fd_shm = shm_open(SHM_BASHPID, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 	if (fd_shm == -1)
@@ -73,18 +71,22 @@ int main()
 		DEBUG_PRINT((P_ERROR "You are a cheater bruh\n"));
 		return OTHER;
 	}
+}
 
-	//________________________________________________________________________________
-	//_______________________END OF ANTI DEBUG SYSTEM STUFF___________________________
-	//________________________________________________________________________________
+int main()
+{
+    // Init crypto
+    if (hydro_init() != 0) {
+        DEBUG_PRINT(P_ERROR "Failed to initialize libhydrogen\n");
+        return ERROR;
+    }
 
+    // Launch networking
+    if (init_networking() == ERROR)
+    {
+        DEBUG_PRINT(P_ERROR "Networking module failed\n");
+        return  ERROR;
+    }
 
-	// Launch networking
-	if (init_networking() == ERROR)
-	{
-		DEBUG_PRINT((P_ERROR "Failed to initialize the networking module\n"));
-		return ERROR;
-	}
-
-	return OK;
+    return OK;
 }

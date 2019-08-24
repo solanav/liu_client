@@ -47,3 +47,11 @@ dkms.conf
 
 # VSCode
 .vscode/
+
+# Qt Creator
+CMakeFiles/
+*.cmake
+*.make
+Makefile
+*.cbp
+*.user
