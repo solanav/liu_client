@@ -297,7 +297,7 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
     {
         uint8_t key[hydro_secretbox_KEYBYTES];
 
-        printf("DECRYPTING SOME SHIT\n\n");
+        printf("DECRYPTING SOME SHIT\n");
 
         sem_wait(sem);
         memcpy(key, peer.kp.rx, hydro_secretbox_KEYBYTES);
@@ -399,11 +399,24 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
         memcpy(id, data + C_UDP_HEADER, PEER_ID_LEN);
 
         // Respond with closest nodes you know
-        send_node(peer.ip, peer.port, id, cookie, sem, sd);
+        send_node(ki, id, cookie, sem, sd);
     }
     else if (memcmp(decrypted_data, SENDNODE, COMM_LEN) == 0 && peer_found == OK) // Peer sent us their peer_list (step 1)
     {
         DEBUG_PRINT(P_INFO "Received nodes from [%s:%d]\n", string_ip, peer.port);
+
+        byte *offset = decrypted_data + C_UDP_HEADER;
+        printf("<<<\n");
+        for (int i = 0; i < C_UDP_LEN; i+=26)
+            printf("[%02d] [%02x][%02x][%02x][%02x] [%02x][%02x] [%02x%02x%02x%02x %02x%02x%02x%02x %02x%02x%02x%02x %02x%02x%02x%02x %02x%02x%02x%02x]\n",
+                i / 26 + 1,
+                offset[i], offset[i+1], offset[i+2], offset[i+3],
+                offset[i+4], offset[i+5],
+                offset[i+6], offset[i+7], offset[i+8], offset[i+9],
+                offset[i+10], offset[i+11], offset[i+12], offset[i+13],
+                offset[i+14], offset[i+15], offset[i+16], offset[i+17],
+                offset[i+18], offset[i+19], offset[i+20], offset[i+21],
+                offset[i+22], offset[i+23], offset[i+24], offset[i+25]);
 
         //memcpy(decrypted_data + C_UDP_HEADER, C_UDP_LEN);
     }
@@ -449,18 +462,6 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
         byte cookie[COOKIE_SIZE];
         memcpy(cookie, decrypted_data + COMM_LEN + PACKET_NUM_LEN, COOKIE_SIZE);
         memcpy(packet2, decrypted_data + C_UDP_HEADER, hydro_kx_XX_PACKET2BYTES);
-
-        printf("RECEIVED <<<\n");
-        for (int i = 0; i < hydro_kx_XX_PACKET2BYTES; i+=8)
-            printf("[%02x][%02x][%02x][%02x] [%02x][%02x][%02x][%02x]\n",
-                (unsigned int) packet2[i+0],
-                (unsigned int) packet2[i+1],
-                (unsigned int) packet2[i+2],
-                (unsigned int) packet2[i+3],
-                (unsigned int) packet2[i+4],
-                (unsigned int) packet2[i+5],
-                (unsigned int) packet2[i+6],
-                (unsigned int) packet2[i+7]);
 
         if (send_dtls3(ki, packet2, cookie, sem, sd) == ERROR)
         {

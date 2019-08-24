@@ -63,14 +63,14 @@ int send_pong(const in_addr_t ip, const in_port_t port, const in_port_t self_por
  *
  * The peer should respond with a peer_list. We will use this to fill our list.
  */
-int send_findnode(const in_addr_t ip, const in_port_t port, sem_t *sem, shared_data *sd);
+int send_findnode(const k_index ki, byte id[PEER_ID_LEN], sem_t *sem, shared_data *sd);
 
 /**
  * Sends the peer_list to a peer
  *
  * This is a response to a peer request, it serves as a peer discovery method.
  */
-int send_node(const in_addr_t ip, const in_port_t port, byte id[PEER_ID_LEN], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd);
+int send_node(const k_index ki, byte id[PEER_ID_LEN], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd);
 
 /**
  * Create a DTLS session

@@ -86,6 +86,8 @@ int init_networking()
 
         sem_wait(sem);
         in_port_t self_port = sd->server_info.port;
+        byte self_id[PEER_ID_LEN];
+        memcpy(self_id, sd->server_info.id, PEER_ID_LEN);
         sem_post(sem);
 
         debug_bootstrap_vpn(self_port, sem, sd);
@@ -105,9 +107,9 @@ int init_networking()
 
         sleep(5);
 
-        send_debug(ki, (byte *) "\xDE\xAD\xBE\xEF", 4, sem, sd);
+        send_findnode(ki, self_id, sem, sd);
 
-        sleep(5);
+        sleep(10);
 
         stop_server(self_port, sem, sd);
     }
