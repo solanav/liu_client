@@ -299,6 +299,13 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
 
         printf("DECRYPTING SOME SHIT\n");
 
+        byte *offset = data;
+        printf("<<<\n");
+        for (int i = 0; i < MAX_UDP; i+=8)
+            printf("[%02x%02x%02x%02x %02x%02x%02x%02x]\n",
+                offset[i], offset[i+1], offset[i+2], offset[i+3],
+                offset[i+4], offset[i+5], offset[i+6], offset[i+7]);
+
         sem_wait(sem);
         memcpy(key, peer.kp.rx, hydro_secretbox_KEYBYTES);
         sem_post(sem);
@@ -346,14 +353,13 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
         sd->server_info.ip = self_ip;
         sem_post(sem);
 
-        // Get self data
+        // Get self data and create peer
         sem_wait(sem);
         in_port_t self_port = sd->server_info.port;
         byte self_id[PEER_ID_LEN];
         memcpy(self_id, sd->server_info.id, PEER_ID_LEN);
         sem_post(sem);
 
-        // Create peer for yourself
         kpeer self_peer;
         create_kpeer(&self_peer, self_ip, self_port, self_id);
 
@@ -428,7 +434,7 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
         sem_wait(sem);
         if (sd->KPEER(ki.b, ki.p).secure != DTLS_NO)
         {
-            DEBUG_PRINT(P_WARN "Connection already secure or in progress\n");
+            DEBUG_PRINT(P_WARN "Connection already secure or in progress [reactive]\n");
             sem_post(sem);
             return ERROR;
         }

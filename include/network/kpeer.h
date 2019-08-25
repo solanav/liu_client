@@ -1,8 +1,8 @@
 #ifndef KBUCKET_H
 #define KBUCKET_H
 
-#define MAX_KPEERS 4
-#define MAX_KBUCKETS 4
+#define MAX_KPEERS 16
+#define MAX_KBUCKETS 16
 #define PEER_ID_LEN 20
 
 #define _KPEER(bucket_i, peer_i) kb_list[bucket_i].peer[peer_i]

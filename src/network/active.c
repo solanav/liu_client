@@ -62,13 +62,42 @@ int send_ping(const in_addr_t ip, const in_port_t port, const in_port_t self_por
     // Next 20 bytes are the ID
     sem_wait(sem);
     memcpy(data + 6, sd->server_info.id, PEER_ID_LEN);
+    k_index ki;
+    int peer_res = get_kpeer(&(sd->as), ip, &ki);
     sem_post(sem);
 
     // Next byte is to check if you need a request
     data[26] = req_bit;
 
+    // If our connection has DTLS, encrypt the message
     byte packet[MAX_UDP];
-    forge_packet(packet, cookie, (byte *)PING, 0, data, sizeof(data));
+    if (peer_res == OK)
+    {
+        sem_wait(sem);
+        if (sd->KPEER(ki.b, ki.p).secure == DTLS_OK)
+        {
+            uint8_t key[hydro_secretbox_KEYBYTES];
+            memcpy(key, sd->KPEER(ki.b, ki.p).kp.tx, hydro_secretbox_KEYBYTES);
+            char tmp[INET_ADDRSTRLEN];
+            ip_string(sd->KPEER(ki.b, ki.p).ip, tmp);
+            DEBUG_PRINT(P_OK "Peer found with secure connection [%d] [%s:%d]\n", sd->KPEER(ki.b, ki.p).secure, tmp, sd->KPEER(ki.b, ki.p).port);
+            sem_post(sem);
+
+            e_forge_packet(packet, cookie, (byte *)PING, 0, data, sizeof(data), key);
+        }
+        else
+        {
+            char tmp[INET_ADDRSTRLEN];
+            ip_string(sd->KPEER(ki.b, ki.p).ip, tmp);
+            DEBUG_PRINT(P_OK "Peer found but NO secure connection [%d] [%s:%d]\n", sd->KPEER(ki.b, ki.p).secure, tmp, sd->KPEER(ki.b, ki.p).port);
+            sem_post(sem);
+            forge_packet(packet, cookie, (byte *)PING, 0, data, sizeof(data));
+        }
+    }
+    else
+    {
+        forge_packet(packet, cookie, (byte *)PING, 0, data, sizeof(data));
+    }
 
     if (req_bit == 1)
         if (add_req(ip, (byte *)PING, cookie, sem, sd) == ERROR)
@@ -95,10 +124,45 @@ int send_pong(const in_addr_t ip, const in_port_t port, const in_port_t self_por
     // Next 20 bytes are the ID
     sem_wait(sem);
     memcpy(data + 6, sd->server_info.id, PEER_ID_LEN);
+    k_index ki;
+    int peer_res = get_kpeer(&(sd->as), ip, &ki);
     sem_post(sem);
 
     byte packet[MAX_UDP];
-    forge_packet(packet, cookie, (byte *)PONG, 0, data, sizeof(data));
+    if (peer_res == OK)
+    {
+        sem_wait(sem);
+        if (sd->KPEER(ki.b, ki.p).secure == DTLS_OK)
+        {
+            uint8_t key[hydro_secretbox_KEYBYTES];
+            memcpy(key, sd->KPEER(ki.b, ki.p).kp.tx, hydro_secretbox_KEYBYTES);
+            char tmp[INET_ADDRSTRLEN];
+            ip_string(sd->KPEER(ki.b, ki.p).ip, tmp);
+            DEBUG_PRINT(P_OK "Peer found with secure connection [%d] [%s:%d]\n", sd->KPEER(ki.b, ki.p).secure, tmp, sd->KPEER(ki.b, ki.p).port);
+            sem_post(sem);
+
+            e_forge_packet(packet, cookie, (byte *)PONG, 0, data, sizeof(data), key);
+
+            byte *offset = packet;
+            printf(">>>\n");
+            for (int i = 0; i < MAX_UDP; i+=8)
+                printf("[%02x%02x%02x%02x %02x%02x%02x%02x]\n",
+                    offset[i], offset[i+1], offset[i+2], offset[i+3],
+                    offset[i+4], offset[i+5], offset[i+6], offset[i+7]);
+        }
+        else
+        {
+            char tmp[INET_ADDRSTRLEN];
+            ip_string(sd->KPEER(ki.b, ki.p).ip, tmp);
+            DEBUG_PRINT(P_OK "Peer found but NO secure connection [%d] [%s:%d]\n", sd->KPEER(ki.b, ki.p).secure, tmp, sd->KPEER(ki.b, ki.p).port);
+            sem_post(sem);
+            forge_packet(packet, cookie, (byte *)PONG, 0, data, sizeof(data));
+        }
+    }
+    else
+    {
+        forge_packet(packet, cookie, (byte *)PONG, 0, data, sizeof(data));
+    }
 
     return upload_data(ip, port, packet, MAX_UDP);
 }
@@ -161,7 +225,7 @@ int send_dtls1(k_index ki, sem_t *sem, shared_data *sd)
     sem_wait(sem);
     if (sd->KPEER(ki.b, ki.p).secure != DTLS_NO)
     {
-        DEBUG_PRINT(P_ERROR "Connection already secure or in progress\n");
+        DEBUG_PRINT(P_WARN "Connection already secure or in progress [active]\n");
         sem_post(sem);
         return ERROR;
     }

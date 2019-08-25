@@ -2,7 +2,7 @@
 
 IMAGE_NAME=liu_client
 DIR="${0%/*}"
-BUILD=/home/solanav/Projects/liu/build
+BUILD=/home/solanav/Projects/liu_env/build-client-Desktop-Default
 
 # Move the latest liu_client to folder
 cp $BUILD/src/liu_client $DIR/files/liu_client

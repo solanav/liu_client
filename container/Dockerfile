@@ -1,10 +1,10 @@
 # Use an official Python runtime as a parent image
-FROM ubuntu
+FROM mubuntu
 
 # Set the working directory to /app
 WORKDIR /app
 
-RUN apt-get update && apt-get install openvpn -y
+#RUN apt-get update && apt-get install openvpn -y
 
 # Copy the current directory contents into the container at /app
 COPY files/* /app/

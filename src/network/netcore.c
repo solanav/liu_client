@@ -23,33 +23,48 @@ int peer_discovery(sem_t *sem, shared_data *sd);
 int init_sd();
 
 #ifdef DEBUG
-void debug_bootstrap_vpn(in_port_t self_port, sem_t *sem, shared_data *sd)
+void debug_dtls_vpn(sem_t *sem, shared_data *sd)
+{
+    // Send dtls requests to all peers
+    for (int i = 0; i < MAX_KBUCKETS; i++)
+    {
+        for (int j = 0; j < MAX_KPEERS; j++)
+        {
+            k_index ki;
+            ki.b = i;
+            ki.p = j;
+
+            sem_wait(sem);
+            in_addr_t other_free = sd->as.kb_list[i].free[j];
+            sem_post(sem);
+
+            // If its not empty and its not us, stablish DTLS
+            if (other_free == 1)
+                send_dtls1(ki, sem, sd);
+
+            usleep(10000);
+        }
+    }
+}
+#endif
+
+#ifdef DEBUG
+void debug_bootstrap_vpn(in_port_t other_port, sem_t *sem, shared_data *sd)
 {
     in_addr_t start_ip = ip_number("10.8.0.0");
-    in_port_t start_port = 1024;
 
     sem_wait(sem);
     in_addr_t self_ip = sd->server_info.ip;
+    in_port_t self_port = sd->server_info.port;
     sem_post(sem);
 
-    // Keep pinging till you got peers
-    while(1)
+    // Ping 10.8.0.0/24
+    for (int i = 0; i < 256; i++)
     {
-        for (int i = 0; i < 50; i++)
-        {
-            if (start_ip + i != self_ip)
-                send_ping(start_ip + i, start_port, self_port, 0, sem, sd);
+        if (start_ip + i != self_ip)
+            send_ping(start_ip + i, other_port, self_port, 0, sem, sd);
 
-            usleep(10000);
-
-            sem_wait(sem);
-            if (sd->as.p_num >= 2)
-            {
-                sem_post(sem);
-                return;
-            }
-            sem_post(sem);
-        }
+        usleep(10000);
     }
 }
 #endif
@@ -90,26 +105,49 @@ int init_networking()
         memcpy(self_id, sd->server_info.id, PEER_ID_LEN);
         sem_post(sem);
 
-        debug_bootstrap_vpn(self_port, sem, sd);
+        // Network discovery (3 sec)
+        for (int i = 0; i < 3; i++)
+        {
+            debug_bootstrap_vpn(1024, sem, sd);
+            sleep(1);
+        }
+
+        // Create secure connections (3 sec)
+//        for (int i = 0; i < 3; i++)
+//        {
+//            debug_dtls_vpn(sem, sd);
+//            sleep(1);
+//        }
+        char r;
+        getrandom(&r, 1, 0);
+        srand(r);
+        int rand_time = rand() % 20;
+        printf("Sleeping for %d [%d]\n", rand_time, r);
+        sleep(rand_time);
 
         k_index ki;
         ki.b = 0;
         ki.p = 1;
-
-        int seed;
-        getrandom(&seed, 1, 0);
-        srand(seed);
-        int random_time = rand() % 10;
-        printf("Waiting %d [%d]\n", random_time, seed);
-        sleep(random_time);
-
         send_dtls1(ki, sem, sd);
 
+        printf("Sending pings in 5 sec\n");
         sleep(5);
 
-        send_findnode(ki, self_id, sem, sd);
+        sem_wait(sem);
+        in_addr_t other_ip = sd->KPEER(0, 1).ip;
+        in_addr_t other_port = sd->KPEER(0, 1).port;
+        sem_post(sem);
 
-        sleep(10);
+        send_ping(other_ip, other_port, self_port, 1, sem, sd);
+
+        sleep(50);
+
+        // Send pings (1 minute)
+//        for (int i = 0; i < 10; i++)
+//        {
+//            debug_bootstrap_vpn(1024, sem, sd);
+//            sleep(6);
+//        }
 
         stop_server(self_port, sem, sd);
     }
