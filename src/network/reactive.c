@@ -261,11 +261,14 @@ SHARED_CLEAN:
 int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem, shared_data *sd)
 {
     // Check if message is from self
+    sem_wait(sem);
     if (other_ip == sd->server_info.ip)
     {
+        sem_post(sem);
         DEBUG_PRINT(P_INFO "Received message from self, ignoring\n");
         return ERROR;
     }
+    sem_post(sem);
 
     // Get timestamp of received datagram
     struct timespec current;
@@ -298,13 +301,6 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
         uint8_t key[hydro_secretbox_KEYBYTES];
 
         printf("DECRYPTING SOME SHIT\n");
-
-        byte *offset = data;
-        printf("<<<\n");
-        for (int i = 0; i < MAX_UDP; i+=8)
-            printf("[%02x%02x%02x%02x %02x%02x%02x%02x]\n",
-                offset[i], offset[i+1], offset[i+2], offset[i+3],
-                offset[i+4], offset[i+5], offset[i+6], offset[i+7]);
 
         sem_wait(sem);
         memcpy(key, peer.kp.rx, hydro_secretbox_KEYBYTES);
@@ -343,10 +339,10 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
     else if (memcmp(decrypted_data, PONG, COMM_LEN) == 0) // We sent a ping, now we get the info we wanted
     {
         // Get ip in the packet (our's)
-        in_addr_t self_ip = ((data[C_UDP_HEADER + 0] & 0xFF) << 24) +
-                ((data[C_UDP_HEADER + 1] & 0xFF) << 16) +
-                ((data[C_UDP_HEADER + 2] & 0xFF) << 8) +
-                ((data[C_UDP_HEADER + 3] & 0xFF) << 0);
+        in_addr_t self_ip = ((decrypted_data[C_UDP_HEADER + 0] & 0xFF) << 24) +
+                ((decrypted_data[C_UDP_HEADER + 1] & 0xFF) << 16) +
+                ((decrypted_data[C_UDP_HEADER + 2] & 0xFF) << 8) +
+                ((decrypted_data[C_UDP_HEADER + 3] & 0xFF) << 0);
 
         // Save ip on shared data
         sem_wait(sem);
