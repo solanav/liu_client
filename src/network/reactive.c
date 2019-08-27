@@ -338,26 +338,53 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
     }
     else if (memcmp(decrypted_data, PONG, COMM_LEN) == 0) // We sent a ping, now we get the info we wanted
     {
-        // Get ip in the packet (our's)
-        in_addr_t self_ip = ((decrypted_data[C_UDP_HEADER + 0] & 0xFF) << 24) +
-                ((decrypted_data[C_UDP_HEADER + 1] & 0xFF) << 16) +
-                ((decrypted_data[C_UDP_HEADER + 2] & 0xFF) << 8) +
-                ((decrypted_data[C_UDP_HEADER + 3] & 0xFF) << 0);
+        byte cookie[COOKIE_SIZE];
+        memcpy(cookie, decrypted_data + COMM_LEN + PACKET_NUM_LEN, COOKIE_SIZE);
 
-        // Save ip on shared data
-        sem_wait(sem);
-        sd->server_info.ip = self_ip;
-        sem_post(sem);
+        int req_index = get_req(cookie, sem, sd);
+        if (req_index == -1)
+        {
+            DEBUG_PRINT(P_WARN "Failed to find request for pong, ignoring\n");
+            return ERROR;
+        }
 
-        // Get self data and create peer
-        sem_wait(sem);
-        in_port_t self_port = sd->server_info.port;
-        byte self_id[PEER_ID_LEN];
-        memcpy(self_id, sd->server_info.id, PEER_ID_LEN);
-        sem_post(sem);
+        DEBUG_PRINT(P_INFO "Found corresponding ping\n");
 
-        kpeer self_peer;
-        create_kpeer(&self_peer, self_ip, self_port, self_id);
+        static unsigned short no_ip = 0;
+
+        // If we don't have our IP yet
+        if (no_ip == 0)
+        {
+            // Execute this piece only once
+            no_ip++;
+
+            // Get ip in the packet (our's)
+            in_addr_t self_ip = ((decrypted_data[C_UDP_HEADER + 0] & 0xFF) << 24) +
+                    ((decrypted_data[C_UDP_HEADER + 1] & 0xFF) << 16) +
+                    ((decrypted_data[C_UDP_HEADER + 2] & 0xFF) << 8) +
+                    ((decrypted_data[C_UDP_HEADER + 3] & 0xFF) << 0);
+
+            // Save ip on shared data
+            sem_wait(sem);
+            sd->server_info.ip = self_ip;
+            sem_post(sem);
+
+            // Get self data and create peer
+            sem_wait(sem);
+            in_port_t self_port = sd->server_info.port;
+            byte self_id[PEER_ID_LEN];
+            memcpy(self_id, sd->server_info.id, PEER_ID_LEN);
+            sem_post(sem);
+
+            kpeer self_peer;
+            create_kpeer(&self_peer, self_ip, self_port, self_id);
+
+            sem_wait(sem);
+            add_kpeer(&(sd->as), &self_peer, 1);
+            sem_post(sem);
+
+            DEBUG_PRINT(P_OK "Extracted our IP, saving self peer and IP\n");
+        }
 
         // Get other data and create peer
         kpeer other_peer;
@@ -366,24 +393,14 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
         in_port_t other_port = ((decrypted_data[C_UDP_HEADER + 4] & 0xFF) << 8) +
                 ((decrypted_data[C_UDP_HEADER + 5] & 0xFF) << 0);
 
+        DEBUG_PRINT(P_INFO "Received a pong from [%s:%d]\n", string_ip, other_port);
+
         create_kpeer(&other_peer, other_ip, other_port, other_id);
 
         // First add yourself then the other
         sem_wait(sem);
-        add_kpeer(&(sd->as), &self_peer, 1);
         add_kpeer(&(sd->as), &other_peer, 0);
         sem_post(sem);
-
-        DEBUG_PRINT(P_INFO "Received a pong from [%s:%d]\n", string_ip, other_port);
-
-        byte cookie[COOKIE_SIZE];
-        memcpy(cookie, decrypted_data + COMM_LEN + PACKET_NUM_LEN, COOKIE_SIZE);
-
-        int req_index = get_req(cookie, sem, sd);
-        if (req_index == -1)
-            DEBUG_PRINT(P_WARN "Failed to find request for the pong we received\n");
-        else
-            DEBUG_PRINT(P_INFO "Found corresponding ping\n");
     }
     else if (memcmp(decrypted_data, FINDNODE, COMM_LEN) == 0 && peer_found == OK) // Peer wants to get our peer_list
     {
