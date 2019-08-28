@@ -292,11 +292,7 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
 #endif
 
     uint8_t decrypted_data[MAX_UDP - hydro_secretbox_HEADERBYTES];
-    if (peer_found == ERROR || peer.secure != DTLS_OK)
-    {
-        memcpy(decrypted_data, data, MAX_UDP - hydro_secretbox_HEADERBYTES);
-    }
-    else if (peer.secure == DTLS_OK)
+    if (peer_found == OK && peer.secure == DTLS_OK)
     {
         uint8_t key[hydro_secretbox_KEYBYTES];
 
@@ -314,6 +310,8 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
             return ERROR;
         }
     }
+    else
+        memcpy(decrypted_data, data, MAX_UDP - hydro_secretbox_HEADERBYTES);
 
     // Switch for message comm
     if (memcmp(decrypted_data, PING, COMM_LEN) == 0) // Peer wants info about our latency and online status
@@ -344,11 +342,14 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
         int req_index = get_req(cookie, sem, sd);
         if (req_index == -1)
         {
-            DEBUG_PRINT(P_WARN "Failed to find request for pong, ignoring\n");
-            return ERROR;
-        }
+            DEBUG_PRINT(P_WARN "Failed to find request for pong\n");
 
-        DEBUG_PRINT(P_INFO "Found corresponding ping\n");
+            if (peer_found == OK && peer.secure == DTLS_OK)
+                return ERROR;
+        }
+        else
+            DEBUG_PRINT(P_INFO "Found corresponding ping\n");
+
 
         static unsigned short no_ip = 0;
 
@@ -356,7 +357,7 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
         if (no_ip == 0)
         {
             // Execute this piece only once
-            no_ip++;
+            no_ip = 1;
 
             // Get ip in the packet (our's)
             in_addr_t self_ip = ((decrypted_data[C_UDP_HEADER + 0] & 0xFF) << 24) +
