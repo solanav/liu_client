@@ -43,6 +43,12 @@ typedef struct _shared_data shared_data;
 #include "network/request.h"
 #include "network/kpeer.h"
 
+// Useful for saving request specific data
+union _data
+{
+    in_addr_t find_ip;
+};
+
 struct _request
 {
     in_addr_t ip[MAX_DATAGRAMS];
@@ -52,6 +58,7 @@ struct _request
     int next[MAX_DATAGRAMS];
     unsigned short free[MAX_DATAGRAMS];
     byte cookie[MAX_DATAGRAMS][COOKIE_SIZE];
+    union _data data;
 };
 
 struct _dtls_data

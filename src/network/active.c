@@ -187,34 +187,37 @@ int send_findnode(const k_index ki, byte id[PEER_ID_LEN], sem_t *sem, shared_dat
     return upload_data(ip, port, packet, MAX_UDP);
 }
 
-int send_node(const k_index ki, byte id[PEER_ID_LEN], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
+int send_node(const in_addr_t ip, const in_port_t port, byte id[PEER_ID_LEN], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
 {
     byte data[C_UDP_LEN] = {0};
-    uint8_t key[hydro_secretbox_KEYBYTES];
 
     sem_wait(sem);
     addr_space as_copy;
     memcpy(&as_copy, &(sd->as), sizeof(addr_space));
     distance_peer_list(data, id, &(as_copy));
-    in_addr_t ip = sd->KPEER(ki.b, ki.p).ip;
-    in_addr_t port = sd->KPEER(ki.b, ki.p).port;
-    memcpy(key, sd->KPEER(ki.b, ki.p).kp.tx, hydro_secretbox_KEYBYTES);
     sem_post(sem);
 
-//    printf("SENDING>>>\n");
-//    for (int i = 0; i < C_UDP_LEN; i+=26)
-//        printf("[%02d] [%02x][%02x][%02x][%02x] [%02x][%02x] [%02x%02x%02x%02x %02x%02x%02x%02x %02x%02x%02x%02x %02x%02x%02x%02x %02x%02x%02x%02x]\n",
-//            i / 26 + 1,
-//            data[i], data[i+1], data[i+2], data[i+3],
-//            data[i+4], data[i+5],
-//            data[i+6], data[i+7], data[i+8], data[i+9],
-//            data[i+10], data[i+11], data[i+12], data[i+13],
-//            data[i+14], data[i+15], data[i+16], data[i+17],
-//            data[i+18], data[i+19], data[i+20], data[i+21],
-//            data[i+22], data[i+23], data[i+24], data[i+25]);
+    // Check if peer is known
+    k_index ki;
+    unsigned short peer_found = get_kpeer(&as_copy, ip, &ki);
+
+    // Check if connection is secure
+    sem_wait(sem);
+    unsigned short peer_secure = sd->KPEER(ki.b, ki.p).secure;
+    sem_post(sem);
 
     byte packet[MAX_UDP];
-    e_forge_packet(packet, cookie, (byte *)SENDNODE, 0, data, C_UDP_LEN, key);
+    if (peer_found == OK && peer_secure == DTLS_OK)
+    {
+        uint8_t key[hydro_secretbox_KEYBYTES];
+        sem_wait(sem);
+        memcpy(key, sd->KPEER(ki.b, ki.p).kp.tx, hydro_secretbox_KEYBYTES);
+        sem_post(sem);
+
+        e_forge_packet(packet, cookie, (byte *)SENDNODE, 0, data, C_UDP_LEN, key);
+    }
+    else
+        forge_packet(packet, cookie, (byte *)SENDNODE, 0, data, C_UDP_LEN);
 
     return upload_data(ip, port, packet, MAX_UDP);
 }

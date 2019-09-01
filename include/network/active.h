@@ -70,7 +70,7 @@ int send_findnode(const k_index ki, byte id[PEER_ID_LEN], sem_t *sem, shared_dat
  *
  * This is a response to a peer request, it serves as a peer discovery method.
  */
-int send_node(const k_index ki, byte id[PEER_ID_LEN], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd);
+int send_node(const in_addr_t ip, const in_port_t port, byte id[PEER_ID_LEN], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd);
 
 /**
  * Create a DTLS session
