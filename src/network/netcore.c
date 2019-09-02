@@ -112,42 +112,42 @@ int init_networking()
             sleep(1);
         }
 
-        // Create secure connections (3 sec)
-//        for (int i = 0; i < 3; i++)
-//        {
-//            debug_dtls_vpn(sem, sd);
-//            sleep(1);
-//        }
+        // Sleep random time (because of DTLS bug)
         char r;
         getrandom(&r, 1, 0);
         srand(r);
         int rand_time = rand() % 20;
-        printf("Sleeping for %d [%d]\n", rand_time, r);
+        DEBUG_PRINT(P_INFO "Sleeping for %d\n", rand_time);
         sleep(rand_time);
 
-        k_index ki;
-        ki.b = 0;
-        ki.p = 1;
-        send_dtls1(ki, sem, sd);
+        // Create secure connections (3 sec)
+        debug_dtls_vpn(sem, sd);
 
-        printf("Sending pings in 5 sec\n");
-        sleep(5);
+        // Send pings to all peers
+        for (int i = 0; i < MAX_KBUCKETS; i++)
+        {
+            for (int j = 0; j < MAX_KPEERS; j++)
+            {
+                sem_wait(sem);
+                kpeer curr = sd->KPEER(i, j);
+                if (sd->as.kb_list[i].free[j] == 0)
+                {
+                    sem_post(sem);
+                    continue;
+                }
+                sem_post(sem);
 
-        sem_wait(sem);
-        in_addr_t other_ip = sd->KPEER(0, 1).ip;
-        in_addr_t other_port = sd->KPEER(0, 1).port;
-        sem_post(sem);
+                char tmp[INET_ADDRSTRLEN];
+                ip_string(curr.ip, tmp);
+                DEBUG_PRINT(P_INFO "Sending ping to [%s:%d] [%d:%d]\n", tmp, curr.port, i, j);
+                send_ping(curr.ip, curr.port, self_port, 1, sem, sd);
 
-        send_ping(other_ip, other_port, self_port, 1, sem, sd);
+                sleep(1);
+            }
+        }
 
-        sleep(50);
-
-        // Send pings (1 minute)
-//        for (int i = 0; i < 10; i++)
-//        {
-//            debug_bootstrap_vpn(1024, sem, sd);
-//            sleep(6);
-//        }
+        DEBUG_PRINT(P_ERROR "DONE, GONNA KILL SELF IN 10 SEC\n");
+        sleep(10);
 
         stop_server(self_port, sem, sd);
     }
@@ -167,7 +167,6 @@ int init_networking()
 
 int init_sd()
 {
-    // TODO: create gotos to clean shit
     int ret = OK;
     // Create the semaphore to stop the server later
     sem_t *sem = sem_open(SERVER_SEM, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1);

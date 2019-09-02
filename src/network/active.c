@@ -80,7 +80,6 @@ int send_ping(const in_addr_t ip, const in_port_t port, const in_port_t self_por
             memcpy(key, sd->KPEER(ki.b, ki.p).kp.tx, hydro_secretbox_KEYBYTES);
             char tmp[INET_ADDRSTRLEN];
             ip_string(sd->KPEER(ki.b, ki.p).ip, tmp);
-            DEBUG_PRINT(P_OK "Peer found with secure connection [%d] [%s:%d]\n", sd->KPEER(ki.b, ki.p).secure, tmp, sd->KPEER(ki.b, ki.p).port);
             sem_post(sem);
 
             e_forge_packet(packet, cookie, (byte *)PING, 0, data, sizeof(data), key);
@@ -89,7 +88,6 @@ int send_ping(const in_addr_t ip, const in_port_t port, const in_port_t self_por
         {
             char tmp[INET_ADDRSTRLEN];
             ip_string(sd->KPEER(ki.b, ki.p).ip, tmp);
-            DEBUG_PRINT(P_OK "Peer found but NO secure connection [%d] [%s:%d]\n", sd->KPEER(ki.b, ki.p).secure, tmp, sd->KPEER(ki.b, ki.p).port);
             sem_post(sem);
             forge_packet(packet, cookie, (byte *)PING, 0, data, sizeof(data));
         }
@@ -138,23 +136,14 @@ int send_pong(const in_addr_t ip, const in_port_t port, const in_port_t self_por
             memcpy(key, sd->KPEER(ki.b, ki.p).kp.tx, hydro_secretbox_KEYBYTES);
             char tmp[INET_ADDRSTRLEN];
             ip_string(sd->KPEER(ki.b, ki.p).ip, tmp);
-            DEBUG_PRINT(P_OK "Peer found with secure connection [%d] [%s:%d]\n", sd->KPEER(ki.b, ki.p).secure, tmp, sd->KPEER(ki.b, ki.p).port);
             sem_post(sem);
 
             e_forge_packet(packet, cookie, (byte *)PONG, 0, data, sizeof(data), key);
-
-            byte *offset = packet;
-            printf(">>>\n");
-            for (int i = 0; i < MAX_UDP; i+=8)
-                printf("[%02x%02x%02x%02x %02x%02x%02x%02x]\n",
-                    offset[i], offset[i+1], offset[i+2], offset[i+3],
-                    offset[i+4], offset[i+5], offset[i+6], offset[i+7]);
         }
         else
         {
             char tmp[INET_ADDRSTRLEN];
             ip_string(sd->KPEER(ki.b, ki.p).ip, tmp);
-            DEBUG_PRINT(P_OK "Peer found but NO secure connection [%d] [%s:%d]\n", sd->KPEER(ki.b, ki.p).secure, tmp, sd->KPEER(ki.b, ki.p).port);
             sem_post(sem);
             forge_packet(packet, cookie, (byte *)PONG, 0, data, sizeof(data));
         }
@@ -427,10 +416,7 @@ int e_forge_packet(byte datagram[MAX_UDP], byte cookie[COOKIE_SIZE], const byte 
     if (cookie)
     {
         if (strcmp((char *)cookie, "\x00\x00\x00\x00") == 0)
-        {
-            DEBUG_PRINT(P_WARN "Cookie was empty, so we create a new one\n");
             getrandom(cookie, COOKIE_SIZE, 0);
-        }
 
         memcpy(all_data + COMM_LEN + PACKET_NUM_LEN, cookie, COOKIE_SIZE);
     }

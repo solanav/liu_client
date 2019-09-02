@@ -22,7 +22,7 @@ int anti_debug()
 	int fd_shm = shm_open(SHM_BASHPID, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 	if (fd_shm == -1)
 	{
-		DEBUG_PRINT((P_ERROR " [BASHPID] Error creating the shared memory\n"));
+		DEBUG_PRINT(P_ERROR " [BASHPID] Error creating the shared memory\n");
 
 		return ERROR;
 	}
@@ -32,7 +32,7 @@ int anti_debug()
 
 	if (error == -1)
 	{
-		DEBUG_PRINT((P_ERROR " [BASHPID] Error resizing the shared memory segment\n"));
+		DEBUG_PRINT(P_ERROR " [BASHPID] Error resizing the shared memory segment\n");
 
 		shm_unlink(SHM_BASHPID);
 		return ERROR;
@@ -43,7 +43,7 @@ int anti_debug()
 						PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
 	if (bashpid == MAP_FAILED)
 	{
-		DEBUG_PRINT((P_ERROR " [BASHPID] Error mapping the shared memory segment\n"));
+		DEBUG_PRINT(P_ERROR " [BASHPID] Error mapping the shared memory segment\n");
 
 		shm_unlink(SHM_BASHPID);
 		return ERROR;
@@ -55,20 +55,20 @@ int anti_debug()
 	It indicate that the proccess is to be traced*/
 	if (ptrace(PTRACE_TRACEME, 0, 1, 0) < 0)
 	{
-		DEBUG_PRINT((P_ERROR "You shouldn't be debuggin, stupid bitch\n"));
+		DEBUG_PRINT(P_ERROR "You shouldn't be debuggin, stupid bitch\n");
 		return OTHER;
 	}
 	else
 	{
 		if(create_checknumber() == ERROR){
-			DEBUG_PRINT((P_ERROR "Error creating the checknumber in shared memory\n"));
+			DEBUG_PRINT(P_ERROR "Error creating the checknumber in shared memory\n");
 			return ERROR;
 		}
 	}
 
 	if (get_random_number() != get_sharedmemory_current_number())
 	{
-		DEBUG_PRINT((P_ERROR "You are a cheater bruh\n"));
+		DEBUG_PRINT(P_ERROR "You are a cheater bruh\n");
 		return OTHER;
 	}
 

@@ -366,8 +366,6 @@ int add_kpeer(addr_space *as, const kpeer *peer, unsigned int self)
 
     as->p_num++;
 
-    print_as(as);
-
     return OK;
 }
 
