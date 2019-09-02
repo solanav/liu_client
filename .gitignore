@@ -48,6 +48,9 @@ dkms.conf
 # VSCode
 .vscode/
 
+# Build
+build/
+
 # Qt Creator
 CMakeFiles/
 *.cmake

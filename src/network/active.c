@@ -39,7 +39,7 @@ size_t upload_data(const in_addr_t ip, const in_port_t port, byte *data, size_t 
 /**
  * Data uploader xtra
  *
- * It uploads big data
+ * Can upload big files by dividing them and labeling them with the packet number
  */
 size_t upload_data_x(const in_addr_t ip, const in_port_t port, byte *data, size_t len, byte *header, byte *cont_header);
 

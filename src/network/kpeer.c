@@ -501,7 +501,7 @@ int import_bin(addr_space *as)
     return OK;
 }
 
-void distance(byte result[PEER_ID_LEN], byte id1[PEER_ID_LEN], byte id2[PEER_ID_LEN])
+void distance(byte result[PEER_ID_LEN], const byte id1[PEER_ID_LEN], const byte id2[PEER_ID_LEN])
 {
     for (int i = 0; i < PEER_ID_LEN; i++)
     {

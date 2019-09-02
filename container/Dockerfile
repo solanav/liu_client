@@ -1,5 +1,5 @@
 # Use an official Python runtime as a parent image
-FROM mubuntu
+FROM solanav/mubuntu:base
 
 # Set the working directory to /app
 WORKDIR /app
