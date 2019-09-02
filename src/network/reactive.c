@@ -419,11 +419,52 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
         memcpy(id, data + C_UDP_HEADER, PEER_ID_LEN);
 
         // Respond with closest nodes you know
-        send_node(ki, id, cookie, sem, sd);
+        send_node(other_ip, peer.port, id, cookie, sem, sd);
     }
     else if (memcmp(decrypted_data, SENDNODE, COMM_LEN) == 0 && peer_found == OK) // Peer sent us their peer_list (step 1)
     {
         DEBUG_PRINT(P_INFO "Received nodes from [%s:%d]\n", string_ip, peer.port);
+
+        // Get the request
+        int req_index = get_req(cookie, sem, sd);
+        if (req_index == -1)
+        {
+            DEBUG_PRINT(P_WARN "Failed to find request for the send_node, ignoring\n");
+            return ERROR;
+        }
+
+        // Check if this is the peer we were looking for
+        sem_wait(sem);
+        in_addr_t find_ip = sd->req.data.find_ip;
+        sem_post(sem);
+
+        if (find_ip == other_ip)
+        {
+            // Delete the request
+            rm_req(req_index, sem, sd);
+
+            DEBUG_PRINT(P_OK "FOUND THE PEER");
+            return OK;
+        }
+
+        // If we didn't find the objective yet
+        in_addr_t tmp_ip;
+        in_port_t tmp_port;
+        byte tmp_id[PEER_ID_LEN];
+
+        byte *offset = decrypted_data + C_UDP_HEADER;
+        for (int i = 0; i < C_UDP_LEN; i+=26)
+        {
+            // Copy to tmp
+            memcpy(tmp_ip, offset[i], sizeof(in_addr_t));
+            memcpy(tmp_port, offset[i + sizeof(in_addr_t)], sizeof(in_port_t));
+            memcpy(tmp_id, offset[i + sizeof(in_addr_t) + sizeof(in_port_t)], PEER_ID_LEN);
+
+            kpeer tmp_peer;
+            create_kpeer(&tmp_peer, tmp_ip, tmp_port, tmp_id);
+
+            send_node()
+        }
 
         byte *offset = decrypted_data + C_UDP_HEADER;
         printf("<<<\n");
@@ -437,8 +478,6 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
                 offset[i+14], offset[i+15], offset[i+16], offset[i+17],
                 offset[i+18], offset[i+19], offset[i+20], offset[i+21],
                 offset[i+22], offset[i+23], offset[i+24], offset[i+25]);
-
-        //memcpy(decrypted_data + C_UDP_HEADER, C_UDP_LEN);
     }
     else if (memcmp(decrypted_data, DTLS1, COMM_LEN) == 0 && peer_found == OK) // Peer sent DTLS1, respond with DTLS2
     {
