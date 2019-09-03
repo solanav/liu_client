@@ -8,7 +8,8 @@
 
 #define MAX_UDP 512 // Max size of a packet
 #define MAX_THREADS 128 // Max number of threads
-#define MAX_DATAGRAMS 128 // Max number of requests
+#define MAX_REQUESTS 128 // Max number of requests
+#define MAX_TKP 32 // Max number of concurrent DTLS connections
 
 #define EMPTY      "\x00\x00"
 #define INIT       "\x00\x01"
@@ -42,6 +43,7 @@ typedef struct _shared_data shared_data;
 
 #include "network/request.h"
 #include "network/kpeer.h"
+#include "network/tmp_kpeer.h"
 
 // Useful for saving request specific data
 union _data
@@ -51,14 +53,22 @@ union _data
 
 struct _request
 {
-    in_addr_t ip[MAX_DATAGRAMS];
-    byte comm[MAX_DATAGRAMS][COMM_LEN];
-    struct timespec timestamp[MAX_DATAGRAMS];
-    int prev[MAX_DATAGRAMS];
-    int next[MAX_DATAGRAMS];
-    unsigned short free[MAX_DATAGRAMS];
-    byte cookie[MAX_DATAGRAMS][COOKIE_SIZE];
+    in_addr_t ip[MAX_REQUESTS];
+    byte comm[MAX_REQUESTS][COMM_LEN];
+    struct timespec timestamp[MAX_REQUESTS];
+    int prev[MAX_REQUESTS];
+    int next[MAX_REQUESTS];
+    unsigned short free[MAX_REQUESTS];
+    byte cookie[MAX_REQUESTS][COOKIE_SIZE];
     union _data data;
+};
+
+struct _tmp_kpeer
+{
+    kpeer kp[MAX_TKP];
+    int prev[MAX_TKP];
+    int next[MAX_TKP];
+    unsigned short free[MAX_TKP];
 };
 
 struct _dtls_data
@@ -82,9 +92,14 @@ typedef struct _shared_data
     addr_space as;
     struct _server_info server_info;
     struct _dtls_data dtls;
+
     struct _request req;
     int req_first;
     int req_last;
+
+    struct _tmp_kpeer tkp;
+    int tkp_first;
+    int tkp_last;
 } shared_data;
 
 /**
@@ -93,6 +108,13 @@ typedef struct _shared_data
  * Creates a fork to run the server and executes commands from the client such as sending data.
  */
 int init_networking();
+
+/**
+ * Init the shared memory
+ * 
+ * You must clean after using this function.
+ */
+int init_sd();
 
 /**
  * Clean shared data

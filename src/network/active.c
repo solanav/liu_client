@@ -14,9 +14,9 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "hydrogen.h"
 #include "network/active.h"
 #include "types.h"
-#include "hydrogen.h"
 
 // Private functions
 
@@ -66,7 +66,7 @@ int send_ping(const in_addr_t ip, const in_port_t port, const in_port_t self_por
     int peer_res = get_kpeer(&(sd->as), ip, &ki);
     sem_post(sem);
 
-    // Next byte is to check if you need a request
+    // Next byte is to check if yosd->tkp.kp[i]u need a request
     data[26] = req_bit;
 
     // If our connection has DTLS, encrypt the message

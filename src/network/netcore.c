@@ -16,11 +16,9 @@
 #include "network/netcore.h"
 #include "network/reactive.h"
 #include "network/active.h"
+#include "hydrogen.h"
 
 #define MIN_PEERS 1
-
-int peer_discovery(sem_t *sem, shared_data *sd);
-int init_sd();
 
 #ifdef DEBUG
 void debug_dtls_vpn(sem_t *sem, shared_data *sd)
@@ -229,6 +227,9 @@ int init_sd()
 
     // Initialize requests data
     sd->req_last = -1;
+
+    // Initialize tkp data
+    sd->tkp_last = -1;
 
     //MQ_CLEAN:
     mq_close(datagram_queue);

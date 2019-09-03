@@ -11,12 +11,12 @@
 #include "types.h"
 #include "hydrogen.h"
 
-typedef struct _k_index {
+typedef struct {
     unsigned int p;
     unsigned int b;
 } k_index;
 
-typedef struct _kpeer {
+typedef struct {
     in_addr_t ip; // Ip of the peer
     in_port_t port; // Port of the peer
     byte id[PEER_ID_LEN]; // Kademlia ID to identify peer
@@ -25,14 +25,14 @@ typedef struct _kpeer {
     unsigned short secure; // 1 if DTLS has been established
 } kpeer;
 
-typedef struct _kbucket {
+typedef struct {
     kpeer peer[MAX_KPEERS]; // Peers in the bucket
     unsigned short free[MAX_KPEERS]; // 1 if there is no peer
     byte start[PEER_ID_LEN]; // First ID that can fit in this bucket (included)
     byte end[PEER_ID_LEN]; // Last ID that can fit in this bucket (included)
 } kbucket;
 
-typedef struct _addr_space {
+typedef struct {
     kbucket kb_list[MAX_KBUCKETS]; // List of all buckets
     unsigned short free[MAX_KPEERS]; // 1 if there is no bucket
     unsigned int b_num; // Number of buckets

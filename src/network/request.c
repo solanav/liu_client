@@ -28,7 +28,7 @@ int add_req(const in_addr_t ip, const byte header[C_UDP_HEADER], const byte cook
 
     // Get an empty space to save the request in
     int index = -1;
-    for (int i = 0; i < MAX_DATAGRAMS && index == -1; i++)
+    for (int i = 0; i < MAX_REQUESTS && index == -1; i++)
     {
         sem_wait(sem);
         if (sd->req.free[i] == 0)
@@ -41,9 +41,10 @@ int add_req(const in_addr_t ip, const byte header[C_UDP_HEADER], const byte cook
     {
         DEBUG_PRINT(P_WARN "No memory for new requests, removing oldest\n");
         sem_wait(sem);
-        int oldest_req = sd->req_last;
+        int oldest_req = sd->req_first;
         sem_post(sem);
         rm_req(oldest_req, sem, sd);
+        index = oldest_req;
     }
 
     sem_wait(sem);
@@ -51,8 +52,7 @@ int add_req(const in_addr_t ip, const byte header[C_UDP_HEADER], const byte cook
     // Copy data to req[index]
     clock_gettime(CLOCK_MONOTONIC, &(sd->req.timestamp[index]));
     sd->req.ip[index] = ip;
-    sd->req.comm[index][0] = header[0];
-    sd->req.comm[index][1] = header[1];
+    memcpy(sd->req.comm[index], header, COMM_LEN);
     memcpy(sd->req.cookie[index], cookie, COOKIE_SIZE);
 
     // Update variables of the list
@@ -84,13 +84,16 @@ int rm_req(int index, sem_t *sem, shared_data *sd)
     if (index == sd->req_last)
         sd->req_last = prev_index;
 
-    sd->req.next[prev_index] = next_index;
-    sd->req.prev[next_index] = prev_index;
+    if (prev_index != -1)
+        sd->req.next[prev_index] = next_index;
+    
+    if (next_index != -1)
+        sd->req.prev[next_index] = prev_index;
 
     memset(sd->req.comm[index], 0, COMM_LEN * sizeof(char));
     sd->req.ip[index] = 0;
-    sd->req.prev[index] = -1;
-    sd->req.next[index] = -1;
+    sd->req.prev[index] = 0;
+    sd->req.next[index] = 0;
     sd->req.free[index] = 0;
 
     sem_post(sem);

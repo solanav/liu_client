@@ -1,12 +1,10 @@
-#ifndef NETWORK_UTILS_H
-#define NETWORK_UTILS_H
+#ifndef REQUESTS_H
+#define REQUESTS_H
 
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <time.h>
 #include <semaphore.h>
-
-#define MAX_PEERS 16
 
 typedef struct _peer_list peer_list;
 

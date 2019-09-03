@@ -22,6 +22,7 @@ add_library(net_lib OBJECT
     ${NET_DIR}/active.c
     ${NET_DIR}/reactive.c
     ${NET_DIR}/request.c
+    ${NET_DIR}/tmp_kpeer.c
     ${NET_DIR}/kpeer.c
     ${NET_DIR}/netcore.c
 )
@@ -41,12 +42,9 @@ target_include_directories(core_lib
 # Add the other cmake files
 add_subdirectory(src)
 add_subdirectory(plugins)
-#add_subdirectory(tests)
+add_subdirectory(tests)
 
 # Add the tests
-#enable_testing()
-#add_test(NAME network_active COMMAND test_network_active)
-#add_test(NAME system_utils COMMAND test_system_utils)
-#add_test(NAME network_utils COMMAND test_network_utils)
-#add_test(NAME pingpong COMMAND test_pingpong)
-#add_test(NAME peerexchange COMMAND test_peerexchange)
+enable_testing()
+add_test(NAME tmp_kpeer COMMAND tmp_kpeer_t)
+add_test(NAME request COMMAND request_t)
