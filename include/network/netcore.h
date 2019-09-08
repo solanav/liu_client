@@ -40,6 +40,7 @@
 
 typedef struct _double_peer_list double_peer_list;
 typedef struct _shared_data shared_data;
+struct _tmp_kpeer;
 
 #include "network/request.h"
 #include "network/kpeer.h"
@@ -74,7 +75,7 @@ struct _tmp_kpeer
 struct _dtls_data
 {
     hydro_kx_keypair kp; // Our own keypair
-    hydro_kx_state state[MAX_KPEERS * MAX_KBUCKETS]; // State for dtls handshake (one for each peer)
+    hydro_kx_state state[MAX_KPEERS * MAX_KBUCKETS + MAX_TKP]; // State for dtls handshake (one for each peer)
 };
 
 struct _server_info

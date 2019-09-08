@@ -23,7 +23,7 @@ int add_tkp(const kpeer *kp, sem_t *sem, shared_data *sd);
  *
  * Given a cookie, it spits out an index of a tkp or ERROR.
  */
-int get_tkp(const kpeer *kp, sem_t *sem, shared_data *sd);
+int get_tkp(const in_addr_t ip, struct _tmp_kpeer tkp_copy, int tkp_first);
 
 /**
  * Remove a tkp

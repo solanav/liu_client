@@ -63,7 +63,7 @@ int send_pong(const in_addr_t ip, const in_port_t port, const in_port_t self_por
  *
  * The peer should respond with a peer_list. We will use this to fill our list.
  */
-int send_findnode(const k_index ki, byte id[PEER_ID_LEN], sem_t *sem, shared_data *sd);
+int send_findnode(const in_addr_t ip, const in_port_t port, byte id[PEER_ID_LEN], sem_t *sem, shared_data *sd);
 
 /**
  * Sends the peer_list to a peer
@@ -80,9 +80,9 @@ int send_node(const in_addr_t ip, const in_port_t port, byte id[PEER_ID_LEN], by
  * client: receives dtls2, send_dtls3(), [key OK]
  * server: receives dtls3, [key OK]
  */
-int send_dtls1(k_index ki, sem_t *sem, shared_data *sd);
-int send_dtls2(k_index ki, uint8_t packet1[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd);
-int send_dtls3(k_index ki, uint8_t packet2[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd);
+int send_dtls1(const in_addr_t ip, const in_port_t port, sem_t *sem, shared_data *sd);
+int send_dtls2(const in_addr_t ip, const in_port_t port, uint8_t packet1[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd);
+int send_dtls3(const in_addr_t ip, const in_port_t port, uint8_t packet2[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd);
 
 /**
  * Sends a debug message
@@ -90,6 +90,6 @@ int send_dtls3(k_index ki, uint8_t packet2[hydro_kx_XX_PACKET1BYTES], byte cooki
  * The client that receives this message will print it as output.
  * The message has to be under C_UDP_LEN bytes long.
  */
-int send_debug(k_index ki, const byte *data, size_t len, sem_t *sem, shared_data *sd);
+int send_debug(const in_addr_t ip, const in_port_t port, const byte *data, size_t len, sem_t *sem, shared_data *sd);
 
 #endif

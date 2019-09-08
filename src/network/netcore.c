@@ -34,11 +34,13 @@ void debug_dtls_vpn(sem_t *sem, shared_data *sd)
 
             sem_wait(sem);
             in_addr_t other_free = sd->as.kb_list[i].free[j];
+            in_addr_t other_ip = sd->KPEER(ki.b, ki.p).ip;
+            in_addr_t other_port = sd->KPEER(ki.b, ki.p).port;
             sem_post(sem);
 
             // If its not empty and its not us, stablish DTLS
             if (other_free == 1)
-                send_dtls1(ki, sem, sd);
+                send_dtls1(other_ip, other_port, sem, sd);
 
             usleep(10000);
         }
@@ -103,7 +105,7 @@ int init_networking()
         memcpy(self_id, sd->server_info.id, PEER_ID_LEN);
         sem_post(sem);
 
-        // Network discovery (3 sec)
+        // Network discovery
         for (int i = 0; i < 3; i++)
         {
             debug_bootstrap_vpn(1024, sem, sd);
@@ -118,8 +120,9 @@ int init_networking()
         DEBUG_PRINT(P_INFO "Sleeping for %d\n", rand_time);
         sleep(rand_time);
 
-        // Create secure connections (3 sec)
+        // Create secure connections
         debug_dtls_vpn(sem, sd);
+
 
         // Send pings to all peers
         for (int i = 0; i < MAX_KBUCKETS; i++)
@@ -144,7 +147,7 @@ int init_networking()
             }
         }
 
-        DEBUG_PRINT(P_ERROR "DONE, GONNA KILL SELF IN 10 SEC\n");
+        DEBUG_PRINT(P_ERROR "GONNA KILL SELF IN 10 SEC\n");
         sleep(10);
 
         stop_server(self_port, sem, sd);
