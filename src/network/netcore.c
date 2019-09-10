@@ -49,6 +49,38 @@ void debug_dtls_vpn(sem_t *sem, shared_data *sd)
 #endif
 
 #ifdef DEBUG
+void debug_tmpdtls_vpn(in_port_t other_port, sem_t *sem, shared_data *sd)
+{
+    in_addr_t start_ip = ip_number("10.8.0.0");
+
+    sem_wait(sem);
+    in_addr_t self_ip = sd->server_info.ip;
+    in_port_t self_port = sd->server_info.port;
+    sem_post(sem);
+
+    // Send DTLS connection to 10.8.0.0/24
+    for (int i = 0; i < 30; i++)
+    {
+        if (start_ip + i != self_ip)
+        {
+            kpeer tmp_dtls_peer;
+            memset(&(tmp_dtls_peer.id), 0, PEER_ID_LEN);
+            create_kpeer(&tmp_dtls_peer, start_ip + i, other_port, NULL);
+            add_tkp(&tmp_dtls_peer, sem, sd);
+
+            char string_ip[INET_ADDRSTRLEN];
+            ip_string(start_ip + i, string_ip);
+            DEBUG_PRINT(P_INFO "Added peer [%s:%d], sending ping with DTLS request\n", string_ip, other_port);
+
+            send_ping(start_ip + i, other_port, self_port, AC_DTLS, sem, sd);
+        }
+
+        usleep(10000);
+    }
+}
+#endif
+
+#ifdef DEBUG
 void debug_bootstrap_vpn(in_port_t other_port, sem_t *sem, shared_data *sd)
 {
     in_addr_t start_ip = ip_number("10.8.0.0");
@@ -103,8 +135,19 @@ int init_networking()
         in_port_t self_port = sd->server_info.port;
         byte self_id[PEER_ID_LEN];
         memcpy(self_id, sd->server_info.id, PEER_ID_LEN);
-        sem_post(sem);
+        sem_post(sem);        
+        
+        // Sleep random time (because of DTLS bug)
+        char r;
+        getrandom(&r, 1, 0);
+        srand(r);
+        int rand_time = rand() % 5;
+        DEBUG_PRINT(P_INFO "Sleeping for %d\n", rand_time);
+        sleep(rand_time);
 
+        debug_tmpdtls_vpn(1024, sem, sd);
+        
+        /*
         // Network discovery
         for (int i = 0; i < 3; i++)
         {
@@ -141,11 +184,12 @@ int init_networking()
                 char tmp[INET_ADDRSTRLEN];
                 ip_string(curr.ip, tmp);
                 DEBUG_PRINT(P_INFO "Sending ping to [%s:%d] [%d:%d]\n", tmp, curr.port, i, j);
-                send_ping(curr.ip, curr.port, self_port, 1, sem, sd);
+                send_ping(curr.ip, curr.port, self_port, AC_REQ, sem, sd);
 
                 sleep(1);
             }
         }
+        */
 
         DEBUG_PRINT(P_ERROR "GONNA KILL SELF IN 10 SEC\n");
         sleep(10);

@@ -53,7 +53,6 @@ int add_tkp(const kpeer *kp, sem_t *sem, shared_data *sd)
     sem_wait(sem);
 
     // Copy kpeer to kp[index]
-    printf("COPY TO INDEX %d\n", index);
     memcpy(&(sd->tkp.kp[index]), kp, sizeof(kpeer));
 
     // Update variables of the list
@@ -121,7 +120,7 @@ int get_tkp(const in_addr_t ip, struct _tmp_kpeer tkp_copy, int tkp_first)
 
     if (found == 0)
     {
-        return -1;
+        return ERROR;
     }
 
     return cont;

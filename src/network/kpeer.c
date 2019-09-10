@@ -407,7 +407,13 @@ int create_kpeer(kpeer *dst, const in_addr_t ip, const in_port_t port, const byt
 
     dst->ip = ip;
     dst->port = port;
-    memcpy(dst->id, id, PEER_ID_LEN);
+
+    if (id != NULL)
+        memcpy(dst->id, id, PEER_ID_LEN);
+
+    dst->secure = DTLS_NO;
+    memset(&(dst->kp), 0, sizeof(dst->kp));
+    memset(&(dst->latency), 0, sizeof(dst->kp));
 
     return OK;
 }

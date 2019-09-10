@@ -43,7 +43,7 @@ size_t upload_data(const in_addr_t ip, const in_port_t port, byte *data, size_t 
  */
 size_t upload_data_x(const in_addr_t ip, const in_port_t port, byte *data, size_t len, byte *header, byte *cont_header);
 
-int send_ping(const in_addr_t ip, const in_port_t port, const in_port_t self_port, unsigned short req_bit, sem_t *sem, shared_data *sd)
+int send_ping(const in_addr_t ip, const in_port_t port, const in_port_t self_port, unsigned short flags, sem_t *sem, shared_data *sd)
 {
     // Create cookie with zeros to get a new one and add it to requests
     byte cookie[COOKIE_SIZE] = {0};
@@ -66,8 +66,8 @@ int send_ping(const in_addr_t ip, const in_port_t port, const in_port_t self_por
     int peer_res = get_kpeer(&(sd->as), ip, &ki);
     sem_post(sem);
 
-    // Next byte is to check if yosd->tkp.kp[i]u need a request
-    data[26] = req_bit;
+    // Next byte is for flags
+    data[26] = flags;
 
     // If our connection has DTLS, encrypt the message
     byte packet[MAX_UDP];
@@ -97,7 +97,7 @@ int send_ping(const in_addr_t ip, const in_port_t port, const in_port_t self_por
         forge_packet(packet, cookie, (byte *)PING, 0, data, sizeof(data));
     }
 
-    if (req_bit == 1)
+    if ((flags & AC_REQ) == AC_REQ)
         if (add_req(ip, (byte *)PING, cookie, sem, sd) == ERROR)
             return ERROR;
 
@@ -228,6 +228,7 @@ int send_dtls1(const in_addr_t ip, const in_port_t port, sem_t *sem, shared_data
         if ((i = get_tkp(ip, sd->tkp, sd->tkp_first)) == ERROR)
         {
             DEBUG_PRINT("Could not find the peer to send dtls1\n");
+            sem_post(sem);
             return ERROR;
         }
         else
@@ -248,7 +249,6 @@ int send_dtls1(const in_addr_t ip, const in_port_t port, sem_t *sem, shared_data
         sem_post(sem);
         return ERROR;
     }
-    DEBUG_PRINT(P_INFO "CONNECTION STATUS %d\n", peer->secure);
     peer->secure = DTLS_ING;
     sem_post(sem);
 
@@ -282,6 +282,7 @@ int send_dtls2(const in_addr_t ip, const in_port_t port, uint8_t packet1[hydro_k
         if ((i = get_tkp(ip, sd->tkp, sd->tkp_first)) == ERROR)
         {
             DEBUG_PRINT("Could not find the peer to send dtls2\n");
+            sem_post(sem);
             return ERROR;
         }
         else
@@ -320,6 +321,7 @@ int send_dtls3(const in_addr_t ip, const in_port_t port, uint8_t packet2[hydro_k
         if ((i = get_tkp(ip, sd->tkp, sd->tkp_first)) == ERROR)
         {
             DEBUG_PRINT("Could not find the peer to send the nodes\n");
+            sem_post(sem);
             return ERROR;
         }
         else

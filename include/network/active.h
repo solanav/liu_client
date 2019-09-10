@@ -7,6 +7,9 @@
 #include "types.h"
 #include "network/netcore.h"
 
+#define AC_REQ 1  // 0b00000001
+#define AC_DTLS 2 //0b00000010
+
 /**
  * Create package
  *

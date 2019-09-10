@@ -289,6 +289,7 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
         {
             r_peer = sd->tkp.kp[tmp_i];
             w_peer = &(sd->tkp.kp[tmp_i]);
+            peer_found = OK;
         }
         
     }
@@ -335,17 +336,34 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
         in_port_t other_port = ((decrypted_data[C_UDP_HEADER + 4] & 0xFF) << 8) +
                 ((decrypted_data[C_UDP_HEADER + 5] & 0xFF) << 0);
 
-        ip_string(other_ip, string_ip);
         DEBUG_PRINT(P_INFO "Received a ping from [%s:%d]\n", string_ip, other_port);
-        DEBUG_PRINT(P_INFO "Sending a pong to [%s:%d]\n", string_ip, other_port);
 
-        // Get self port
-        sem_wait(sem);
-        in_port_t self_port = sd->server_info.port;
-        sem_post(sem);
+        kpeer tmp;
+        byte other_id[PEER_ID_LEN];
+        memcpy(other_id, decrypted_data + C_UDP_HEADER + sizeof(in_addr_t) + sizeof(in_port_t), PEER_ID_LEN);
+        create_kpeer(&tmp, other_ip, other_port, other_id);
 
-        // Send pong with the cookie from the ping
-        send_pong(other_ip, other_port, self_port, cookie, sem, sd);
+        // Check if they want DTLS
+        unsigned char flags = *(decrypted_data + C_UDP_HEADER + sizeof(in_addr_t) + sizeof(in_port_t) + PEER_ID_LEN);
+        if ((flags & AC_DTLS) == AC_DTLS)
+        {
+            DEBUG_PRINT(P_INFO "Sending a dtls to [%s:%d]\n", string_ip, other_port);
+            
+            add_tkp(&tmp, sem, sd);
+            send_dtls1(other_ip, other_port, sem, sd);
+        }
+        else
+        {
+            DEBUG_PRINT(P_INFO "Sending a pong to [%s:%d]\n", string_ip, other_port);
+
+            // Get self port
+            sem_wait(sem);
+            in_port_t self_port = sd->server_info.port;
+            sem_post(sem);
+
+            // Send pong with the cookie from the ping
+            send_pong(other_ip, other_port, self_port, cookie, sem, sd);
+        }
     }
     else if (memcmp(decrypted_data, PONG, COMM_LEN) == 0) // We sent a ping, now we get the info we wanted
     {
@@ -486,7 +504,7 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
             send_node(tmp_ip, tmp_port, tmp_id, cookie, sem, sd);
         }
     }
-    else if (memcmp(decrypted_data, DTLS1, COMM_LEN) == 0 && peer_found == OK) // Peer sent DTLS1, respond with DTLS2
+    else if (memcmp(decrypted_data, DTLS1, COMM_LEN) == 0) // Peer sent DTLS1, respond with DTLS2
     {
         DEBUG_PRINT(P_INFO "Received DTLS step 1 from [%s:%d]\n", string_ip, r_peer.port);
 
@@ -570,7 +588,13 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
         memcpy(cookie, decrypted_data + COMM_LEN + PACKET_NUM_LEN, COOKIE_SIZE);
         memcpy(packet3, decrypted_data + C_UDP_HEADER, hydro_kx_XX_PACKET2BYTES);
 
-        if (hydro_kx_xx_4(&(sd->dtls.state[(ki.b * MAX_KPEERS) + ki.p]), &(w_peer->kp), NULL, packet3, NULL) != 0)
+        hydro_kx_state *dtls_state;
+        if (tmp_i == ERROR) // Permanent peer found
+            dtls_state = &(sd->dtls.state[(ki.b * MAX_KPEERS) + ki.p]);
+        else // Temporal peer found
+            dtls_state = &(sd->dtls.state[MAX_KPEERS * MAX_KBUCKETS + tmp_i]);
+
+        if (hydro_kx_xx_4(dtls_state, &(w_peer->kp), NULL, packet3, NULL) != 0)
         {
             DEBUG_PRINT(P_ERROR "Failed to execute step 4 of DTLS\n");
 
@@ -607,6 +631,12 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
     {
         DEBUG_PRINT(P_INFO "Received an empty message\n");
     }
+    else
+    {
+        DEBUG_PRINT(P_ERROR "Received unknown message from [%s:%d]\n", string_ip, r_peer.port);
+        return ERROR;
+    }
+    
 
     return OK;
 }
