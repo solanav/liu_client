@@ -48,25 +48,27 @@ void debug_dtls_vpn(sem_t *sem, shared_data *sd)
 }
 #endif
 
-#ifdef DEBUG
+//#ifdef DEBUG
 void debug_tmpdtls_vpn(in_port_t other_port, sem_t *sem, shared_data *sd)
 {
-    in_addr_t start_ip = ip_number("10.8.0.0");
+    in_addr_t start_ip = ip_number("172.18.0.0");
 
     sem_wait(sem);
     in_addr_t self_ip = sd->server_info.ip;
     in_port_t self_port = sd->server_info.port;
+    struct _tmp_kpeer tkp = sd->tkp;
+    int tkp_first = sd->tkp_first;
     sem_post(sem);
 
-    // Send DTLS connection to 10.8.0.0/24
+    // Send DTLS connection to 172.18.0.0/24
     for (int i = 0; i < 30; i++)
     {
-        if (start_ip + i != self_ip)
+        if (start_ip + i != self_ip && get_tkp(start_ip + i, &tkp, tkp_first) == ERROR)
         {
             kpeer tmp_dtls_peer;
             memset(&(tmp_dtls_peer.id), 0, PEER_ID_LEN);
             create_kpeer(&tmp_dtls_peer, start_ip + i, other_port, NULL);
-            add_tkp(&tmp_dtls_peer, sem, sd);
+            int add_res = add_tkp(&tmp_dtls_peer, sem, sd);
 
             char string_ip[INET_ADDRSTRLEN];
             ip_string(start_ip + i, string_ip);
@@ -78,19 +80,19 @@ void debug_tmpdtls_vpn(in_port_t other_port, sem_t *sem, shared_data *sd)
         usleep(10000);
     }
 }
-#endif
+//#endif
 
 #ifdef DEBUG
 void debug_bootstrap_vpn(in_port_t other_port, sem_t *sem, shared_data *sd)
 {
-    in_addr_t start_ip = ip_number("10.8.0.0");
+    in_addr_t start_ip = ip_number("172.18.0.0");
 
     sem_wait(sem);
     in_addr_t self_ip = sd->server_info.ip;
     in_port_t self_port = sd->server_info.port;
     sem_post(sem);
 
-    // Ping 10.8.0.0/24
+    // Ping 172.18.0.0/24
     for (int i = 0; i < 256; i++)
     {
         if (start_ip + i != self_ip)
@@ -191,7 +193,7 @@ int init_networking()
         }
         */
 
-        DEBUG_PRINT(P_ERROR "GONNA KILL SELF IN 10 SEC\n");
+        DEBUG_PRINT(P_INFO "Ending connection...\n");
         sleep(10);
 
         stop_server(self_port, sem, sd);

@@ -225,7 +225,7 @@ int send_dtls1(const in_addr_t ip, const in_port_t port, sem_t *sem, shared_data
     if (get_kpeer(&(sd->as), ip, &ki) == ERROR)
     {
         int i;
-        if ((i = get_tkp(ip, sd->tkp, sd->tkp_first)) == ERROR)
+        if ((i = get_tkp(ip, &(sd->tkp), sd->tkp_first)) == ERROR)
         {
             DEBUG_PRINT("Could not find the peer to send dtls1\n");
             sem_post(sem);
@@ -279,7 +279,7 @@ int send_dtls2(const in_addr_t ip, const in_port_t port, uint8_t packet1[hydro_k
     if (get_kpeer(&(sd->as), ip, &ki) == ERROR)
     {
         int i;
-        if ((i = get_tkp(ip, sd->tkp, sd->tkp_first)) == ERROR)
+        if ((i = get_tkp(ip, &(sd->tkp), sd->tkp_first)) == ERROR)
         {
             DEBUG_PRINT("Could not find the peer to send dtls2\n");
             sem_post(sem);
@@ -318,7 +318,7 @@ int send_dtls3(const in_addr_t ip, const in_port_t port, uint8_t packet2[hydro_k
     if (get_kpeer(&(sd->as), ip, &ki) == ERROR)
     {
         int i;
-        if ((i = get_tkp(ip, sd->tkp, sd->tkp_first)) == ERROR)
+        if ((i = get_tkp(ip, &(sd->tkp), sd->tkp_first)) == ERROR)
         {
             DEBUG_PRINT("Could not find the peer to send the nodes\n");
             sem_post(sem);

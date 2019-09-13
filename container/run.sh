@@ -11,4 +11,4 @@ cp $BUILD/src/liu_client $DIR/files/liu_client
 docker build . -t $IMAGE_NAME
 
 # Run it
-docker run -ti --cap-add=NET_ADMIN --device=/dev/net/tun $IMAGE_NAME
+docker run -ti --net=private $IMAGE_NAME

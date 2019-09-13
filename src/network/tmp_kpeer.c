@@ -21,10 +21,10 @@ int add_tkp(const kpeer *kp, sem_t *sem, shared_data *sd)
 {
     // Check if tkp is already there
     sem_wait(sem);
-    if (get_tkp(kp->ip, sd->tkp, sd->tkp_first) != -1)
+    if (get_tkp(kp->ip, &(sd->tkp), sd->tkp_first) != -1)
     {
         sem_post(sem);
-        DEBUG_PRINT(P_ERROR "kpeer already there\n");
+        DEBUG_PRINT(P_WARN "kpeer already there\n");
         return ERROR;
     }
     sem_post(sem);
@@ -101,20 +101,20 @@ int rm_tkp(int index, sem_t *sem, shared_data *sd)
     return OK;
 }
 
-int get_tkp(const in_addr_t ip, struct _tmp_kpeer tkp_copy, int tkp_first)
+int get_tkp(const in_addr_t ip, const struct _tmp_kpeer *tkp_copy, int tkp_first)
 {
     int cont = tkp_first;
 
     int found = 0;
     while (found == 0)
     {
-        if (tkp_copy.kp[cont].ip == ip)
+        if (tkp_copy->kp[cont].ip == ip)
             found = 1;
         else
-            cont = tkp_copy.next[cont];
+            cont = tkp_copy->next[cont];
 
         // Check the next is ok
-        if (cont == -1 || cont == tkp_copy.next[cont])
+        if (cont == -1 || cont == tkp_copy->next[cont])
             break;
     }
 

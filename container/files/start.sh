@@ -1,3 +1,3 @@
 #!/bin/bash
-nohup openvpn bot.ovpn &
+ip addr
 ./liu_client

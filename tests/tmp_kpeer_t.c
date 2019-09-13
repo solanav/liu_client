@@ -45,7 +45,7 @@ int main()
         printf("\n");
     }
 
-    int index = get_tkp(test.ip, sd->tkp, sd->tkp_first);
+    int index = get_tkp(test.ip, &(sd->tkp), sd->tkp_first);
     printf("INDEX OF %02x%02x%02x%02x is %d\n", test.id[0], test.id[1], test.id[2], test.id[3], index);
 
     // Clean all

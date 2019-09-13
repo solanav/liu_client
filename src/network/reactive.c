@@ -283,7 +283,7 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
     int peer_found = get_kpeer(&(sd->as), other_ip, &ki);
     if (peer_found == ERROR)
     {
-        if ((tmp_i = get_tkp(other_ip, sd->tkp, sd->tkp_first)) == ERROR)
+        if ((tmp_i = get_tkp(other_ip, &(sd->tkp), sd->tkp_first)) == ERROR)
             DEBUG_PRINT(P_WARN "Could not find peer\n");
         else
         {
