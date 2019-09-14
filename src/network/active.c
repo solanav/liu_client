@@ -17,6 +17,7 @@
 #include "hydrogen.h"
 #include "network/active.h"
 #include "types.h"
+#include "peer.h"
 
 // Private functions
 
@@ -45,6 +46,9 @@ size_t upload_data_x(const in_addr_t ip, const in_port_t port, byte *data, size_
 
 int send_ping(const in_addr_t ip, const in_port_t port, const in_port_t self_port, unsigned short flags, sem_t *sem, shared_data *sd)
 {
+    peer p;
+    int peer_res = get_peer(&p, ip, sem, sd);
+
     // Create cookie with zeros to get a new one and add it to requests
     byte cookie[COOKIE_SIZE] = {0};
     byte data[27];
@@ -62,8 +66,7 @@ int send_ping(const in_addr_t ip, const in_port_t port, const in_port_t self_por
     // Next 20 bytes are the ID
     sem_wait(sem);
     memcpy(data + 6, sd->server_info.id, PEER_ID_LEN);
-    k_index ki;
-    int peer_res = get_kpeer(&(sd->as), ip, &ki);
+    int secure = p.kp->secure;
     sem_post(sem);
 
     // Next byte is for flags
@@ -71,41 +74,31 @@ int send_ping(const in_addr_t ip, const in_port_t port, const in_port_t self_por
 
     // If our connection has DTLS, encrypt the message
     byte packet[MAX_UDP];
-    if (peer_res == OK)
+    if (peer_res == OK && secure == DTLS_OK)
     {
+        uint8_t key[hydro_secretbox_KEYBYTES];
         sem_wait(sem);
-        if (sd->KPEER(ki.b, ki.p).secure == DTLS_OK)
-        {
-            uint8_t key[hydro_secretbox_KEYBYTES];
-            memcpy(key, sd->KPEER(ki.b, ki.p).kp.tx, hydro_secretbox_KEYBYTES);
-            char tmp[INET_ADDRSTRLEN];
-            ip_string(sd->KPEER(ki.b, ki.p).ip, tmp);
-            sem_post(sem);
-
-            e_forge_packet(packet, cookie, (byte *)PING, 0, data, sizeof(data), key);
-        }
-        else
-        {
-            char tmp[INET_ADDRSTRLEN];
-            ip_string(sd->KPEER(ki.b, ki.p).ip, tmp);
-            sem_post(sem);
-            forge_packet(packet, cookie, (byte *)PING, 0, data, sizeof(data));
-        }
+        memcpy(key, p.kp->key.tx, hydro_secretbox_KEYBYTES);
+        sem_post(sem);
+        e_forge_packet(packet, cookie, (byte *)PING, 0, data, sizeof(data), key);
     }
     else
-    {
         forge_packet(packet, cookie, (byte *)PING, 0, data, sizeof(data));
-    }
 
     if ((flags & AC_REQ) == AC_REQ)
         if (add_req(ip, (byte *)PING, cookie, sem, sd) == ERROR)
             return ERROR;
+
+    ;
 
     return upload_data(ip, port, packet, MAX_UDP);
 }
 
 int send_pong(const in_addr_t ip, const in_port_t port, const in_port_t self_port, byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
 {
+    peer p;
+    int peer_res = get_peer(&p, ip, sem, sd);
+
     // Create cookie with zeros to get a new one and add it to requests
     byte data[26];
 
@@ -122,57 +115,47 @@ int send_pong(const in_addr_t ip, const in_port_t port, const in_port_t self_por
     // Next 20 bytes are the ID
     sem_wait(sem);
     memcpy(data + 6, sd->server_info.id, PEER_ID_LEN);
-    k_index ki;
-    int peer_res = get_kpeer(&(sd->as), ip, &ki);
+    int secure = p.kp->secure;
     sem_post(sem);
 
     byte packet[MAX_UDP];
-    if (peer_res == OK)
+    if (peer_res == OK && secure == DTLS_OK)
     {
+        uint8_t key[hydro_secretbox_KEYBYTES];
         sem_wait(sem);
-        if (sd->KPEER(ki.b, ki.p).secure == DTLS_OK)
-        {
-            uint8_t key[hydro_secretbox_KEYBYTES];
-            memcpy(key, sd->KPEER(ki.b, ki.p).kp.tx, hydro_secretbox_KEYBYTES);
-            char tmp[INET_ADDRSTRLEN];
-            ip_string(sd->KPEER(ki.b, ki.p).ip, tmp);
-            sem_post(sem);
+        memcpy(key, p.kp->key.tx, hydro_secretbox_KEYBYTES);
+        sem_post(sem);
 
-            e_forge_packet(packet, cookie, (byte *)PONG, 0, data, sizeof(data), key);
-        }
-        else
-        {
-            char tmp[INET_ADDRSTRLEN];
-            ip_string(sd->KPEER(ki.b, ki.p).ip, tmp);
-            sem_post(sem);
-            forge_packet(packet, cookie, (byte *)PONG, 0, data, sizeof(data));
-        }
+        e_forge_packet(packet, cookie, (byte *)PONG, 0, data, sizeof(data), key);
     }
     else
-    {
         forge_packet(packet, cookie, (byte *)PONG, 0, data, sizeof(data));
-    }
+
+    ;
 
     return upload_data(ip, port, packet, MAX_UDP);
 }
 
 int send_findnode(const in_addr_t ip, const in_port_t port, byte id[PEER_ID_LEN], sem_t *sem, shared_data *sd)
 {
-    // Get the tx key
-    uint8_t key[hydro_secretbox_KEYBYTES];
-    sem_wait(sem);
-    k_index ki;
-    if (get_kpeer(&(sd->as), ip, &ki) == ERROR)
+    peer p;
+    if (get_peer(&p, ip, sem, sd) == ERROR)
     {
         DEBUG_PRINT("Could not find the peer to send the nodes\n");
         return ERROR;
     }
-    memcpy(key, sd->KPEER(ki.b, ki.p).kp.tx, hydro_secretbox_KEYBYTES);
+    
+    // Get the tx key
+    uint8_t key[hydro_secretbox_KEYBYTES];
+    sem_wait(sem);
+    memcpy(key, p.kp->key.tx, hydro_secretbox_KEYBYTES);
     sem_post(sem);
 
     byte cookie[COOKIE_SIZE] = {0};
     byte packet[MAX_UDP];
     e_forge_packet(packet, cookie, (byte *)FINDNODE, 0, id, PEER_ID_LEN, key);
+
+    ;
 
     if (add_req(ip, (byte *)FINDNODE, cookie, sem, sd) == ERROR)
         return ERROR;
@@ -191,12 +174,12 @@ int send_node(const in_addr_t ip, const in_port_t port, byte id[PEER_ID_LEN], by
     sem_post(sem);
 
     // Check if peer is known
-    k_index ki;
-    unsigned short peer_found = get_kpeer(&as_copy, ip, &ki);
+    peer p;
+    int peer_found = get_peer(&p, ip, sem, sd);
 
     // Check if connection is secure
     sem_wait(sem);
-    unsigned short peer_secure = sd->KPEER(ki.b, ki.p).secure;
+    unsigned short peer_secure = p.kp->secure;
     sem_post(sem);
 
     byte packet[MAX_UDP];
@@ -204,7 +187,7 @@ int send_node(const in_addr_t ip, const in_port_t port, byte id[PEER_ID_LEN], by
     {
         uint8_t key[hydro_secretbox_KEYBYTES];
         sem_wait(sem);
-        memcpy(key, sd->KPEER(ki.b, ki.p).kp.tx, hydro_secretbox_KEYBYTES);
+        memcpy(key, p.kp->key.tx, hydro_secretbox_KEYBYTES);
         sem_post(sem);
 
         e_forge_packet(packet, cookie, (byte *)SENDNODE, 0, data, C_UDP_LEN, key);
@@ -212,51 +195,38 @@ int send_node(const in_addr_t ip, const in_port_t port, byte id[PEER_ID_LEN], by
     else
         forge_packet(packet, cookie, (byte *)SENDNODE, 0, data, C_UDP_LEN);
 
+    ;
+    
     return upload_data(ip, port, packet, MAX_UDP);
 }
 
 int send_dtls1(const in_addr_t ip, const in_port_t port, sem_t *sem, shared_data *sd)
 {
-    // Dont try to start if already in progress
-    sem_wait(sem);
-    k_index ki;
-    kpeer *peer;
-    hydro_kx_state *state;
-    if (get_kpeer(&(sd->as), ip, &ki) == ERROR)
+    peer p;
+    if (get_peer(&p, ip, sem, sd) == ERROR)
     {
-        int i;
-        if ((i = get_tkp(ip, &(sd->tkp), sd->tkp_first)) == ERROR)
-        {
-            DEBUG_PRINT("Could not find the peer to send dtls1\n");
-            sem_post(sem);
-            return ERROR;
-        }
-        else
-        {
-            peer = &(sd->tkp.kp[i]);
-            state = &(sd->dtls.state[MAX_KPEERS * MAX_KBUCKETS + i]);
-        }
-    }
-    else
-    {
-        peer = &(sd->KPEER(ki.b, ki.p));
-        state = &(sd->dtls.state[(ki.b * MAX_KPEERS) + ki.p]);
+        DEBUG_PRINT("Could not find the peer to send dtls1\n");
+        return ERROR;
     }
 
-    if (peer->secure != DTLS_NO)
+    sem_wait(sem);
+    if (p.kp->secure != DTLS_NO)
     {
         DEBUG_PRINT(P_WARN "Connection already secure or in progress [active]\n");
         sem_post(sem);
+        ;
         return ERROR;
     }
-    peer->secure = DTLS_ING;
+    p.kp->secure = DTLS_ING;
     sem_post(sem);
 
     // Create packet for dtls handshake and update state
     uint8_t packet1[hydro_kx_XX_PACKET1BYTES];
     sem_wait(sem);
-    hydro_kx_xx_1(state, packet1, NULL);
+    hydro_kx_xx_1(p.state, packet1, NULL);
     sem_post(sem);
+    
+    ;
 
     // Create udp packet with cookie and packet1 as data
     byte cookie[COOKIE_SIZE] = {0}; // Create new cookie for dtls
@@ -272,31 +242,23 @@ int send_dtls1(const in_addr_t ip, const in_port_t port, sem_t *sem, shared_data
 
 int send_dtls2(const in_addr_t ip, const in_port_t port, uint8_t packet1[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
 {
+    peer p;
+    if (get_peer(&p, ip, sem, sd) == ERROR)
+    {
+        DEBUG_PRINT("Could not find the peer to send dtls2\n");
+        return ERROR;
+    }
+
     uint8_t packet2[hydro_kx_XX_PACKET2BYTES];
     sem_wait(sem);
-    k_index ki;
-    hydro_kx_state *state;
-    if (get_kpeer(&(sd->as), ip, &ki) == ERROR)
-    {
-        int i;
-        if ((i = get_tkp(ip, &(sd->tkp), sd->tkp_first)) == ERROR)
-        {
-            DEBUG_PRINT("Could not find the peer to send dtls2\n");
-            sem_post(sem);
-            return ERROR;
-        }
-        else
-            state = &(sd->dtls.state[MAX_KPEERS * MAX_KBUCKETS + i]);
-    }
-    else
-        state = &(sd->dtls.state[(ki.b * MAX_KPEERS) + ki.p]);
-
-    if (hydro_kx_xx_2(state, packet2, packet1, NULL, &(sd->dtls.kp)) != 0) {
+    if (hydro_kx_xx_2(p.state, packet2, packet1, NULL, &(sd->dtls.key)) != 0) {
         DEBUG_PRINT(P_ERROR "Failed step 2 of dtls handshake\n");
         sem_post(sem);
         return ERROR;
     }
     sem_post(sem);
+    
+    ;
 
     // Create packet with the cookie from dtls1 and add packet2 as data
     byte packet[MAX_UDP];
@@ -311,41 +273,24 @@ int send_dtls2(const in_addr_t ip, const in_port_t port, uint8_t packet1[hydro_k
 
 int send_dtls3(const in_addr_t ip, const in_port_t port, uint8_t packet2[hydro_kx_XX_PACKET1BYTES], byte cookie[COOKIE_SIZE], sem_t *sem, shared_data *sd)
 {
-    sem_wait(sem);
-    k_index ki;
-    kpeer *peer;
-    hydro_kx_state *state;
-    if (get_kpeer(&(sd->as), ip, &ki) == ERROR)
+    peer p;
+    if (get_peer(&p, ip, sem, sd) == ERROR)
     {
-        int i;
-        if ((i = get_tkp(ip, &(sd->tkp), sd->tkp_first)) == ERROR)
-        {
-            DEBUG_PRINT("Could not find the peer to send the nodes\n");
-            sem_post(sem);
-            return ERROR;
-        }
-        else
-        {
-            peer = &(sd->tkp.kp[i]);
-            state = &(sd->dtls.state[MAX_KPEERS * MAX_KBUCKETS + i]);
-        }
+        DEBUG_PRINT("Could not find the peer to send dtls2\n");
+        return ERROR;
     }
-    else
-    {
-        peer = &(sd->KPEER(ki.b, ki.p));
-        state = &(sd->dtls.state[(ki.b * MAX_KPEERS) + ki.p]);
-    }
-    sem_post(sem);
 
     uint8_t packet3[hydro_kx_XX_PACKET3BYTES];
     sem_wait(sem);
-    if (hydro_kx_xx_3(state, &(peer->kp), packet3, NULL, packet2, NULL,
-                  &(sd->dtls.kp)) != 0) {
+    if (hydro_kx_xx_3(p.state, &(p.kp->key), packet3, NULL, packet2, NULL,
+                  &(sd->dtls.key)) != 0) {
         DEBUG_PRINT(P_ERROR "Failed step 3 of dtls handshake\n");
         sem_post(sem);
         return ERROR;
     }
     sem_post(sem);
+    
+    ;
 
     // Create packet with the cookie from dtls1 and add packet3 as data
     byte packet[MAX_UDP];
@@ -362,18 +307,20 @@ int send_debug(const in_addr_t ip, const in_port_t port, const byte *data, size_
         return ERROR;
     }
 
+    peer p;
+    if (get_peer(&p, ip, sem, sd) == ERROR)
+    {
+        DEBUG_PRINT("Could not find the peer to send dtls2\n");
+        return ERROR;
+    }
+
     // Get the tx key
     uint8_t key[hydro_secretbox_KEYBYTES];
     sem_wait(sem);
-    k_index ki;
-    if (get_kpeer(&(sd->as), ip, &ki) == ERROR)
-    {
-        DEBUG_PRINT("Could not find the peer to send the nodes\n");
-        return ERROR;
-    }
-    
-    memcpy(key, sd->KPEER(ki.b, ki.p).kp.tx, hydro_secretbox_KEYBYTES);
+    memcpy(key, p.kp->key.tx, hydro_secretbox_KEYBYTES);
     sem_post(sem);
+    
+    ;
 
     // Create packet with the data provided
     byte packet[MAX_UDP];

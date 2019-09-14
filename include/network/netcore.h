@@ -74,7 +74,7 @@ struct _tmp_kpeer
 
 struct _dtls_data
 {
-    hydro_kx_keypair kp; // Our own keypair
+    hydro_kx_keypair key; // Our own keypair
     hydro_kx_state state[MAX_KPEERS * MAX_KBUCKETS + MAX_TKP]; // State for dtls handshake (one for each peer)
 };
 

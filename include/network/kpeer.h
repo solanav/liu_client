@@ -21,7 +21,7 @@ typedef struct {
     in_port_t port; // Port of the peer
     byte id[PEER_ID_LEN]; // Kademlia ID to identify peer
     struct timespec latency; // Latency with the peer
-    hydro_kx_session_keypair kp; // Keypair for DTLS
+    hydro_kx_session_keypair key; // Keypair for DTLS
     unsigned short secure; // 1 if DTLS has been established
 } kpeer;
 

@@ -412,8 +412,8 @@ int create_kpeer(kpeer *dst, const in_addr_t ip, const in_port_t port, const byt
         memcpy(dst->id, id, PEER_ID_LEN);
 
     dst->secure = DTLS_NO;
-    memset(&(dst->kp), 0, sizeof(dst->kp));
-    memset(&(dst->latency), 0, sizeof(dst->kp));
+    memset(&(dst->key), 0, sizeof(dst->key));
+    memset(&(dst->latency), 0, sizeof(dst->key));
 
     return OK;
 }

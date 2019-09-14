@@ -24,6 +24,7 @@ add_library(net_lib OBJECT
     ${NET_DIR}/request.c
     ${NET_DIR}/tmp_kpeer.c
     ${NET_DIR}/kpeer.c
+    ${NET_DIR}/peer.c
     ${NET_DIR}/netcore.c
 )
 target_include_directories(net_lib
