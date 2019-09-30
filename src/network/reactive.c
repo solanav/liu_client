@@ -52,7 +52,7 @@ int start_server(sem_t *sem, shared_data *sd)
     sem_wait(sem);
     self_addr.sin_port = htons(sd->server_info.port);
     while (bind(socket_desc, (const struct sockaddr *)&self_addr,
-             sizeof(self_addr)) < 0)
+                sizeof(self_addr)) < 0)
     {
         sd->server_info.port++;
         self_addr.sin_port = htons(sd->server_info.port);
@@ -174,7 +174,6 @@ int stop_server(in_port_t port, sem_t *sem, shared_data *sd)
     DEBUG_PRINT(P_INFO "Sending empty message...\n");
     sd->server_info.stop = 1;
     sem_post(sem);
-
 
     // Message to update the server so it stops asap
     send_empty(LOCAL_IP_NUM, port);
@@ -322,7 +321,7 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
         memcpy(cookie, decrypted_data + COMM_LEN + PACKET_NUM_LEN, COOKIE_SIZE);
 
         in_port_t extracted_port = ((decrypted_data[C_UDP_HEADER + 4] & 0xFF) << 8) +
-                ((decrypted_data[C_UDP_HEADER + 5] & 0xFF) << 0);
+                                   ((decrypted_data[C_UDP_HEADER + 5] & 0xFF) << 0);
 
         DEBUG_PRINT(P_INFO "Received a ping from [%s:%d]\n", string_ip, extracted_port);
 
@@ -336,7 +335,7 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
         if ((flags & AC_DTLS) == AC_DTLS)
         {
             DEBUG_PRINT(P_INFO "Sending a dtls to [%s:%d]\n", string_ip, extracted_port);
-            
+
             add_tkp(&tmp, sem, sd);
             send_dtls1(other_ip, extracted_port, sem, sd);
         }
@@ -369,7 +368,6 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
         else
             DEBUG_PRINT(P_INFO "Pong received and found the request\n");
 
-
         static unsigned short no_ip = 0;
 
         // If we don't have our IP yet
@@ -380,9 +378,9 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
 
             // Get ip in the packet (our's)
             in_addr_t self_ip = ((decrypted_data[C_UDP_HEADER + 0] & 0xFF) << 24) +
-                    ((decrypted_data[C_UDP_HEADER + 1] & 0xFF) << 16) +
-                    ((decrypted_data[C_UDP_HEADER + 2] & 0xFF) << 8) +
-                    ((decrypted_data[C_UDP_HEADER + 3] & 0xFF) << 0);
+                                ((decrypted_data[C_UDP_HEADER + 1] & 0xFF) << 16) +
+                                ((decrypted_data[C_UDP_HEADER + 2] & 0xFF) << 8) +
+                                ((decrypted_data[C_UDP_HEADER + 3] & 0xFF) << 0);
 
             // Save ip on shared data
             sem_wait(sem);
@@ -411,7 +409,7 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
         byte other_id[PEER_ID_LEN];
         memcpy(other_id, decrypted_data + C_UDP_HEADER + sizeof(in_addr_t) + sizeof(in_port_t), PEER_ID_LEN);
         in_port_t extracted_port = ((decrypted_data[C_UDP_HEADER + 4] & 0xFF) << 8) +
-                ((decrypted_data[C_UDP_HEADER + 5] & 0xFF) << 0);
+                                   ((decrypted_data[C_UDP_HEADER + 5] & 0xFF) << 0);
 
         DEBUG_PRINT(P_INFO "The pong came from [%s:%d]\n", string_ip, extracted_port);
 
@@ -479,7 +477,7 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
         byte tmp_id[PEER_ID_LEN];
 
         byte *offset = decrypted_data + C_UDP_HEADER;
-        for (int i = 0; i < C_UDP_LEN; i+=26)
+        for (int i = 0; i < C_UDP_LEN; i += 26)
         {
             // Copy to tmp
             memcpy(&tmp_ip, offset + i, sizeof(in_addr_t));
@@ -492,7 +490,7 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
             send_node(tmp_ip, tmp_port, tmp_id, cookie, sem, sd);
         }
     }
-    else if (memcmp(decrypted_data, DTLS1, COMM_LEN) == 0) // Peer sent DTLS1, respond with DTLS2
+    else if (memcmp(decrypted_data, DTLS1, COMM_LEN) == 0 && peer_found == OK) // Peer sent DTLS1, respond with DTLS2
     {
         DEBUG_PRINT(P_INFO "Received DTLS step 1 from [%s:%d]\n", string_ip, other_port);
 
@@ -605,7 +603,7 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
         DEBUG_PRINT(P_OK "Debug message from [%s:%d]\n", string_ip, other_port);
 
         DEBUG_PRINT(P_INFO "[%02x][%02x][%02x][%02x]\n",
-               decrypted_data[8], decrypted_data[9], decrypted_data[10], decrypted_data[11]);
+                    decrypted_data[8], decrypted_data[9], decrypted_data[10], decrypted_data[11]);
     }
     else if (memcmp(decrypted_data, EMPTY, COMM_LEN) == 0) // Used by the stop_server function
     {
@@ -616,7 +614,6 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
         DEBUG_PRINT(P_ERROR "Received unknown message from [%s:%d]\n", string_ip, other_port);
         return ERROR;
     }
-    
 
     return OK;
 }

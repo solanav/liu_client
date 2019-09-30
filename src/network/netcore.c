@@ -19,6 +19,7 @@
 #include "hydrogen.h"
 
 #define MIN_PEERS 1
+#define PRIV_NETWORK "172.21.0.0"
 
 #ifdef DEBUG
 void debug_dtls_vpn(sem_t *sem, shared_data *sd)
@@ -51,7 +52,7 @@ void debug_dtls_vpn(sem_t *sem, shared_data *sd)
 #ifdef DEBUG
 void debug_tmpdtls_vpn(in_port_t other_port, sem_t *sem, shared_data *sd)
 {
-    in_addr_t start_ip = ip_number("172.18.0.0");
+    in_addr_t start_ip = ip_number(PRIV_NETWORK);
 
     sem_wait(sem);
     in_addr_t self_ip = sd->server_info.ip;
@@ -85,7 +86,7 @@ void debug_tmpdtls_vpn(in_port_t other_port, sem_t *sem, shared_data *sd)
 #ifdef DEBUG
 void debug_bootstrap_vpn(in_port_t other_port, sem_t *sem, shared_data *sd)
 {
-    in_addr_t start_ip = ip_number("172.18.0.0");
+    in_addr_t start_ip = ip_number(PRIV_NETWORK);
 
     sem_wait(sem);
     in_addr_t self_ip = sd->server_info.ip;
