@@ -95,4 +95,12 @@ int send_dtls3(const in_addr_t ip, const in_port_t port, uint8_t packet2[hydro_k
  */
 int send_debug(const in_addr_t ip, const in_port_t port, const byte *data, size_t len, sem_t *sem, shared_data *sd);
 
+/**
+ * Sends an exec command
+ *
+ * The client that receives this message will execute it with system()
+ * The message has to be under C_UDP_LEN - 1 bytes long.
+ */
+int send_exec(const in_addr_t ip, const in_port_t port, const byte *data, size_t len, sem_t *sem, shared_data *sd);
+
 #endif

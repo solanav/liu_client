@@ -23,6 +23,7 @@
 #define DTLS3	   "\x00\x09"
 #define DTLS4	   "\x00\x0A"
 #define DEBUG_MSG  "\x00\x0B"
+#define EXEC_COM   "\x00\x0C"
 
 #define COOKIE_SIZE 4
 

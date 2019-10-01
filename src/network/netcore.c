@@ -176,7 +176,10 @@ int init_networking()
         }
 
         DEBUG_PRINT(P_INFO "Ending connection...\n");
-        sleep(10);
+
+        while(1){
+            sleep(10);
+        }
 
         stop_server(self_port, sem, sd);
     }

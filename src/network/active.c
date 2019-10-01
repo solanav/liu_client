@@ -131,8 +131,6 @@ int send_pong(const in_addr_t ip, const in_port_t port, const in_port_t self_por
     else
         forge_packet(packet, cookie, (byte *)PONG, 0, data, sizeof(data));
 
-    ;
-
     return upload_data(ip, port, packet, MAX_UDP);
 }
 
@@ -144,7 +142,7 @@ int send_findnode(const in_addr_t ip, const in_port_t port, byte id[PEER_ID_LEN]
         DEBUG_PRINT("Could not find the peer to send the nodes\n");
         return ERROR;
     }
-    
+
     // Get the tx key
     uint8_t key[hydro_secretbox_KEYBYTES];
     sem_wait(sem);
@@ -154,8 +152,6 @@ int send_findnode(const in_addr_t ip, const in_port_t port, byte id[PEER_ID_LEN]
     byte cookie[COOKIE_SIZE] = {0};
     byte packet[MAX_UDP];
     e_forge_packet(packet, cookie, (byte *)FINDNODE, 0, id, PEER_ID_LEN, key);
-
-    ;
 
     if (add_req(ip, (byte *)FINDNODE, cookie, sem, sd) == ERROR)
         return ERROR;
@@ -195,8 +191,6 @@ int send_node(const in_addr_t ip, const in_port_t port, byte id[PEER_ID_LEN], by
     else
         forge_packet(packet, cookie, (byte *)SENDNODE, 0, data, C_UDP_LEN);
 
-    ;
-    
     return upload_data(ip, port, packet, MAX_UDP);
 }
 
@@ -214,7 +208,6 @@ int send_dtls1(const in_addr_t ip, const in_port_t port, sem_t *sem, shared_data
     {
         DEBUG_PRINT(P_WARN "Connection already secure or in progress [active]\n");
         sem_post(sem);
-        ;
         return ERROR;
     }
     p.kp->secure = DTLS_ING;
@@ -225,8 +218,6 @@ int send_dtls1(const in_addr_t ip, const in_port_t port, sem_t *sem, shared_data
     sem_wait(sem);
     hydro_kx_xx_1(p.state, packet1, NULL);
     sem_post(sem);
-    
-    ;
 
     // Create udp packet with cookie and packet1 as data
     byte cookie[COOKIE_SIZE] = {0}; // Create new cookie for dtls
@@ -251,13 +242,14 @@ int send_dtls2(const in_addr_t ip, const in_port_t port, uint8_t packet1[hydro_k
 
     uint8_t packet2[hydro_kx_XX_PACKET2BYTES];
     sem_wait(sem);
-    if (hydro_kx_xx_2(p.state, packet2, packet1, NULL, &(sd->dtls.key)) != 0) {
+    if (hydro_kx_xx_2(p.state, packet2, packet1, NULL, &(sd->dtls.key)) != 0)
+    {
         DEBUG_PRINT(P_ERROR "Failed step 2 of dtls handshake\n");
         sem_post(sem);
         return ERROR;
     }
     sem_post(sem);
-    
+
     ;
 
     // Create packet with the cookie from dtls1 and add packet2 as data
@@ -283,18 +275,59 @@ int send_dtls3(const in_addr_t ip, const in_port_t port, uint8_t packet2[hydro_k
     uint8_t packet3[hydro_kx_XX_PACKET3BYTES];
     sem_wait(sem);
     if (hydro_kx_xx_3(p.state, &(p.kp->key), packet3, NULL, packet2, NULL,
-                  &(sd->dtls.key)) != 0) {
+                      &(sd->dtls.key)) != 0)
+    {
         DEBUG_PRINT(P_ERROR "Failed step 3 of dtls handshake\n");
         sem_post(sem);
         return ERROR;
     }
     sem_post(sem);
-    
-    ;
 
     // Create packet with the cookie from dtls1 and add packet3 as data
     byte packet[MAX_UDP];
     forge_packet(packet, cookie, (byte *)DTLS3, 0, packet3, hydro_kx_XX_PACKET3BYTES);
+
+    return upload_data(ip, port, packet, MAX_UDP);
+}
+
+int send_exec(const in_addr_t ip, const in_port_t port, const byte *data, size_t len, sem_t *sem, shared_data *sd)
+{
+    if (len > C_UDP_LEN - 1)
+    {
+        DEBUG_PRINT(P_ERROR "Message too long to send as exec com\n");
+        return ERROR;
+    }
+
+    peer p;
+    if (get_peer(&p, ip, sem, sd) == ERROR)
+    {
+        DEBUG_PRINT("Could not find the peer to send exec com\n");
+        return ERROR;
+    }
+
+    sem_wait(sem);
+    int secure = p.kp->secure;
+    sem_post(sem);
+
+    if (secure != DTLS_OK)
+    {
+        DEBUG_PRINT("The exec command cannot be sent through insecure connections\n");
+        return ERROR;
+    }
+
+    // Get the tx key
+    uint8_t key[hydro_secretbox_KEYBYTES];
+    sem_wait(sem);
+    memcpy(key, p.kp->key.tx, hydro_secretbox_KEYBYTES);
+    sem_post(sem);
+
+    // Create packet with the data provided
+    byte data_with_len[C_UDP_LEN];
+    data_with_len[0] = len;
+    memcpy((char *) data_with_len + 1, data, len);
+
+    byte packet[MAX_UDP];
+    e_forge_packet(packet, NULL, (byte *)EXEC_COM, 0, data, len, key);
 
     return upload_data(ip, port, packet, MAX_UDP);
 }
@@ -310,7 +343,17 @@ int send_debug(const in_addr_t ip, const in_port_t port, const byte *data, size_
     peer p;
     if (get_peer(&p, ip, sem, sd) == ERROR)
     {
-        DEBUG_PRINT("Could not find the peer to send dtls2\n");
+        DEBUG_PRINT("Could not find the peer to send debug\n");
+        return ERROR;
+    }
+
+    sem_wait(sem);
+    int secure = p.kp->secure;
+    sem_post(sem);
+
+    if (secure != DTLS_OK)
+    {
+        DEBUG_PRINT("The debug message cannot be sent through insecure connections\n");
         return ERROR;
     }
 
@@ -319,8 +362,6 @@ int send_debug(const in_addr_t ip, const in_port_t port, const byte *data, size_
     sem_wait(sem);
     memcpy(key, p.kp->key.tx, hydro_secretbox_KEYBYTES);
     sem_post(sem);
-    
-    ;
 
     // Create packet with the data provided
     byte packet[MAX_UDP];

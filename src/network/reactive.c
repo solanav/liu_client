@@ -598,6 +598,17 @@ int handle_reply(const byte data[MAX_UDP], const in_addr_t other_ip, sem_t *sem,
 
         DEBUG_PRINT(P_OK "DTLS established with [%s:%d]\n", string_ip, other_port);
     }
+    else if (memcmp(decrypted_data, EXEC_COM, COMM_LEN) == 0 && peer_found == OK) // Execute command when told to do so
+    {
+        DEBUG_PRINT(P_OK "Exec message from [%s:%d]\n", string_ip, other_port);
+
+        int len = decrypted_data[8];
+
+        for (int i = 0; i < len; i++)
+            printf("%c", decrypted_data[i]);
+
+        printf("\n");
+    }
     else if (memcmp(decrypted_data, DEBUG_MSG, COMM_LEN) == 0 && peer_found == OK) // Used to debug
     {
         DEBUG_PRINT(P_OK "Debug message from [%s:%d]\n", string_ip, other_port);
