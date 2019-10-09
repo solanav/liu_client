@@ -2,7 +2,6 @@
 #include <errno.h>
 #include <mqueue.h>
 #include <netinet/in.h>
-#include <openssl/pem.h>
 #include <semaphore.h>
 #include <stdio.h>
 #include <string.h>

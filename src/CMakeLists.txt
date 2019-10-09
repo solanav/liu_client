@@ -12,6 +12,5 @@ target_link_libraries(liu_client
     dl
     pthread
     rt
-    crypto
     ${LIB_DIR}/libhydrogen.a
 )

@@ -71,6 +71,8 @@ int anti_debug()
 		DEBUG_PRINT((P_ERROR "You are a cheater bruh\n"));
 		return OTHER;
 	}
+
+	return 0;
 }
 
 int main()
