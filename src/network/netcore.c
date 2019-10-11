@@ -19,7 +19,7 @@
 #include "hydrogen.h"
 
 #define MIN_PEERS 1
-#define PRIV_NETWORK "172.21.0.0"
+#define PRIV_NETWORK "172.18.0.0"
 
 #ifdef DEBUG
 void debug_dtls_vpn(sem_t *sem, shared_data *sd)
@@ -176,10 +176,6 @@ int init_networking()
         }
 
         DEBUG_PRINT(P_INFO "Ending connection...\n");
-
-        while(1){
-            sleep(10);
-        }
 
         stop_server(self_port, sem, sd);
     }
